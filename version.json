@@ -1,11 +1,12 @@
 {
-  "version": "0.0.0",
-  "codename": "Rijndael",
+  "version": "0.0.1",
+  "codename": "Diffie",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
     "Diffie",
     "Hellman",
+    "Merkle",
     "Rivest",
     "Shamir",
     "Adleman",
@@ -15,7 +16,7 @@
     "Kerckhoffs (gebruikt door VeiligDelen v0.1.x)",
     "Lampson (gebruikt door iCtHorseSupport v0.0.1)"
   ],
-  "phase": "Phase 0 — repo-skeleton + ontwerp-documenten",
+  "phase": "Phase 1 — backend FastAPI-skeleton LIVE (15/15 tests groen, 96% coverage)",
   "released": "2026-05-21",
   "kdbx_format": 4,
   "kdf_default": {
@@ -24,5 +25,21 @@
     "memory_kib": 131072,
     "parallelism": 2
   },
-  "next_version_planned": "0.0.1-Diffie (Phase 1 backend-skeleton + FastAPI mac-local-run)"
+  "phase1_endpoints": [
+    "GET /health",
+    "POST /auth/register",
+    "POST /auth/login",
+    "POST /auth/logout",
+    "GET /vault",
+    "POST /vault",
+    "GET /vault/{id}",
+    "PUT /vault/{id} (If-Match)",
+    "DELETE /vault/{id}"
+  ],
+  "phase1_test_results": {
+    "tests": 15,
+    "passed": 15,
+    "coverage_pct": 96
+  },
+  "next_version_planned": "0.0.2-Hellman (Phase 2 frontend POC met kdbxweb)"
 }

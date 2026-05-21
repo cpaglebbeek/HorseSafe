@@ -9,8 +9,8 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 - [ ] **GitHub-remote aanmaken** — `gh repo create cpaglebbeek/HorseSafe --private` + initial push (wacht op akkoord in deze sessie)
 - [ ] **Tarball consume + extract** — `/bugcheck consume 103502_keepassxc-2.7.12-src.tar.xz_ecc9c5` → kopie in `specs/keepassxc-source/` als referentie (LEZEN-only, geen vendoring) (wacht op akkoord)
 - [ ] **/sanitycheck draaien** op skeleton (newp-fase N+1, verplicht)
-- [ ] **Fase 1 — Backend skeleton** — FastAPI-app met /auth/register, /auth/login, /vault, /vault/{id} GET+PUT (geen MFA nog, alleen auth-laag 1). Doel: lokaal draaien met `uvicorn`. Geen deploy. (planning, wacht op fase 0+1 akkoord)
-- [ ] **Fase 2 — Frontend POC** — HTML+vanilla-JS met kdbxweb. Login + vault-unlock + 1 entry tonen. Geen UI-polish. (planning)
+- [x] ~~**Fase 1 — Backend skeleton** — FastAPI-app met /auth/register, /auth/login, /vault, /vault/{id} GET+PUT (geen MFA nog, alleen auth-laag 1). Doel: lokaal draaien met `uvicorn`. Geen deploy.~~ ✅ 2026-05-21 — 15/15 tests, 96% coverage, smoke-test ok
+- [ ] **Fase 2 — Frontend POC** — HTML+vanilla-JS met kdbxweb. Login + vault-unlock + 1 entry tonen. Geen UI-polish. (volgende — v0.0.2-Hellman)
 - [ ] **Fase 3 — MFA integratie** — magic-link bridge naar iCt_Horse + TOTP setup-flow. (planning)
 - [ ] **Fase 4 — Admin-pagina** — user-CRUD + stats. (planning)
 - [ ] **Fase 5 — Import/export** — KDBX3/4, Bitwarden JSON, KeePass-CSV, XLSX. (planning)
@@ -43,3 +43,8 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 - [x] ~~Repo-skeleton + ontwerp-documenten~~ ✅ 2026-05-21
 - [x] ~~Naamkeuze HorseSafe + codenaam-thema Cryptografen + v0.0.0-Rijndael~~ ✅ 2026-05-21
 - [x] ~~WhatIf-akkoord op 22 punten (alle defaults)~~ ✅ 2026-05-21
+- [x] ~~GitHub-remote `cpaglebbeek/HorseSafe` (PRIVATE) aanmaken + initial push~~ ✅ 2026-05-21
+- [x] ~~Tarball-consume + extract naar `Meta_iCt_Horse_Diensten/sources/keepassxc-source/`~~ ✅ 2026-05-21
+- [x] ~~`/sanitycheck` op skeleton (newp-fase N+1)~~ ✅ 2026-05-21 (PASS ~95%)
+- [x] ~~P2: `docs/screens/` + `.github/workflows/ci.yml` + `Meta_Master/TODO_VASTLEGGING.md` entry~~ ✅ 2026-05-21
+- [x] ~~**Fase 1 — Backend FastAPI-skeleton v0.0.1-Diffie**~~ ✅ 2026-05-21 (15/15 tests groen, 96% coverage, smoke-test ok)

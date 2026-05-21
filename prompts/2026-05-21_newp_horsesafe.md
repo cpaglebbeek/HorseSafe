@@ -1,11 +1,11 @@
 ---
 date: 2026-05-21
 session: newp_horsesafe
-status: open
-resume: "verder met HorseSafe Fase 1 — backend FastAPI-skeleton + frontend kdbxweb POC; eerst akkoord op GitHub-remote-creation + tarball-consume"
+status: done
+resume: ""
 project: HorseSafe
 ecosystem: iCt Horse Diensten
-linked_actions: [HS-FASE-1-BACKEND, HS-FASE-2-FRONTEND, HS-GITHUB-REMOTE, HS-TARBALL-CONSUME, HS-SANITYCHECK]
+linked_actions: [HS-FASE-2-FRONTEND]
 ---
 
 # Sessie 2026-05-21 — HorseSafe newp Fase 2: repo-skeleton + ontwerp-documenten
