@@ -12,6 +12,32 @@ Kleurcodes:
 
 ## Open bugs
 
+### HS-BUG-002 — basic-auth popup op /HorseSafe (zonder trailing slash)
+
+**Kleur:** 🟡 Geel
+**Status:** RESOLVED 2026-05-22
+**Versie ontdekt:** v0.0.7-Bellare (productie-deploy)
+**Versie opgelost:** v0.0.7-Bellare (zelfde dag — hotfix in nginx-snippet)
+
+**Symptoom:** User die `horsecloud55.ddns.net/HorseSafe` typt (zonder trailing slash) kreeg HorseCloud basic-auth-popup. Gemeld tijdens intern-test van Christian.
+
+**RCA — drie niveaus:**
+- **Functioneel:** Onverwachte basic-auth-popup op trailing-slash-loze URL
+- **Technisch:** Nginx `location /HorseSafe/ {}` matcht `/HorseSafe/x` maar NIET de exacte URI `/HorseSafe`. Request valt door naar `location / {}` die `auth_basic "HorseCloud"` heeft
+- **Architectonisch:** Nginx-snippet ontbreekt exact-match-redirect voor de trailing-slash-loze variant. Standaard-praktijk om expliciet te redirect
+
+**Fix:**
+- `scripts/nginx_snippet.conf`: extra `location = /HorseSafe { auth_basic off; return 301 /HorseSafe/; }` toegevoegd
+- Diff in commit `6861cf1`
+- Deploy: scp + `nginx -t && systemctl reload nginx`
+- Verify: `curl -I /HorseSafe` → 301 + Location → /HorseSafe/ → 200 OK
+
+**Preventie:**
+- Future deploys: include `location =` exact-match-redirects voor alle prefix-locations naast root-paths
+- Smoke-test uitgebreid worden om beide trailing-slash-varianten te checken
+
+---
+
 ### HS-BUG-001 — argon2-browser WASM hangt in headless Chromium
 
 **Kleur:** 🟡 Geel
