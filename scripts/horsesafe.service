@@ -1,0 +1,35 @@
+[Unit]
+Description=HorseSafe — zero-knowledge wachtwoord-vault SaaS backend
+Documentation=https://github.com/cpaglebbeek/HorseSafe
+After=network.target
+
+[Service]
+Type=simple
+User=horsesafe
+Group=horsesafe
+WorkingDirectory=/opt/horsesafe/repo
+EnvironmentFile=/opt/horsesafe/.env
+ExecStart=/opt/horsesafe/venv/bin/uvicorn backend.app:app --host 127.0.0.1 --port 3997
+Restart=on-failure
+RestartSec=5
+
+# systemd-hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/horsesafe/db /opt/horsesafe/vaults /opt/horsesafe/logs /opt/horsesafe/tmp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+# Journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=horsesafe
+
+[Install]
+WantedBy=multi-user.target
