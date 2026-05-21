@@ -1,12 +1,12 @@
 ---
 date: 2026-05-21
 session: horsesafe_fase2_hellman
-status: open
-resume: "verder met HorseSafe Fase 3 — MFA-integratie (TOTP setup-flow + magic-link bridge naar iCt_Horse) + Argon2id-KDF voor nieuwe vaults na browser-cross-test (v0.0.3-Merkle)"
+status: done
+resume: ""
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 parent_master: Meta_iCt_Horse_Diensten
-linked_actions: [HS-FASE-3-MFA, HS-FASE-3-ARGON2-RE-ENABLE]
+linked_actions: []
 ---
 
 # Sessie 2026-05-21 — HorseSafe Fase 2 v0.0.2-Hellman: frontend kdbxweb POC LIVE

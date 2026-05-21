@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "HorseSafe"
-    app_version: str = "0.0.1-Diffie"
+    app_version: str = "0.0.3-Merkle"
 
     db_path: Path = Field(default=Path("./db/horsesafe.db"))
     vaults_dir: Path = Field(default=Path("./vaults"))
@@ -43,6 +43,16 @@ class Settings(BaseSettings):
 
     cors_origins: str = ""  # Comma-separated; leeg = geen CORS (production-default)
     rate_limit_enabled: bool = True
+
+    # MFA — Fase 3 (v0.0.3-Merkle)
+    totp_encryption_key: str = ""  # 32-byte hex; leeg = test/dev-mode (plaintext fallback)
+    totp_issuer: str = "HorseSafe"
+    gmail_user: str = ""  # Voor magic-link e-mail
+    gmail_app_password: str = ""  # Google App Password (vereist 2FA op Gmail)
+    magic_link_ttl_minutes: int = 10
+    public_url: str = "http://localhost:8000"  # Voor magic-link redemption URL
+    mfa_required: bool = False  # Force MFA voor alle accounts (v0.1.0 dienst)
+
     log_level: str = "INFO"
 
 

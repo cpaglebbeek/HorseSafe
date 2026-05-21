@@ -8,7 +8,7 @@ async def test_health_ok(client: AsyncClient) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["status"] == "ok"
-    assert body["version"].startswith("0.0.1")
+    assert body["version"].startswith("0.0.")
     assert body["db"] == "ok"
     assert body["vaults_dir"] == "ok"
 

@@ -3,7 +3,59 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- Fase 3: MFA-integratie (TOTP + magic-link) + Argon2id-KDF voor nieuwe vaults
+- Fase 4: admin-pagina + user-CRUD + audit-viewer + MFA-backup-codes
+
+## [0.0.3-Merkle] — 2026-05-21
+
+### Added — MFA-integratie
+
+**Backend:**
+- `services/mfa_service.py` — TOTP setup/verify/disable + AES-GCM-encrypted TOTP-secret at-rest (12-byte nonce || ciphertext || tag, base64-urlsafe) + base32 generate + provisioning_uri voor QR-render
+- `services/magic_link_service.py` — Gmail SMTP_SSL via App Password + 32-byte urlsafe token + 10 min ttl + single-use redemption + EmailSender Protocol voor test-mocking
+- `routes/auth.py` — 5 nieuwe endpoints: `/auth/totp/{setup,verify,disable}` + `/auth/magic-link` + `/auth/magic-link/redeem`
+- `routes/vault.py` — `_user()` upgraded naar MFA-gate: weigert 403 als `users.totp_secret IS NOT NULL` + `jwt.mfa = false`
+- `services/jwt_service.py` — JWT-payload bevat `mfa: bool` claim + `reissue_with_mfa()` helper voor cookie-upgrade na MFA-pass
+- `routes/auth.py` POST /auth/login — antwoord bevat `mfa_required: bool` op basis van TOTP-status
+- `config.py` — 6 nieuwe env-vars: `HORSESAFE_TOTP_ENCRYPTION_KEY`, `HORSESAFE_TOTP_ISSUER`, `HORSESAFE_GMAIL_USER`, `HORSESAFE_GMAIL_APP_PASSWORD`, `HORSESAFE_MAGIC_LINK_TTL_MINUTES`, `HORSESAFE_PUBLIC_URL`, `HORSESAFE_MFA_REQUIRED`
+- 10 nieuwe pytest-tests over 2 files:
+  - `tests/test_mfa_totp.py` — setup/verify-happy/verify-invalid/challenge-flow/disable/vault-block (7 tests)
+  - `tests/test_mfa_magic_link.py` — unknown-email-no-leak/happy-roundtrip/grants-mfa-pass (3 tests)
+- Backend pytest: **25/25 ✅**, lint: ✅, black: ✅
+
+**Frontend:**
+- `mfa.html` (S4 MFA-challenge) — 2 tabs: TOTP-code + magic-link request
+- `settings.html` (S12) — TOTP enable/disable + QR-code render + status-display
+- `js/mfa.js` — TOTP-challenge UI + magic-link request UI + tab-switching
+- `js/settings.js` — TOTP setup-flow (genereer secret → render QR → verify → opslaan) + disable-flow + status-probe
+- `js/auth.js` — login redirect: `mfa_required: true` → `mfa.html`; anders `vault.html`
+- `js/vault-ui.js` — 403 mfa_required detection → redirect naar `mfa.html`
+- `vault.html` — extra "⚙ Instellingen"-button in top-bar
+- `frontend/devserver.py` — alternative dev-server met COOP/COEP + WASM-MIME headers (BUG-001-retry-vector)
+- E2E playwright: 3 tests (was 2): S1 landing + vault-roundtrip + **MFA setup/re-login-challenge** in 6.6s
+
+**Vendored:**
+- `vendor/qrcode/qrcode.js` v2.0.4 (MIT, ~55KB) — QR-Code generator voor TOTP otpauth://-URL render
+- `vendor/qrcode/LICENSE.MIT`
+
+**Docs:**
+- `BUGS.md` — HS-BUG-001 status update: retry-vector `devserver.py` toegevoegd; cross-browser test verschoven naar v0.0.5+ (samen met KeePassXC-CLI oracle-test)
+
+### Changed
+- `version.json`: 0.0.2 → 0.0.3-Merkle
+- `backend/config.py`: `app_version` 0.0.1-Diffie → 0.0.3-Merkle (was nog niet bumped in v0.0.2)
+- Default `HORSESAFE_MFA_REQUIRED = false` — opt-in via settings-pagina
+
+### Security
+- **AES-GCM at-rest encryptie van TOTP-secrets** — server-master-key uit env (`HORSESAFE_TOTP_ENCRYPTION_KEY`, 32-byte hex). Bij key-rotation moeten alle TOTP-secrets opnieuw worden ingesteld (gepland Fase 4).
+- **Failed MFA-pogingen throttle**: hergebruikt `failed_logins`-tabel; 5 in 15 min → 423 Locked
+- **Audit-log events**: `mfa_setup_totp`, `mfa_pass_totp`, `mfa_pass_magic_link`, `mfa_fail`
+
+### Not Yet
+- Argon2id-KDF re-enable voor nieuwe vaults → deferred naar v0.0.5+ (samen met KeePassXC-CLI oracle-test). Bridge staat klaar.
+- MFA-backup-codes (10 recovery-codes) → v0.0.4-Rivest met admin-pagina
+- Admin-rescue voor user-account-recovery → v0.0.4-Rivest
+- iCt_Horse magic-link bridge hergebruik → v0.0.7+ deploy (huidige Gmail SMTP werkt out-of-the-box)
+- /auth/me endpoint voor frontend-status-probe → v0.0.4+
 
 ## [0.0.2-Hellman] — 2026-05-21
 

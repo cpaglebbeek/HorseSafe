@@ -62,7 +62,9 @@
     try {
       const r = await window.HorseSafeAPI.login({ email, password });
       if (r.ok) {
-        window.location.href = 'vault.html';
+        // Bij mfa_required: door naar MFA-challenge. Anders direct vault.
+        const next = r.data?.mfa_required ? 'mfa.html' : 'vault.html';
+        window.location.href = next;
       } else {
         const err = r.data?.detail?.error || r.data?.error || 'unknown';
         const msg = (

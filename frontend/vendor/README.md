@@ -9,6 +9,15 @@ Vendored third-party libraries voor de HorseSafe-frontend. **Niet via npm in pro
 - **Bestand:** `kdbxweb.min.js` (135 KB UMD-bundle — exposeert globaal `kdbxweb`-object)
 - **Doel:** KDBX3/KDBX4 read/write in browser
 
+## qrcode/
+- **Versie:** qrcode-generator 2.0.4
+- **Licentie:** MIT (zie `qrcode/LICENSE.MIT`)
+- **Bron:** Kazuhiko Arase — http://www.d-project.com/
+- **Bestanden:**
+  - `qrcode.js` (55 KB — QR Code generator, exposeert globaal `qrcode`-functie)
+  - `qrcode_UTF8.js` (793 B — UTF-8 encoding helper)
+- **Doel:** TOTP-otpauth-URL renderen als QR-code voor Authenticator-apps (Google Authenticator / Authy / etc.)
+
 ## argon2/
 - **Versie:** argon2-browser 1.18.0
 - **Licentie:** MIT (zie `argon2/LICENSE.MIT`)

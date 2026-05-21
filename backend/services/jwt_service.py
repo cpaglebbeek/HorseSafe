@@ -9,12 +9,13 @@ from fastapi import HTTPException, Request, Response, status
 from ..config import get_settings
 
 
-def issue(user_id: str, is_admin: bool) -> str:
+def issue(user_id: str, is_admin: bool, mfa_passed: bool = False) -> str:
     settings = get_settings()
     now = int(time.time())
     payload: dict[str, Any] = {
         "sub": user_id,
         "admin": is_admin,
+        "mfa": mfa_passed,
         "iat": now,
         "exp": now + settings.jwt_ttl_minutes * 60,
     }
@@ -59,3 +60,13 @@ def require_auth(request: Request) -> dict[str, Any]:
             detail={"error": "not_authenticated"},
         )
     return decode(token)
+
+
+def reissue_with_mfa(response: Response, payload: dict[str, Any]) -> None:
+    """Maak nieuw JWT-cookie met mfa=true op basis van bestaande payload."""
+    new_token = issue(
+        user_id=str(payload["sub"]),
+        is_admin=bool(payload.get("admin", False)),
+        mfa_passed=True,
+    )
+    set_cookie(response, new_token)

@@ -15,9 +15,9 @@ Kleurcodes:
 ### HS-BUG-001 — argon2-browser WASM hangt in headless Chromium
 
 **Kleur:** 🟡 Geel
-**Status:** open (gemitigeerd)
+**Status:** open (gemitigeerd, retry-vector aanwezig — deferred naar v0.0.5+)
 **Versie ontdekt:** v0.0.2-Hellman (2026-05-21)
-**Versie target-fix:** v0.0.3-Merkle
+**Versie heroverweging:** v0.0.3-Merkle (2026-05-21) — `frontend/devserver.py` toegevoegd als retry-vector met COOP/COEP+WASM-MIME-headers; cross-browser test uitgesteld tot v0.0.5+ (samen met KeePassXC-CLI oracle-test in Fase 5)
 
 **Symptoom:** `kdbxweb.Kdbx.create()` met default-Argon2d-KDF hangt op `db.save()` in headless Chromium via Playwright. Geen fout, geen timeout in browser — gewoon nooit klaar. `argon2-bundled.min.js` + `argon2.wasm` correct geladen, `window.argon2` en `window.kdbxweb` beide aanwezig. Hash-call resolveert nooit.
 

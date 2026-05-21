@@ -8,6 +8,8 @@ pyjwt>=2.9,<3
 aiosqlite>=0.20,<1
 python-multipart>=0.0.12
 email-validator>=2.2
+pyotp>=2.9,<3
+cryptography>=43,<46
 
 # Dev / test
 pytest>=8

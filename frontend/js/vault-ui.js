@@ -112,6 +112,10 @@
           window.location.href = 'login.html';
           return;
         }
+        if (listRes.status === 403 && listRes.data?.detail?.error === 'mfa_required') {
+          window.location.href = 'mfa.html';
+          return;
+        }
         showError('unlock-error', `Fout bij vault-list: ${listRes.status}`);
         return;
       }

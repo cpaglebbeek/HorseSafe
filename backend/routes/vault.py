@@ -20,9 +20,17 @@ from ..services import audit_service, jwt_service, storage_service
 router = APIRouter()
 
 
-# NB: Fase 1 — MFA-gate volgt in Fase 3 (v0.0.3-Merkle)
 def _user(request: Request) -> str:
+    """Vereis JWT + (indien user TOTP heeft) mfa_passed=true.
+
+    Fase 3: vault-routes weigeren toegang zonder voltooide MFA voor accounts met TOTP.
+    """
     payload = jwt_service.require_auth(request)
+    if not bool(payload.get("mfa", False)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "mfa_required"},
+        )
     return str(payload["sub"])
 
 

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — MFA</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+  <style>
+    .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--hs-border); margin-bottom: var(--hs-sp-4); }
+    .tab-btn {
+      background: transparent; color: var(--hs-fg-secondary); border: none;
+      padding: var(--hs-sp-3) var(--hs-sp-5); cursor: pointer;
+      border-bottom: 2px solid transparent; border-radius: 0; font-size: 1rem;
+    }
+    .tab-btn.active { color: var(--hs-fg-primary); border-bottom-color: var(--hs-accent); }
+    .tab-btn:hover:not(.active) { color: var(--hs-fg-primary); }
+    .totp-input {
+      font-family: var(--hs-font-mono); font-size: 1.5rem; letter-spacing: 0.5em;
+      text-align: center; padding: var(--hs-sp-3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">Twee-factor authenticatie</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <p class="muted">
+          Voltooi één van onderstaande stappen om door te gaan naar je vault.
+          Beide methoden zijn gelijkwaardig veilig.
+        </p>
+
+        <div class="tab-bar">
+          <button class="tab-btn active" data-tab="totp">Authenticator-code</button>
+          <button class="tab-btn" data-tab="magic">Magic-link via e-mail</button>
+        </div>
+
+        <div id="totp-pane">
+          <h2 style="font-size: 1rem;">Voer 6-cijfer-code in uit je Authenticator-app</h2>
+          <form id="totp-form">
+            <input type="text" id="totp-code" class="totp-input"
+                   inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+                   autocomplete="one-time-code" required>
+            <div id="totp-error" class="error" hidden></div>
+            <div class="actions">
+              <button type="submit" id="totp-submit">Verifieer</button>
+              <button type="button" id="totp-logout" class="secondary">Annuleer (uitloggen)</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="magic-pane" hidden>
+          <h2 style="font-size: 1rem;">Stuur een eenmalige inlog-link naar je e-mail</h2>
+          <p class="muted">
+            We sturen een link die 10 minuten geldig is en die eenmalig gebruikt kan worden.
+            Als je geen e-mail ziet binnen 2 minuten — check spam.
+          </p>
+          <form id="magic-form">
+            <label for="magic-email">E-mailadres</label>
+            <input type="email" id="magic-email" required autocomplete="email">
+            <div id="magic-status" class="success" hidden></div>
+            <div class="actions">
+              <button type="submit" id="magic-submit">Verstuur link</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer>HorseSafe v0.0.3-Merkle — Twee onafhankelijke auth-lagen</footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/mfa.js"></script>
+</body>
+</html>

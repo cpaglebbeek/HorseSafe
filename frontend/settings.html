@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — Instellingen</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+  <style>
+    .qr-canvas { display: block; margin: var(--hs-sp-4) auto; padding: var(--hs-sp-3); background: white; border-radius: var(--hs-br-md); width: fit-content; }
+    .secret-text { font-family: var(--hs-font-mono); padding: var(--hs-sp-2); background: var(--hs-bg-elevated); border-radius: var(--hs-br-sm); word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">Instellingen</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Twee-factor authenticatie (TOTP)</h2>
+        <p class="muted">
+          Bescherm je account-laag met een 6-cijfer-code uit een Authenticator-app
+          (Google Authenticator, Authy, Microsoft Authenticator, etc.). Zonder TOTP
+          ben je beschermd door alleen je account-wachtwoord op de eerste laag.
+        </p>
+
+        <div id="totp-status-pane">
+          <p>Status: <strong id="totp-status">Onbekend</strong></p>
+          <div class="actions">
+            <button id="totp-enable-btn">TOTP inschakelen</button>
+            <button id="totp-disable-btn" class="danger" hidden>TOTP uitschakelen</button>
+          </div>
+        </div>
+
+        <div id="totp-setup-pane" hidden>
+          <p>1. Scan de QR-code met je Authenticator-app.</p>
+          <div class="qr-canvas" id="qr-canvas"></div>
+          <p>Geen QR-scanner? Voer dit secret handmatig in:</p>
+          <div class="secret-text" id="secret-text"></div>
+          <p style="margin-top: 1em;">2. Voer de 6-cijfer-code in die je app toont:</p>
+          <form id="totp-verify-form">
+            <input type="text" id="setup-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required style="text-align: center; font-family: var(--hs-font-mono); font-size: 1.5rem; letter-spacing: 0.5em;">
+            <div id="setup-error" class="error" hidden></div>
+            <div id="setup-success" class="success" hidden></div>
+            <div class="actions">
+              <button type="submit">Verifieer + activeer</button>
+              <button type="button" id="setup-cancel" class="secondary">Annuleer</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="totp-disable-pane" hidden>
+          <p>Voer een huidige TOTP-code in om TOTP uit te schakelen:</p>
+          <form id="totp-disable-form">
+            <input type="text" id="disable-code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required style="text-align: center; font-family: var(--hs-font-mono); font-size: 1.5rem; letter-spacing: 0.5em;">
+            <div id="disable-error" class="error" hidden></div>
+            <div class="actions">
+              <button type="submit" class="danger">Uitschakelen</button>
+              <button type="button" id="disable-cancel" class="secondary">Annuleer</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Navigatie</h2>
+        <div class="actions">
+          <a href="vault.html"><button>← Terug naar vault</button></a>
+          <button id="logout-btn" class="secondary">Uitloggen</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>HorseSafe v0.0.3-Merkle</footer>
+  </div>
+
+  <script src="vendor/qrcode/qrcode.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/settings.js"></script>
+</body>
+</html>

@@ -1,6 +1,6 @@
 {
-  "version": "0.0.2",
-  "codename": "Hellman",
+  "version": "0.0.3",
+  "codename": "Merkle",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -14,10 +14,18 @@
     "Rogaway",
     "Bernstein"
   ],
-  "phase": "Phase 2 — frontend kdbxweb POC LIVE (vendored kdbxweb + argon2-browser, 2 e2e tests groen)",
+  "phase": "Phase 3 — MFA-integratie LIVE: TOTP setup/verify/disable + magic-link via Gmail SMTP + AES-GCM-encrypted-at-rest TOTP-secret + MFA-gate op vault-routes",
   "released": "2026-05-21",
   "kdbx_format": 4,
-  "kdf_in_use_v0_0_2": "AES-KDF (KDBX-spec-conform, snel, opent in KeePassXC-desktop)",
-  "kdf_default_kdbxweb": "Argon2d (= upstream default; bridge naar argon2-browser staat klaar, activeert in v0.0.3+)",
-  "next_version_planned": "0.0.3-Merkle (Phase 3 MFA-integratie + Argon2id-KDF voor nieuwe vaults)"
+  "kdf_in_use": "AES-KDF (KDBX-spec-conform). Argon2id-bridge staat klaar; full re-enable verschoven naar v0.0.5+ na KeePassXC-CLI oracle-test in Fase 5.",
+  "mfa": {
+    "totp": "RFC 6238 SHA-1 30s 6-digits + ±1 window-tolerance",
+    "magic_link": "32-byte urlsafe token, 10 min, single-use via Gmail SMTP_SSL",
+    "secret_at_rest": "AES-GCM-encrypted (12-byte nonce + ciphertext + tag) met HORSESAFE_TOTP_ENCRYPTION_KEY"
+  },
+  "test_results": {
+    "backend_pytest": "25/25 ✅",
+    "frontend_e2e_playwright": "3/3 ✅ (S1 landing + vault-roundtrip + MFA-flow)"
+  },
+  "next_version_planned": "0.0.4-Rivest (Phase 4 admin-pagina + user-CRUD + audit-viewer + MFA-backup-codes)"
 }

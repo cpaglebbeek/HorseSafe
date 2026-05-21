@@ -11,7 +11,8 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 - [ ] **/sanitycheck draaien** op skeleton (newp-fase N+1, verplicht)
 - [x] ~~**Fase 1 — Backend skeleton** — FastAPI-app met /auth/register, /auth/login, /vault, /vault/{id} GET+PUT (geen MFA nog, alleen auth-laag 1). Doel: lokaal draaien met `uvicorn`. Geen deploy.~~ ✅ 2026-05-21 — 15/15 tests, 96% coverage, smoke-test ok
 - [x] ~~**Fase 2 — Frontend POC** — HTML+vanilla-JS met kdbxweb. Login + vault-unlock + 1 entry tonen. Geen UI-polish.~~ ✅ 2026-05-21 — kdbxweb+argon2 vendored, S1/S2/S6/S7 schermen LIVE, e2e playwright 2/2 groen, full roundtrip (registreer + login + vault-create in browser + entry + pw-toggle + lock + reopen) werkt
-- [ ] **Fase 3 — MFA integratie** — magic-link bridge naar iCt_Horse + TOTP setup-flow. Tevens **Argon2id-KDF activeren** voor nieuwe vaults (na browser-cross-test op echte Chrome/Firefox/Safari). (volgende — v0.0.3-Merkle)
+- [x] ~~**Fase 3 — MFA integratie** — magic-link bridge naar iCt_Horse + TOTP setup-flow~~ ✅ 2026-05-21 — TOTP RFC 6238 + AES-GCM-encrypted-at-rest secret + Gmail SMTP magic-link + vault-MFA-gate; backend 25/25 pytest + frontend 3/3 playwright; qrcode-generator vendored; settings-page + mfa-challenge-page LIVE
+- [ ] **Fase 4 — Admin-pagina** — user-CRUD + storage-stats + audit-log-viewer + MFA-backup-codes + admin-rescue voor user-account-recovery. (volgende — v0.0.4-Rivest)
 - [ ] **Fase 4 — Admin-pagina** — user-CRUD + stats. (planning)
 - [ ] **Fase 5 — Import/export** — KDBX3/4, Bitwarden JSON, KeePass-CSV, XLSX. (planning)
 - [ ] **Fase 6 — Browser-extensie** (v0.2.0) — MV3, autocomplete, échte clipboard-wipe. (planning, optioneel)
