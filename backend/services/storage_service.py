@@ -45,8 +45,9 @@ async def create_vault(
     now = int(time.time())
     try:
         await conn.execute(
-            """INSERT INTO vaults (id, user_id, name, blob_path, size_bytes, etag, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            "INSERT INTO vaults "
+            "(id, user_id, name, blob_path, size_bytes, etag, created_at, updated_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (vault_id, user_id, name, str(blob_path), len(blob), etag, now, now),
         )
         await conn.commit()

@@ -17,7 +17,9 @@ async def register(payload: UserRegister, request: Request) -> dict[str, str]:
             status_code=400,
             detail={
                 "error": "ack_required",
-                "message": "Je moet bevestigen dat data permanent verloren gaat bij vergeten wachtwoord",
+                "message": (
+                    "Je moet bevestigen dat data permanent verloren gaat bij vergeten wachtwoord"
+                ),
             },
         )
     settings = get_settings()

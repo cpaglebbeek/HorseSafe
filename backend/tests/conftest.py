@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import sys
 from collections.abc import AsyncIterator
 from pathlib import Path
@@ -20,7 +19,9 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Elke test krijgt eigen DB + vaults-dir + lichte argon2-params voor snelheid."""
     monkeypatch.setenv("HORSESAFE_DB_PATH", str(tmp_path / "test.db"))
     monkeypatch.setenv("HORSESAFE_VAULTS_DIR", str(tmp_path / "vaults"))
-    monkeypatch.setenv("HORSESAFE_JWT_SECRET", "test-secret-32bytes-not-for-prod-use-only-in-pytest")
+    monkeypatch.setenv(
+        "HORSESAFE_JWT_SECRET", "test-secret-32bytes-not-for-prod-use-only-in-pytest"
+    )
     monkeypatch.setenv("HORSESAFE_COOKIE_SECURE", "false")  # voor httpx-tests
     monkeypatch.setenv("HORSESAFE_ARGON2_TIME_COST", "2")
     monkeypatch.setenv("HORSESAFE_ARGON2_MEMORY_KIB", "8192")  # 8 MiB voor snelheid

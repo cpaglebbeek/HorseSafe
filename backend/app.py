@@ -18,7 +18,9 @@ logger = logging.getLogger("horsesafe")
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    logging.basicConfig(level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s | %(message)s")
+    logging.basicConfig(
+        level=settings.log_level, format="%(asctime)s %(levelname)s %(name)s | %(message)s"
+    )
     logger.info("HorseSafe %s starting", settings.app_version)
     await init_db()
     settings.vaults_dir.mkdir(parents=True, exist_ok=True)

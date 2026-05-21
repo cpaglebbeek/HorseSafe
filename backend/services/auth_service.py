@@ -83,9 +83,7 @@ async def is_throttled(conn: aiosqlite.Connection, ip: str, email: str | None) -
     return bool(row and row["n"] >= settings.failed_login_max)
 
 
-async def record_failed_login(
-    conn: aiosqlite.Connection, ip: str, email: str | None
-) -> None:
+async def record_failed_login(conn: aiosqlite.Connection, ip: str, email: str | None) -> None:
     await conn.execute(
         "INSERT INTO failed_logins (ip, email, ts) VALUES (?, ?, ?)",
         (ip, email.lower() if email else None, int(time.time())),

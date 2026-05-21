@@ -24,9 +24,7 @@ def issue(user_id: str, is_admin: bool) -> str:
 def decode(token: str) -> dict[str, Any]:
     settings = get_settings()
     try:
-        return dict(
-            jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
-        )
+        return dict(jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]))
     except jwt.PyJWTError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

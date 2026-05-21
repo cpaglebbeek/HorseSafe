@@ -1,6 +1,16 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, File, Form, Header, HTTPException, Request, Response, UploadFile, status
+from fastapi import (
+    APIRouter,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+    status,
+)
 
 from ..config import get_settings
 from ..db.connection import connect
@@ -52,7 +62,7 @@ async def create_vault(
 
 
 @router.get("/{vault_id}")
-async def read_vault(vault_id: str, request: Request, response: Response) -> Response:
+async def read_vault(vault_id: str, request: Request) -> Response:
     user_id = _user(request)
     settings = get_settings()
     async with connect(settings.db_path) as conn:
@@ -116,7 +126,11 @@ async def update_vault(
             detail={"vault_id": vault_id, "size": len(data)},
         )
         # Strip private keys uit response
-        clean = {k: v for k, v in result.items() if not k.startswith("_") and k != "blob_path" and k != "user_id"}
+        clean = {
+            k: v
+            for k, v in result.items()
+            if not k.startswith("_") and k != "blob_path" and k != "user_id"
+        }
         return VaultPublic(**clean)  # type: ignore[arg-type]
 
 
