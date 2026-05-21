@@ -18,6 +18,14 @@ Vendored third-party libraries voor de HorseSafe-frontend. **Niet via npm in pro
   - `qrcode_UTF8.js` (793 B — UTF-8 encoding helper)
 - **Doel:** TOTP-otpauth-URL renderen als QR-code voor Authenticator-apps (Google Authenticator / Authy / etc.)
 
+## sheetjs/
+- **Versie:** xlsx (SheetJS Community Edition) 0.18.5
+- **Licentie:** Apache-2.0 (zie `sheetjs/LICENSE.APACHE-2.0`)
+- **Bron:** https://github.com/SheetJS/sheetjs (community 0.18.x, oude npm-published versie; nieuwere versies via cdn.sheetjs.com)
+- **Bestand:** `xlsx.mini.min.js` (245 KB — minimale variant zonder styling/codepage, voldoende voor onze plaintext-import/export)
+- **Doel:** XLSX-parsing (`.xlsx` workbook → JSON-rijen) en building (entries → workbook) voor import/export-wizards
+- **Globale namespace:** `window.XLSX`
+
 ## argon2/
 - **Versie:** argon2-browser 1.18.0
 - **Licentie:** MIT (zie `argon2/LICENSE.MIT`)

@@ -67,6 +67,9 @@
       } else if (fmt === 'json') {
         const json = window.HorseSafeImportExport.buildJSON(entries);
         window.HorseSafeImportExport.downloadBlob(json, `horsesafe-${ts}.json`, 'application/json');
+      } else if (fmt === 'xlsx') {
+        const arr = window.HorseSafeImportExport.buildXlsx(entries);
+        window.HorseSafeImportExport.downloadBlob(arr, `horsesafe-${ts}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       }
       $('warning-section').hidden = true;
       alert('✅ Export voltooid. Bestand is gedownload.');

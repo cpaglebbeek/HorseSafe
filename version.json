@@ -1,6 +1,6 @@
 {
-  "version": "0.0.7",
-  "codename": "Bellare",
+  "version": "0.0.8",
+  "codename": "Rogaway",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",

@@ -84,6 +84,39 @@
     return rows;
   }
 
+  /**
+   * Parse XLSX (.xlsx) workbook ArrayBuffer → entries. Eerste sheet gelezen.
+   * Header-row matched case-insensitive op Title/Username/Password/URL/Notes.
+   * Vereist window.XLSX (SheetJS) geladen.
+   */
+  function parseXlsx(arrayBuffer) {
+    if (!window.XLSX) throw new Error('SheetJS (window.XLSX) niet geladen');
+    const wb = window.XLSX.read(arrayBuffer, { type: 'array' });
+    const sheetName = wb.SheetNames[0];
+    if (!sheetName) throw new Error('Geen sheets gevonden in xlsx');
+    const sheet = wb.Sheets[sheetName];
+    const rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+    if (rows.length < 2) return [];
+    const header = rows[0].map((c) => String(c || '').toLowerCase().trim());
+    const idx = {
+      title:    header.findIndex((c) => c === 'title' || c === 'name'),
+      username: header.findIndex((c) => c === 'username' || c === 'user' || c === 'login'),
+      password: header.findIndex((c) => c === 'password'),
+      url:      header.findIndex((c) => c === 'url' || c === 'web site'),
+      notes:    header.findIndex((c) => c === 'notes' || c === 'comments'),
+    };
+    if (idx.title < 0 || idx.password < 0) {
+      throw new Error('XLSX mist verplichte kolommen "Title" + "Password"');
+    }
+    return rows.slice(1).filter((r) => r.length > 1).map((r) => ({
+      title:    String(r[idx.title] || '(zonder naam)'),
+      username: idx.username >= 0 ? String(r[idx.username] || '') : '',
+      password: String(r[idx.password] || ''),
+      url:      idx.url >= 0 ? String(r[idx.url] || '') : '',
+      notes:    idx.notes >= 0 ? String(r[idx.notes] || '') : '',
+    }));
+  }
+
   // ─── Export builders ───
 
   function buildCSV(entries) {
@@ -119,6 +152,23 @@
         organizationId: null,
       })),
     }, null, 2);
+  }
+
+  /**
+   * Bouw XLSX-workbook → Uint8Array (download-able).
+   * Vereist window.XLSX (SheetJS) geladen.
+   */
+  function buildXlsx(entries) {
+    if (!window.XLSX) throw new Error('SheetJS (window.XLSX) niet geladen');
+    const rows = [['Title', 'Username', 'Password', 'URL', 'Notes']];
+    for (const e of entries) {
+      rows.push([e.title || '', e.username || '', e.password || '', e.url || '', e.notes || '']);
+    }
+    const ws = window.XLSX.utils.aoa_to_sheet(rows);
+    const wb = window.XLSX.utils.book_new();
+    window.XLSX.utils.book_append_sheet(wb, ws, 'HorseSafe');
+    // type:'array' → Uint8Array (browser-friendly download)
+    return window.XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
   }
 
   // ─── Merge in kdbxweb-Kdbx ───
@@ -194,6 +244,8 @@
     parseCSV,
     buildCSV,
     buildJSON,
+    parseXlsx,
+    buildXlsx,
     mergeEntriesInto,
     extractEntries,
     downloadBlob,

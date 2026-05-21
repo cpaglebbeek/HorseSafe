@@ -1,6 +1,15 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-05-21
+> Laatst bijgewerkt: 2026-05-18
+
+## 🆕 2026-05-18 — v0.0.8-Rogaway (XLSX-import + XLSX-export)
+
+- [x] ~~**SheetJS vendoren** — `frontend/vendor/sheetjs/xlsx.mini.min.js` (0.18.5, Apache-2.0, 245 KB)~~ ✅ 2026-05-18
+- [x] ~~**`parseXlsx` + `buildXlsx`** in `frontend/js/import-export.js`~~ ✅ 2026-05-18
+- [x] ~~**UI** — xlsx-optie in import.html + export.html dropdowns, script-include~~ ✅ 2026-05-18
+- [x] ~~**Versie-bump** — config.py + version.json → 0.0.8-Rogaway~~ ✅ 2026-05-18
+- [ ] **Deploy naar HC55** — git pull + rsync frontend (vendor + js + html) + restart systemd
+- [ ] **Live-verificatie** — XLSX-export download op live + reimport-round-trip
 
 ## 🆕 2026-05-21 — newp Fase 2 → Fase 3+
 

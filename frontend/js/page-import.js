@@ -35,6 +35,9 @@
       } else if (fmt === 'csv') {
         const text = await file.text();
         parsedEntries = window.HorseSafeImportExport.parseKeePassCsv(text);
+      } else if (fmt === 'xlsx') {
+        const buf = await file.arrayBuffer();
+        parsedEntries = window.HorseSafeImportExport.parseXlsx(buf);
       }
 
       // 2. Laad HorseSafe-vault

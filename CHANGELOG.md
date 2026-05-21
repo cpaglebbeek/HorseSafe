@@ -5,6 +5,24 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 ## [Unreleased]
 - v0.1.0-Massey: public launch op icthorse.nl/HorseSafe/ + externe pen-test + open-source-beslissing AGPL
 
+## [0.0.8-Rogaway] — 2026-05-18
+
+### Added — XLSX-import + XLSX-export
+
+- **SheetJS Community 0.18.5 vendored** (`frontend/vendor/sheetjs/xlsx.mini.min.js`, 245 KB, Apache-2.0). Mini-build zonder styling/codepage — voldoet voor plaintext import/export.
+- **`parseXlsx(arrayBuffer)`** in `frontend/js/import-export.js`: leest eerste sheet, header-row case-insensitive op `Title|Username|Password|URL|Notes` (`Title` + `Password` verplicht).
+- **`buildXlsx(entries)`** in `frontend/js/import-export.js`: schrijft één sheet `HorseSafe` met dezelfde 5 kolommen, retourneert `Uint8Array` (browser-friendly download).
+- **`import.html`** dropdown: optie `xlsx — XLSX (Excel-werkblad)` + `<script src="vendor/sheetjs/xlsx.mini.min.js">`.
+- **`export.html`** dropdown: optie `xlsx — XLSX (Excel-werkblad, PLAINTEXT)` + zelfde script-include.
+- **`page-import.js` + `page-export.js`** branches voor `fmt === 'xlsx'`: arraybuffer → entries (import) en entries → arraybuffer met MIME `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` (export).
+- **`frontend/vendor/README.md`**: sheetjs-sectie toegevoegd met versie/licentie/bron/doel.
+
+### Notes
+
+- XLSX-export is **PLAINTEXT** — zelfde audit-log + reden vereist als CSV/JSON (audit-import endpoint blijft ongewijzigd, format-string `xlsx`).
+- Zero-knowledge ongewijzigd: parsing/building gebeurt volledig client-side; server ziet alleen ciphertext (KDBX4) + audit-events.
+- Geen back-end-mutaties; geen migratie; geen versiebump van schema.
+
 ## [0.0.7-Bellare] — 2026-05-22
 
 ### Added — Productie-deploy HorseCloud55 LIVE
