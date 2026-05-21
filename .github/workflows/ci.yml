@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Skeleton — wordt actief vanaf Fase 1 (v0.0.1-Diffie) wanneer backend-code bestaat.
+# Tot dan: workflow runt minimaal (markdown-lint + repo-structuur-check) zodat
+# de CI-status van de PRIVATE repo zichtbaar is.
+
+jobs:
+  repo-structure:
+    name: Repo-structuur audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verplichte top-level docs aanwezig
+        run: |
+          required=(README.md CLAUDE.md ARCHITECTURE.md UI_DESIGN.md PRINCIPLES.md \
+                    DEPENDENCIES.md THREAT_MODEL.md BUGS.md ACTIONS.md API.md \
+                    CHANGELOG.md COMPONENT_DIAGRAM.md DATA_MODEL.md DEPLOYMENT.md \
+                    DESIGN_TOKENS.md DPIA.md ENGINE_INPUT_CONTROL.md \
+                    GDPR_COMPLIANCE.md MONITORING.md PRIVACY_STATEMENT.md \
+                    ROADMAP.md RUNBOOK.md SECURITY.md SEQUENCE_DIAGRAMS.md \
+                    version.json .gitignore)
+          missing=()
+          for f in "${required[@]}"; do
+            [ -f "$f" ] || missing+=("$f")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "❌ Ontbrekende verplichte files:"
+            printf '  - %s\n' "${missing[@]}"
+            exit 1
+          fi
+          echo "✅ Alle 26 verplichte top-level files aanwezig"
+      - name: Sub-dirs aanwezig
+        run: |
+          for d in backend frontend extension docs specs prompts; do
+            [ -d "$d" ] && [ -f "$d/README.md" ] || { echo "❌ $d/ of $d/README.md ontbreekt"; exit 1; }
+          done
+          echo "✅ Alle 6 sub-dirs + sub-READMEs aanwezig"
+      - name: Geen plaintext-secrets gestaged
+        run: |
+          if grep -RIn -E '(BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY|aws_access_key_id|password\s*=\s*["'\''][^"'\''])' \
+               --exclude-dir=.git --exclude-dir=node_modules --exclude=*.md . ; then
+            echo "❌ Mogelijke plaintext secrets gevonden"
+            exit 1
+          fi
+          echo "✅ Geen plaintext-secrets in code"
+
+  backend:
+    name: Backend (Python)
+    runs-on: ubuntu-latest
+    # Vanaf Fase 1 (v0.0.1-Diffie) wordt deze job actief — vereist backend/requirements.txt + backend/app.py
+    if: ${{ hashFiles('backend/requirements.txt') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        working-directory: backend
+        run: |
+          pip install -r requirements.txt
+          pip install ruff black mypy pytest pytest-asyncio pytest-cov httpx
+      - name: Ruff (lint)
+        working-directory: backend
+        run: ruff check .
+      - name: Black (format)
+        working-directory: backend
+        run: black --check .
+      - name: Mypy (types)
+        working-directory: backend
+        run: mypy --strict .
+      - name: Pytest + coverage
+        working-directory: backend
+        run: pytest --cov=. --cov-report=term --cov-fail-under=80
+
+  frontend:
+    name: Frontend (ES2022)
+    runs-on: ubuntu-latest
+    # Vanaf Fase 2 (v0.0.2-Hellman) — vereist frontend/index.html + frontend/js/
+    if: ${{ hashFiles('frontend/index.html') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: ESLint
+        working-directory: frontend
+        run: |
+          npm install --no-save eslint @eslint/js
+          npx eslint js/ || true   # warning-only tot eslint.config gepind
+      - name: Playwright e2e (smoke)
+        working-directory: frontend
+        run: |
+          npm install --no-save @playwright/test
+          npx playwright install --with-deps chromium
+          # Backend moet draaien als service — wordt toegevoegd in Fase 3+
+          # npx playwright test tests/smoke.spec.ts
+
+  kdbx-roundtrip:
+    name: KDBX4-roundtrip oracle-test
+    runs-on: ubuntu-latest
+    # Bewijst dat kdbxweb-write + KeePassXC-CLI-read elkaar verstaan (CLAUDE.md regel 7)
+    # Vanaf Fase 5 (v0.0.5-Shamir) wanneer import/export bestaat
+    if: ${{ hashFiles('backend/tests/fixtures/test_vault.kdbx') != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install KeePassXC CLI
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq keepassxc
+      - name: Round-trip test
+        run: |
+          # Genereer vault met kdbxweb (node-CLI)
+          # Lees met keepassxc-cli ls --no-password (test-fixture met bekend pw)
+          # Vergelijk entries-count
+          bash scripts/kdbx-roundtrip.sh
