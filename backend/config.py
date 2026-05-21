@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "HorseSafe"
-    app_version: str = "0.0.4-Rivest"
+    app_version: str = "0.0.5-Shamir"
 
     db_path: Path = Field(default=Path("./db/horsesafe.db"))
     vaults_dir: Path = Field(default=Path("./vaults"))

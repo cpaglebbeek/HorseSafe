@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — Exporteren</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">Exporteren</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Vault exporteren</h2>
+        <p class="muted">
+          Export gebeurt volledig in je browser. Server registreert alleen het event +
+          reden (voor plaintext-formaten).
+        </p>
+
+        <form id="export-form">
+          <label for="format">Formaat</label>
+          <select id="format" required>
+            <option value="kdbx">KDBX4 (encrypted, opent in KeePassXC) — aanbevolen</option>
+            <option value="json">JSON (Bitwarden-compatibel, PLAINTEXT)</option>
+            <option value="csv">CSV (KeePass-kolommen, PLAINTEXT)</option>
+          </select>
+
+          <label for="vault-pw">HorseSafe vault-wachtwoord</label>
+          <input type="password" id="vault-pw" required>
+
+          <div id="reason-section" hidden>
+            <label for="reason">Reden van plaintext-export <span class="muted">(verplicht, min. 10 tekens)</span></label>
+            <input type="text" id="reason" placeholder="Backup voor migratie naar KeePassXC-desktop...">
+          </div>
+
+          <div id="export-error" class="error" hidden></div>
+
+          <div class="actions">
+            <button type="submit" id="export-btn">Exporteer</button>
+            <a href="vault.html"><button type="button" class="secondary">Annuleer</button></a>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" id="warning-section" hidden style="border-left: 3px solid var(--hs-danger);">
+        <h2 style="color: var(--hs-danger);">⚠ Plaintext-export waarschuwing</h2>
+        <p>
+          Je staat op het punt <strong>ALLE wachtwoorden ONVERSLEUTELD</strong> te downloaden.
+          Verwijder het bestand zo snel mogelijk en behandel het als gevoelig materiaal.
+        </p>
+        <div class="actions">
+          <button id="confirm-plaintext" class="danger">Begrepen, download nu</button>
+          <button id="cancel-plaintext" class="secondary">Annuleer</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>HorseSafe v0.0.5-Shamir — alle export client-side; server logt alleen event + reden</footer>
+  </div>
+
+  <script src="vendor/kdbxweb/kdbxweb.min.js"></script>
+  <script src="vendor/argon2/argon2-bundled.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/crypto.js"></script>
+  <script src="js/import-export.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      function $(id) { return document.getElementById(id); }
+
+      $('format').addEventListener('change', () => {
+        const fmt = $('format').value;
+        $('reason-section').hidden = (fmt === 'kdbx');
+      });
+
+      $('export-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        $('export-error').hidden = true;
+        const fmt = $('format').value;
+        const reason = $('reason').value;
+        if (fmt !== 'kdbx' && reason.length < 10) {
+          $('export-error').textContent = 'Reden van minimaal 10 tekens vereist voor plaintext-export.';
+          $('export-error').hidden = false;
+          return;
+        }
+        if (fmt !== 'kdbx') {
+          // Toon eerst waarschuwing
+          $('warning-section').hidden = false;
+          return;
+        }
+        await doExport(fmt, '');
+      });
+
+      $('confirm-plaintext').addEventListener('click', async () => {
+        await doExport($('format').value, $('reason').value);
+      });
+      $('cancel-plaintext').addEventListener('click', () => {
+        $('warning-section').hidden = true;
+      });
+
+      async function doExport(fmt, reason) {
+        $('export-btn').disabled = true;
+        try {
+          const vaultPw = $('vault-pw').value;
+          // 1. Laad vault
+          const listRes = await window.HorseSafeAPI.listVaults();
+          if (!listRes.ok || listRes.data.length === 0) {
+            throw new Error('Geen vault gevonden');
+          }
+          const meta = listRes.data[0];
+          const readRes = await window.HorseSafeAPI.readVault(meta.id);
+          if (!readRes.ok) throw new Error('Vault niet leesbaar');
+          const db = await window.HorseSafeCrypto.openDatabase(readRes.blob, vaultPw);
+          const entries = window.HorseSafeImportExport.extractEntries(db);
+
+          // 2. Audit-stamp eerst (zodat server het ziet ook bij latere browser-crash)
+          const stampRes = await fetch(window.HorseSafeAPI.base + `/vault/${meta.id}/audit-export`, {
+            method: 'POST', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ format: fmt, reason }),
+          });
+          if (!stampRes.ok) {
+            const data = await stampRes.json().catch(() => ({}));
+            throw new Error('Audit-fout: ' + (data?.detail?.error || stampRes.status));
+          }
+
+          // 3. Bouw + download
+          const ts = new Date().toISOString().slice(0, 10);
+          if (fmt === 'kdbx') {
+            const blob = await window.HorseSafeCrypto.saveDatabase(db);
+            window.HorseSafeImportExport.downloadBlob(blob, `horsesafe-${ts}.kdbx`, 'application/octet-stream');
+          } else if (fmt === 'csv') {
+            const csv = window.HorseSafeImportExport.buildCSV(entries);
+            window.HorseSafeImportExport.downloadBlob(csv, `horsesafe-${ts}.csv`, 'text/csv');
+          } else if (fmt === 'json') {
+            const json = window.HorseSafeImportExport.buildJSON(entries);
+            window.HorseSafeImportExport.downloadBlob(json, `horsesafe-${ts}.json`, 'application/json');
+          }
+          // Hide warning
+          $('warning-section').hidden = true;
+          alert('✅ Export voltooid. Bestand is gedownload.');
+        } catch (err) {
+          $('export-error').textContent = 'Fout: ' + err.message;
+          $('export-error').hidden = false;
+        } finally {
+          $('export-btn').disabled = false;
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

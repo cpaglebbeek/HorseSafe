@@ -145,6 +145,16 @@
   }
 
   $('f-apply').addEventListener('click', () => { auditOffset = 0; loadAudit(); });
+  $('f-export-csv').addEventListener('click', () => {
+    const event = $('f-event').value.trim();
+    const user = $('f-user').value.trim();
+    const params = new URLSearchParams();
+    if (event) params.set('event', event);
+    if (user) params.set('user', user);
+    const url = window.HorseSafeAPI.base + '/admin/audit/export?' + params.toString();
+    // Trigger download via navigatie (cookie wordt automatisch meegestuurd)
+    window.location.href = url;
+  });
   $('audit-prev').addEventListener('click', () => {
     auditOffset = Math.max(0, auditOffset - (parseInt($('f-limit').value, 10) || 50));
     loadAudit();

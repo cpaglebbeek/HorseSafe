@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import csv
+import io
+import time
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import Response
 
 from ..config import get_settings
 from ..db.connection import connect
@@ -150,3 +154,63 @@ async def audit(
             detail={"filters": {"user": user, "event": event, "limit": limit, "offset": offset}},
         )
         return rows
+
+
+@router.get("/audit/export")
+async def audit_export_csv(
+    request: Request,
+    user: str | None = None,
+    event: str | None = None,
+    from_ts: int | None = None,
+    to_ts: int | None = None,
+    limit: int = 10000,
+) -> Response:
+    """Stream audit-log als CSV. Max 10k rijen per export."""
+    payload = _require_admin(request)
+    settings = get_settings()
+    if limit > 10000:
+        limit = 10000
+    async with connect(settings.db_path) as conn:
+        rows = await admin_service.query_audit(
+            conn,
+            user_id=user,
+            event=event,
+            from_ts=from_ts,
+            to_ts=to_ts,
+            limit=limit,
+            offset=0,
+        )
+        await audit_service.log(
+            conn,
+            user_id=str(payload["sub"]),
+            event="admin_audit_csv_export",
+            ip=request.client.host if request.client else None,
+            detail={"filters": {"user": user, "event": event, "limit": limit}, "count": len(rows)},
+        )
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(
+        ["id", "ts", "iso_ts", "user_id", "ip", "user_agent", "event", "detail", "reason"]
+    )
+    for row in rows:
+        ts = int(row.get("ts") or 0)
+        iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(ts)) if ts else ""
+        writer.writerow(
+            [
+                row.get("id"),
+                ts,
+                iso,
+                row.get("user_id") or "",
+                row.get("ip") or "",
+                row.get("user_agent") or "",
+                row.get("event") or "",
+                row.get("detail") or "",
+                row.get("reason") or "",
+            ]
+        )
+    filename = f"audit-{time.strftime('%Y-%m-%d', time.gmtime())}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )

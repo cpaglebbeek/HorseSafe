@@ -21,6 +21,27 @@
 
     <main>
       <section class="card">
+        <h2>Account-wachtwoord wijzigen</h2>
+        <p class="muted">
+          Wijzigt het wachtwoord voor inloggen op HorseSafe. NIET het vault-wachtwoord —
+          dat blijft alleen in je hoofd / browser.
+        </p>
+        <form id="pw-change-form">
+          <label for="pw-old">Huidig wachtwoord</label>
+          <input type="password" id="pw-old" required autocomplete="current-password">
+          <label for="pw-new">Nieuw wachtwoord <span class="muted">(min 12 tekens)</span></label>
+          <input type="password" id="pw-new" required minlength="12" autocomplete="new-password">
+          <label for="pw-new2">Bevestig nieuw wachtwoord</label>
+          <input type="password" id="pw-new2" required minlength="12" autocomplete="new-password">
+          <div id="pw-error" class="error" hidden></div>
+          <div id="pw-success" class="success" hidden></div>
+          <div class="actions">
+            <button type="submit">Wachtwoord wijzigen</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
         <h2>Twee-factor authenticatie (TOTP)</h2>
         <p class="muted">
           Bescherm je account-laag met een 6-cijfer-code uit een Authenticator-app

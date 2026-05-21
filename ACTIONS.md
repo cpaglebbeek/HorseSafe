@@ -13,8 +13,8 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 - [x] ~~**Fase 2 — Frontend POC** — HTML+vanilla-JS met kdbxweb. Login + vault-unlock + 1 entry tonen. Geen UI-polish.~~ ✅ 2026-05-21 — kdbxweb+argon2 vendored, S1/S2/S6/S7 schermen LIVE, e2e playwright 2/2 groen, full roundtrip (registreer + login + vault-create in browser + entry + pw-toggle + lock + reopen) werkt
 - [x] ~~**Fase 3 — MFA integratie** — magic-link bridge naar iCt_Horse + TOTP setup-flow~~ ✅ 2026-05-21 — TOTP RFC 6238 + AES-GCM-encrypted-at-rest secret + Gmail SMTP magic-link + vault-MFA-gate; backend 25/25 pytest + frontend 3/3 playwright; qrcode-generator vendored; settings-page + mfa-challenge-page LIVE
 - [x] ~~**Fase 4 — Admin-pagina** — user-CRUD + storage-stats + audit-log-viewer + MFA-backup-codes + admin-rescue~~ ✅ 2026-05-21 — admin.html (S11) + backup-codes.html (S13) + 6 admin-endpoints + 3 auth-endpoints (/me, backup-codes/{generate,verify}) + bcrypt-hashed backup-codes (single-use) + DB-migrate runner + CLI promote-admin; backend 40/40 pytest + frontend 5/5 playwright
-- [ ] **Fase 5 — Import/export + KDBX-roundtrip-oracle** — KDBX3/4, Bitwarden JSON, KeePass-CSV, XLSX + KeePassXC-CLI oracle-test + Argon2id-re-enable evaluatie (volgende — v0.0.5-Shamir)
-- [ ] **Fase 5 — Import/export** — KDBX3/4, Bitwarden JSON, KeePass-CSV, XLSX. (planning)
+- [x] ~~**Fase 5 — Import/export + KDBX-roundtrip-oracle**~~ ✅ 2026-05-21 — KDBX3/4 + Bitwarden JSON + KeePass-CSV import/export (XLSX uitgesteld v0.0.7+) + admin-CSV-audit-export + account-pw-change + KeePassXC-CLI oracle in CI; backend 54/54 pytest + frontend 5/5 playwright; client-side parse (zero-knowledge intact); BUG-001 definitief deferred naar v1.0-Bernstein
+- [ ] **Fase 6 — Vault-sharing** — sharing tussen users met re-encryptie + asymmetrische key-pair per user (volgende — v0.0.6-Adleman)
 - [ ] **Fase 6 — Browser-extensie** (v0.2.0) — MV3, autocomplete, échte clipboard-wipe. (planning, optioneel)
 - [ ] **Fase 7 — Productie-deploy HC55** — nginx-snippet + systemd-unit + Let's Encrypt + SHARED_INFRASTRUCTURE.md update. (na fase 1-5 stabiel)
 

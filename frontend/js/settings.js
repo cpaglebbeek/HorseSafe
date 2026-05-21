@@ -145,6 +145,37 @@
 
   $('logout-btn').addEventListener('click', () => window.HorseSafeAuth.logout());
 
+  // Pw-change form (v0.0.5-Shamir)
+  const pwForm = $('pw-change-form');
+  if (pwForm) {
+    pwForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hide('pw-error'); hide('pw-success');
+      const oldPw = $('pw-old').value;
+      const newPw = $('pw-new').value;
+      const newPw2 = $('pw-new2').value;
+      if (newPw !== newPw2) { show('pw-error', 'Nieuwe wachtwoorden komen niet overeen.'); return; }
+      if (newPw.length < 12) { show('pw-error', 'Nieuw wachtwoord moet minimaal 12 tekens zijn.'); return; }
+      try {
+        const r = await fetch(window.HorseSafeAPI.base + '/auth/password', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ old_password: oldPw, new_password: newPw }),
+        });
+        if (r.ok) {
+          show('pw-success', 'Wachtwoord gewijzigd. Volgende login: gebruik nieuwe wachtwoord.');
+          pwForm.reset();
+        } else {
+          const data = await r.json().catch(() => ({}));
+          const err = data?.detail?.error || 'unknown';
+          show('pw-error', err === 'wrong_old_password' ? 'Huidig wachtwoord onjuist.' :
+            err === 'password_too_short' ? 'Nieuw wachtwoord te kort.' :
+            `Fout: ${err}`);
+        }
+      } catch (e) { show('pw-error', 'Netwerkfout: ' + e.message); }
+    });
+  }
+
   // Init
   probeTotpStatus();
 })();

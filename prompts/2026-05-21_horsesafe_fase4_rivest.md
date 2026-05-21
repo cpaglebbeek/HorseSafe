@@ -1,12 +1,12 @@
 ---
 date: 2026-05-21
 session: horsesafe_fase4_rivest
-status: open
-resume: "verder met HorseSafe Fase 5 — import/export KDBX/Bitwarden/CSV/XLSX + KeePassXC-CLI roundtrip-oracle-test + Argon2id-re-enable evaluatie (v0.0.5-Shamir)"
+status: done
+resume: ""
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 parent_master: Meta_iCt_Horse_Diensten
-linked_actions: [HS-FASE-5-IMPORT-EXPORT]
+linked_actions: []
 ---
 
 # Sessie 2026-05-21 — HorseSafe Fase 4 v0.0.4-Rivest: Admin-paneel LIVE

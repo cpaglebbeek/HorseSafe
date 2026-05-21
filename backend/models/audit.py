@@ -36,6 +36,8 @@ AuditEvent = Literal[
     "admin_user_send_magic_link",
     "backup_codes_generate",
     "backup_codes_consume",
+    "account_password_changed",
+    "admin_audit_csv_export",
     "input_rejected",
 ]
 

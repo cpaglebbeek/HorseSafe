@@ -158,3 +158,66 @@ async def delete_vault(vault_id: str, request: Request) -> Response:
             detail={"vault_id": vault_id},
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ─────────────── Import/Export audit-stamps (v0.0.5-Shamir) ───────────────
+# Server doet GEEN parsing — alle import/export is client-side.
+# Deze endpoints registreren alleen het event + reden (voor plaintext-export).
+
+
+_VALID_IMPORT_FORMATS = {"kdbx", "bitwarden", "csv", "xlsx"}
+_VALID_EXPORT_FORMATS = {"kdbx", "csv", "json", "xlsx"}
+
+
+@router.post("/{vault_id}/audit-import")
+async def audit_import(vault_id: str, body: dict[str, object], request: Request) -> dict[str, bool]:
+    user_id = _user(request)
+    settings = get_settings()
+    fmt = str(body.get("format", ""))
+    count = int(body.get("count", 0) or 0)
+    if fmt not in _VALID_IMPORT_FORMATS:
+        raise HTTPException(status_code=400, detail={"error": "invalid_format"})
+    async with connect(settings.db_path) as conn:
+        meta = await storage_service.get_vault_meta(conn, user_id, vault_id)
+        if not meta:
+            raise HTTPException(status_code=404, detail={"error": "not_found"})
+        await audit_service.log(
+            conn,
+            user_id=user_id,
+            event=f"import_{fmt}",  # type: ignore[arg-type]
+            ip=request.client.host if request.client else None,
+            detail={"vault_id": vault_id, "count": count},
+        )
+    return {"ok": True}
+
+
+@router.post("/{vault_id}/audit-export")
+async def audit_export(vault_id: str, body: dict[str, str], request: Request) -> dict[str, bool]:
+    user_id = _user(request)
+    settings = get_settings()
+    fmt = body.get("format", "")
+    reason = (body.get("reason") or "").strip()
+    if fmt not in _VALID_EXPORT_FORMATS:
+        raise HTTPException(status_code=400, detail={"error": "invalid_format"})
+    # Plaintext-formats vereisen reden (min 10 chars); KDBX is encrypted → reden niet vereist
+    if fmt in ("csv", "json", "xlsx") and len(reason) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "error": "reason_required",
+                "message": "Reden van min. 10 tekens vereist voor plaintext-export",
+            },
+        )
+    async with connect(settings.db_path) as conn:
+        meta = await storage_service.get_vault_meta(conn, user_id, vault_id)
+        if not meta:
+            raise HTTPException(status_code=404, detail={"error": "not_found"})
+        await audit_service.log(
+            conn,
+            user_id=user_id,
+            event=f"export_{fmt}",  # type: ignore[arg-type]
+            ip=request.client.host if request.client else None,
+            detail={"vault_id": vault_id},
+            reason=reason if reason else None,
+        )
+    return {"ok": True}

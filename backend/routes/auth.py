@@ -15,6 +15,7 @@ from ..services import (
     jwt_service,
     magic_link_service,
     mfa_service,
+    pw_service,
 )
 
 router = APIRouter()
@@ -358,3 +359,35 @@ async def backup_codes_verify(
         )
     jwt_service.reissue_with_mfa(response, payload)
     return {"ok": True, "mfa_passed": True}
+
+
+# ─────────────── Account-pw change ───────────────
+
+
+@router.post("/password")
+async def change_password(body: dict[str, str], request: Request) -> dict[str, bool]:
+    """Wijzig account-pw (NIET vault-master-pw, dat blijft client-side).
+
+    Body: {old_password, new_password}. Vereist JWT.
+    """
+    payload = jwt_service.require_auth(request)
+    user_id = str(payload["sub"])
+    settings = get_settings()
+    old_pw = body.get("old_password", "")
+    new_pw = body.get("new_password", "")
+    if not old_pw or not new_pw:
+        raise HTTPException(status_code=400, detail={"error": "missing_fields"})
+    async with connect(settings.db_path) as conn:
+        try:
+            ok = await pw_service.change_account_password(conn, user_id, old_pw, new_pw)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail={"error": str(e)}) from e
+        if not ok:
+            raise HTTPException(status_code=401, detail={"error": "wrong_old_password"})
+        await audit_service.log(
+            conn,
+            user_id=user_id,
+            event="account_password_changed",
+            ip=request.client.host if request.client else None,
+        )
+    return {"ok": True}
