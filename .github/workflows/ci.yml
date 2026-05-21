@@ -150,40 +150,40 @@ jobs:
           pip install -r requirements.txt
 
       - name: Roundtrip test
-        env:
-          HORSESAFE_JWT_SECRET: ci-test-secret-32bytes-replaced-in-prod-do-not-reuse
-          HORSESAFE_COOKIE_SECURE: "false"
-          HORSESAFE_RATE_LIMIT_ENABLED: "false"
-          HORSESAFE_DB_PATH: ./.oracle-db/horsesafe.db
-          HORSESAFE_VAULTS_DIR: ./.oracle-vaults
         run: |
-          # Genereer een test-KDBX4-blob via een Python-helper-script
+          # Sanity-check: keepassxc-cli kan KDBX4-vault aanmaken + entry toevoegen + listen.
+          # Bewijst dat de KDBX4-spec-implementatie van KeePassXC op CI-runner werkt.
+          # NB: keepassxc-cli add -p is een FLAG (password-prompt), niet een waarde.
+          # We gebruiken --generate (random pw) om dit te vermijden.
           python - <<'PYEOF'
-          import asyncio, os, subprocess, sys, uuid
-          # Voor oracle-test: gebruik kdbxweb-CLI variant zou ideaal zijn, maar
-          # we hebben geen Node-runner. Plaatsvervanger: genereer KDBX4 via
-          # keepassxc-cli zelf (sanity-check dat KeePassXC kan lezen wat hij maakt).
+          import os, subprocess, sys
           os.makedirs("/tmp/oracle", exist_ok=True)
-          # Maak KDBX4-vault met bekend wachtwoord
+          DB_PW = "OracleTestPw1234"
+
+          # 1. db-create (2x DB_PW voor confirm-prompt)
           subprocess.run(
               ["keepassxc-cli", "db-create", "-p", "/tmp/oracle/test.kdbx"],
-              input="OracleTestPw1234\nOracleTestPw1234\n",
+              input=f"{DB_PW}\n{DB_PW}\n",
               text=True, check=True,
           )
-          # Voeg entry toe
+          print("✓ KDBX4-vault aangemaakt")
+
+          # 2. Voeg entry toe met --generate (random pw) — vermijdt -p-flag-conflict
           subprocess.run(
-              ["keepassxc-cli", "add", "/tmp/oracle/test.kdbx", "TestEntry",
-               "-u", "alice", "-p", "EntrySecret"],
-              input="OracleTestPw1234\n", text=True, check=True,
+              ["keepassxc-cli", "add", "--generate", "-L", "16",
+               "-u", "alice", "/tmp/oracle/test.kdbx", "TestEntry"],
+              input=f"{DB_PW}\n", text=True, check=True,
           )
-          # List entries
+          print("✓ Entry toegevoegd met random pw")
+
+          # 3. List entries — verifieer TestEntry aanwezig
           result = subprocess.run(
               ["keepassxc-cli", "ls", "/tmp/oracle/test.kdbx"],
-              input="OracleTestPw1234\n", text=True, capture_output=True, check=True,
+              input=f"{DB_PW}\n", text=True, capture_output=True, check=True,
           )
-          print("keepassxc-cli ls output:", result.stdout)
+          print("ls-output:", result.stdout)
           if "TestEntry" not in result.stdout:
               print("ERROR: TestEntry niet gevonden in ls-output")
               sys.exit(1)
-          print("✅ KeePassXC-CLI roundtrip OK")
+          print("✅ KeePassXC-CLI roundtrip OK — KDBX4-spec werkt in CI")
           PYEOF
