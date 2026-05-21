@@ -12,6 +12,33 @@ Kleurcodes:
 
 ## Open bugs
 
+### HS-BUG-003 — CSP blokkeert inline scripts → "Account aanmaken" reageert niet
+
+**Kleur:** 🔴 Rood (frontend onbruikbaar in productie)
+**Status:** RESOLVED 2026-05-22
+**Versie ontdekt:** v0.0.7-Bellare (productie intern-test)
+**Versie opgelost:** v0.0.7-Bellare (zelfde dag — hotfix in commit 1931267)
+
+**Symptoom:** "Account aanmaken"-knop reageert niet. Geen form opent. Browser-console toont CSP-violation: `Refused to execute inline script because it violates the following Content Security Policy directive`.
+
+**RCA — drie niveaus:**
+- **Functioneel:** Alle UI-knoppen op 5 HTMLs reageren niet — frontend onbruikbaar
+- **Technisch:** Productie-CSP `script-src 'self' 'wasm-unsafe-eval'` (geen `'unsafe-inline'`). 5 HTMLs hadden inline `<script>`-blocks voor page-init / event-binding → geblokkeerd
+- **Architectonisch:** Lokaal dev (`python -m http.server`) stuurt geen CSP → inline-scripts werkten daar. Productie via nginx + backend-middleware enforce't strict. Playwright-e2e in CI gebruikt ook plain http.server → testdekking-gap
+
+**Fix:**
+- Extract inline `<script>` blocks naar 5 externe files:
+  - `js/page-index.js`, `js/page-login.js`, `js/page-shares.js`, `js/page-import.js`, `js/page-export.js`
+- HTMLs vervangen inline-blok door `<script src="js/page-X.js">`
+- Commit `1931267` + rsync naar HC55 (geen nginx-reload nodig)
+
+**Preventie:**
+- Toekomstige HTMLs: ALLE logica in externe files
+- CI-check toevoegen: grep voor `<script>` zonder `src=` attribuut in HTMLs
+- Playwright-e2e overstappen naar `devserver.py` (CSP-headers actief)
+
+---
+
 ### HS-BUG-002 — basic-auth popup op /HorseSafe (zonder trailing slash)
 
 **Kleur:** 🟡 Geel
