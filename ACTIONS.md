@@ -16,7 +16,8 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 - [x] ~~**Fase 5 — Import/export + KDBX-roundtrip-oracle**~~ ✅ 2026-05-21 — KDBX3/4 + Bitwarden JSON + KeePass-CSV import/export (XLSX uitgesteld v0.0.7+) + admin-CSV-audit-export + account-pw-change + KeePassXC-CLI oracle in CI; backend 54/54 pytest + frontend 5/5 playwright; client-side parse (zero-knowledge intact); BUG-001 definitief deferred naar v1.0-Bernstein
 - [x] ~~**Fase 6 — Vault-sharing**~~ ✅ 2026-05-21 — ECDH-P256 (WebCrypto native) + AES-GCM-wrapped private-key + per-entry share + inbox/decline/accept; backend 67/67 pytest + 4 nieuwe audit-events + DB-migratie 004; frontend shares.html + js/sharing.js + keypair-gen in settings + Deel-knop in vault; zero-knowledge intact (server kent alleen pubkeys + opaque ciphertexts)
 - [ ] **Browser-extensie** (v0.2.0+) — MV3, autocomplete, échte clipboard-wipe (uitgesteld, optioneel)
-- [ ] **Fase 7 — Productie-deploy HC55** — nginx-snippet + systemd-unit + Let's Encrypt + SHARED_INFRASTRUCTURE.md update (volgende — v0.0.7-Bellare)
+- [x] ~~**Fase 7 — Productie-deploy HC55**~~ ✅ 2026-05-22 — LIVE op https://horsecloud55.ddns.net/HorseSafe/ ; systemd + nginx-snippet + backup-cron actief; auth_basic off voor /HorseSafe/-paths (eigen JWT+MFA); live-smoke-test groen (health + register + login + vault + me + logout)
+- [ ] **v0.1.0-Massey** — public launch: icthorse.nl/HorseSafe/ subdomain + externe pen-test + open-source AGPL + Dashboard-tile + LinkedIn-aankondiging
 
 ## Niet-blokkerende vervolgvragen (WhatIf-uitloop)
 

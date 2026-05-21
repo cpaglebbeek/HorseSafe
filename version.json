@@ -1,6 +1,6 @@
 {
-  "version": "0.0.6",
-  "codename": "Adleman",
+  "version": "0.0.7",
+  "codename": "Bellare",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -14,33 +14,28 @@
     "Rogaway",
     "Bernstein"
   ],
-  "phase": "Phase 6 — Vault-sharing tussen users LIVE: ECDH P-256 (WebCrypto native) + AES-GCM-wrapped private-key + zero-knowledge intact",
-  "released": "2026-05-21",
+  "phase": "Phase 7 — Productie-deploy HorseCloud55 LIVE: https://horsecloud55.ddns.net/HorseSafe/ — systemd + nginx + backup-cron actief",
+  "released": "2026-05-22",
+  "live_url": "https://horsecloud55.ddns.net/HorseSafe/",
+  "next_url_planned": "https://icthorse.nl/HorseSafe/ (v0.1.0-Massey)",
+  "deploy_status": {
+    "server": "HorseCloud55 (Hetzner Helsinki)",
+    "port": 3997,
+    "install_path": "/opt/horsesafe/",
+    "service": "horsesafe.service (active, enabled)",
+    "nginx_path": "/HorseSafe/ + /HorseSafe/api/ (auth_basic off — eigen JWT+MFA)",
+    "backup": "/etc/cron.d/horsesafe-backup daily 03:00 → Hetzner Storagebox (vereist HORSESAFE_BACKUP_TARGET in .env)",
+    "tls": "Let's Encrypt wildcard (gedeeld met HC55-stack)",
+    "first_admin": "te-promoten via python -m backend.db.promote_admin <email>"
+  },
   "kdbx_format": 4,
-  "kdf_in_use": "AES-KDF (KDBX-spec-conform, KeePassXC-CLI oracle-verified). Argon2id-default deferred v1.0-Bernstein.",
-  "sharing": {
-    "asymmetric": "ECDH P-256 (WebCrypto native, geen externe lib)",
-    "symmetric": "AES-GCM-256 voor share-payload-encryptie + private-key-wrapping",
-    "kdf_for_wrap": "PBKDF2-SHA256 (100000 iterations) van vault-master-pw + user-id-salt",
-    "share_granularity": "Individuele entries, per-email"
-  },
-  "import_formats": ["KDBX3", "KDBX4", "Bitwarden JSON", "KeePass-CSV"],
-  "export_formats": ["KDBX4 (encrypted)", "JSON (Bitwarden-compat plaintext)", "CSV (KeePass-kolommen plaintext)"],
-  "mfa": {
-    "totp": "RFC 6238 SHA-1 30s 6-digits + ±1 window-tolerance",
-    "magic_link": "32-byte urlsafe token, 10 min, single-use via Gmail SMTP_SSL",
-    "secret_at_rest": "AES-GCM-encrypted met HORSESAFE_TOTP_ENCRYPTION_KEY",
-    "backup_codes": "10 codes XXXXX-XXXXX, bcrypt-hashed, single-use, show-once-flow"
-  },
-  "account_security": {
-    "pw_change": "POST /auth/password — vereist oude-pw-verificatie + nieuwe-pw min 12 chars",
-    "pw_reset_forgot": "Via magic-link (geen e-mail-link-met-embed-token wegens security)"
-  },
+  "kdf_in_use": "AES-KDF (KeePassXC-CLI-verified). Argon2id-default deferred v1.0-Bernstein.",
   "test_results": {
-    "backend_pytest": "67/67 ✅ (van 54, +13 sharing-tests)",
-    "frontend_e2e_playwright": "5/5 ✅ in 9.6s",
-    "kdbx_oracle_ci": "KeePassXC-CLI roundtrip in CI-job kdbx-oracle"
+    "backend_pytest": "67/67 ✅",
+    "frontend_e2e_playwright": "5/5 ✅",
+    "kdbx_oracle_ci": "✓ KeePassXC-CLI roundtrip groen",
+    "live_smoke_test": "✓ health + register + login + vault + me + logout (full roundtrip op LIVE-server)"
   },
   "schema_version": 4,
-  "next_version_planned": "0.0.7-Bellare (Phase 7 — productie-deploy HorseCloud55 + nginx + systemd + Let's Encrypt + smoke-tests)"
+  "next_version_planned": "0.1.0-Massey (public launch: icthorse.nl/HorseSafe/, externe pen-test, open-source-beslissing AGPL)"
 }

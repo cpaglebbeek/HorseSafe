@@ -3,7 +3,78 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- Fase 7: productie-deploy HorseCloud55 + nginx + systemd + Let's Encrypt (v0.0.7-Bellare)
+- v0.1.0-Massey: public launch op icthorse.nl/HorseSafe/ + externe pen-test + open-source-beslissing AGPL
+
+## [0.0.7-Bellare] — 2026-05-22
+
+### Added — Productie-deploy HorseCloud55 LIVE
+
+**LIVE op:** `https://horsecloud55.ddns.net/HorseSafe/`
+
+**Server-state op HC55:**
+- `/opt/horsesafe/` met `repo/`, `venv/`, `db/`, `vaults/`, `logs/`, `tmp/`, `web/`
+- System-user `horsesafe` (no-login, no-shell)
+- systemd-unit `/etc/systemd/system/horsesafe.service` → **active, enabled**
+- nginx-snippet `/etc/nginx/snippets/horsesafe.conf` met `auth_basic off` voor beide HorseSafe-locations (eigen JWT+MFA)
+- nginx-include in horsecloud-server-block (port 443)
+- `/etc/cron.d/horsesafe-backup` — nightly 03:00 rsync naar Storagebox (skip indien target niet gezet)
+- `.env` met random JWT_SECRET + TOTP_ENCRYPTION_KEY (32 bytes hex elk) + bcrypt-rounds=12
+
+**Repo-artefacten:**
+- `scripts/deploy_hc55.sh` — idempotente bootstrap
+- `scripts/horsesafe.service` — systemd-unit met full hardening
+- `scripts/nginx_snippet.conf` — appendable include met `auth_basic off`
+- `scripts/backup_to_storagebox.sh` — nightly rsync + sqlite-snapshot-tar + retentie
+- `scripts/post_deploy_smoke.sh` — curl-only roundtrip-test
+- `docs/DEPLOY_HC55_LIVE.md` — runbook
+
+**Live-smoke-test (uitgevoerd, groen):**
+- ✓ GET /health → {"status":"ok","version":"0.0.6-Adleman","db":"ok","vaults_dir":"ok"}
+- ✓ POST /auth/register → user_id
+- ✓ POST /auth/login → JWT-cookie + mfa_required=false
+- ✓ GET /vault → []
+- ✓ GET /auth/me → has_keypair=false
+- ✓ POST /auth/logout → ok
+
+**Updates:**
+- `Meta_Master/SHARED_INFRASTRUCTURE.md` — poort 3997 "gereserveerd" → LIVE
+- `version.json` + `backend/config.py` `app_version` → 0.0.7-Bellare
+
+### Decided
+
+- **URL**: `horsecloud55.ddns.net/HorseSafe/` (intern, achter LE-TLS); `icthorse.nl/HorseSafe/` v0.1.0
+- **`auth_basic off`** voor /HorseSafe/* (eigen JWT+MFA)
+- **Deploy-strategie**: optie (c) uit WhatIf — AI provisioneert + dry-run; gebruiker approve't laatste 2 stappen
+- **Eerste admin**: niet automatisch — handmatig promote na eerste-user-registratie
+- **Backup-target**: nog niet geconfigureerd in .env (HORSESAFE_BACKUP_TARGET leeg)
+
+### Operationele stappen tijdens deploy
+
+1. ✅ Pre-check: Python 3.12, port 3997 vrij, geen pre-existing /opt/horsesafe
+2. ✅ Bootstrap als root op HC55
+3. ✅ Git clone via PAT in `/root/.git-credentials`
+4. ✅ Dry-run validatie: nginx -t OK, systemd-analyze OK
+5. ⚠️ Snippet-bug ontdekt + gefixed: `auth_basic off` toegevoegd voor beide locations (eerste run gaf 401 wegens basic-auth)
+6. ✅ Include in horsecloud-server-block (1 regel toegevoegd na server_name)
+7. ✅ nginx -t && systemctl reload nginx
+8. ✅ systemctl enable --now horsesafe → active (running)
+9. ✅ Smoke-test live: full register/login/vault/me/logout roundtrip
+10. ✅ Cleanup smoke-account
+
+### Not Yet (v0.1.0-Massey)
+
+- icthorse.nl/HorseSafe/ (Hostinger DNS)
+- Externe pen-test
+- Open-source-beslissing (AGPL-3.0 voorgesteld)
+- Dashboard-tile health-monitoring
+- Public launch + LinkedIn-aankondiging
+
+### Niet kritiek (v1.0-Bernstein of later)
+
+- HORSESAFE_BACKUP_TARGET configureren
+- HORSESAFE_GMAIL_USER/PASSWORD voor magic-link
+- Eerste admin promoveren bij echte first-user
+- Argon2id KDF re-evaluatie
 
 ## [0.0.6-Adleman] — 2026-05-21
 

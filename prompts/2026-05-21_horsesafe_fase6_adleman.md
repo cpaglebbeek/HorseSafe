@@ -1,12 +1,12 @@
 ---
 date: 2026-05-21
 session: horsesafe_fase6_adleman
-status: open
-resume: "verder met HorseSafe Fase 7 — productie-deploy HorseCloud55 + nginx + systemd + Let's Encrypt + smoke-tests (v0.0.7-Bellare)"
+status: done
+resume: ""
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 parent_master: Meta_iCt_Horse_Diensten
-linked_actions: [HS-FASE-7-DEPLOY]
+linked_actions: []
 ---
 
 # Sessie 2026-05-21 — HorseSafe Fase 6 v0.0.6-Adleman: Vault-sharing LIVE
