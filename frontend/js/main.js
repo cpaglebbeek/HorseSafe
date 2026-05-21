@@ -11,8 +11,8 @@
     await UI.unlockOrCreate();
   });
 
-  $('logout-from-unlock').addEventListener('click', () => window.HorseSafeAuth?.logout?.());
-  $('logout-from-vault').addEventListener('click', () => window.HorseSafeAuth?.logout?.());
+  $('logout-from-unlock').addEventListener('click', () => window.HorseSafeAuth.logout());
+  $('logout-from-vault').addEventListener('click', () => window.HorseSafeAuth.logout());
 
   $('lock-vault').addEventListener('click', () => UI.lockVault());
   $('add-entry').addEventListener('click', () => {
