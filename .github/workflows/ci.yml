@@ -54,7 +54,7 @@ jobs:
     name: Backend (Python)
     runs-on: ubuntu-latest
     # Vanaf Fase 1 (v0.0.1-Diffie) wordt deze job actief — vereist backend/requirements.txt + backend/app.py
-    if: ${{ hashFiles('backend/requirements.txt') != '' }}
+    if: hashFiles('backend/requirements.txt') != ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -82,7 +82,7 @@ jobs:
     name: Frontend (ES2022)
     runs-on: ubuntu-latest
     # Vanaf Fase 2 (v0.0.2-Hellman) — vereist frontend/index.html + frontend/js/
-    if: ${{ hashFiles('frontend/index.html') != '' }}
+    if: hashFiles('frontend/index.html') != ''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -106,7 +106,7 @@ jobs:
     runs-on: ubuntu-latest
     # Bewijst dat kdbxweb-write + KeePassXC-CLI-read elkaar verstaan (CLAUDE.md regel 7)
     # Vanaf Fase 5 (v0.0.5-Shamir) wanneer import/export bestaat
-    if: ${{ hashFiles('backend/tests/fixtures/test_vault.kdbx') != '' }}
+    if: hashFiles('backend/tests/fixtures/test_vault.kdbx') != ''
     steps:
       - uses: actions/checkout@v4
       - name: Install KeePassXC CLI
