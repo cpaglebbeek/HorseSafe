@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — Inloggen</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">Inloggen</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Account-login</h2>
+        <p class="muted">
+          Dit is je <strong>account-wachtwoord</strong> (toegang tot HorseSafe-server).
+          Je <strong>vault-wachtwoord</strong> komt na het inloggen — dat blijft in je browser.
+        </p>
+
+        <form id="login-form">
+          <label for="login-email">E-mailadres</label>
+          <input type="email" id="login-email" required autocomplete="email">
+
+          <label for="login-pw">Account-wachtwoord</label>
+          <input type="password" id="login-pw" required autocomplete="current-password">
+
+          <div id="login-error" class="error" hidden></div>
+
+          <div class="actions">
+            <button type="submit" id="login-submit">Inloggen</button>
+            <a href="index.html"><button type="button" class="secondary">Terug</button></a>
+          </div>
+        </form>
+      </section>
+
+      <p class="muted">
+        Nog geen account? <a href="index.html">Account aanmaken</a>.
+      </p>
+    </main>
+
+    <footer>
+      HorseSafe v0.0.2-Hellman — iCt Horse · KvK 96787112
+    </footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await HorseSafeAuth.handleLogin();
+    });
+  </script>
+</body>
+</html>

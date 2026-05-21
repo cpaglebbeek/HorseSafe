@@ -27,6 +27,14 @@ db/*.db-wal
 db/*.db-shm
 logs/
 
+# Dev-only runtime locations (lokale uvicorn-run met overridden paths)
+backend/.dev-db/
+backend/.dev-vaults/
+backend/.smoke-db/
+backend/.smoke-vaults/
+backend/.ci-db/
+backend/.ci-vaults/
+
 # IDE
 .vscode/
 .idea/

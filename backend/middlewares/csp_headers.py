@@ -36,4 +36,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "no-referrer"
+        # COOP/COEP — vereist door sommige browsers voor crossOriginIsolated state
+        # (nodig voor SharedArrayBuffer in zware WASM-kdf-implementaties)
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
         return response

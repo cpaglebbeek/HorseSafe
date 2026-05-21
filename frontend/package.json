@@ -1,0 +1,14 @@
+{
+  "name": "horsesafe-frontend-tests",
+  "version": "0.0.2",
+  "private": true,
+  "description": "HorseSafe frontend dev-tests (e2e playwright). Productie-frontend is vanilla ES2022 — geen build-step. Deze package.json is alleen voor lokale tests + CI.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "serve": "python3 -m http.server 8000"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}

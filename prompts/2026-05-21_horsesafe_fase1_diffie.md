@@ -1,12 +1,12 @@
 ---
 date: 2026-05-21
 session: horsesafe_fase1_diffie
-status: open
-resume: "verder met HorseSafe Fase 2 — frontend kdbxweb POC (v0.0.2-Hellman): vanilla-JS index/login/vault.html, kdbxweb-ESM, decrypteer-in-browser, 1 entry tonen + clipboard-copy met 10s wipe"
+status: done
+resume: ""
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 parent_master: Meta_iCt_Horse_Diensten
-linked_actions: [HS-FASE-2-FRONTEND]
+linked_actions: []
 ---
 
 # Sessie 2026-05-21 — HorseSafe Fase 1 v0.0.1-Diffie: backend FastAPI-skeleton LIVE

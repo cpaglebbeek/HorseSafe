@@ -10,8 +10,8 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 - [ ] **Tarball consume + extract** — `/bugcheck consume 103502_keepassxc-2.7.12-src.tar.xz_ecc9c5` → kopie in `specs/keepassxc-source/` als referentie (LEZEN-only, geen vendoring) (wacht op akkoord)
 - [ ] **/sanitycheck draaien** op skeleton (newp-fase N+1, verplicht)
 - [x] ~~**Fase 1 — Backend skeleton** — FastAPI-app met /auth/register, /auth/login, /vault, /vault/{id} GET+PUT (geen MFA nog, alleen auth-laag 1). Doel: lokaal draaien met `uvicorn`. Geen deploy.~~ ✅ 2026-05-21 — 15/15 tests, 96% coverage, smoke-test ok
-- [ ] **Fase 2 — Frontend POC** — HTML+vanilla-JS met kdbxweb. Login + vault-unlock + 1 entry tonen. Geen UI-polish. (volgende — v0.0.2-Hellman)
-- [ ] **Fase 3 — MFA integratie** — magic-link bridge naar iCt_Horse + TOTP setup-flow. (planning)
+- [x] ~~**Fase 2 — Frontend POC** — HTML+vanilla-JS met kdbxweb. Login + vault-unlock + 1 entry tonen. Geen UI-polish.~~ ✅ 2026-05-21 — kdbxweb+argon2 vendored, S1/S2/S6/S7 schermen LIVE, e2e playwright 2/2 groen, full roundtrip (registreer + login + vault-create in browser + entry + pw-toggle + lock + reopen) werkt
+- [ ] **Fase 3 — MFA integratie** — magic-link bridge naar iCt_Horse + TOTP setup-flow. Tevens **Argon2id-KDF activeren** voor nieuwe vaults (na browser-cross-test op echte Chrome/Firefox/Safari). (volgende — v0.0.3-Merkle)
 - [ ] **Fase 4 — Admin-pagina** — user-CRUD + stats. (planning)
 - [ ] **Fase 5 — Import/export** — KDBX3/4, Bitwarden JSON, KeePass-CSV, XLSX. (planning)
 - [ ] **Fase 6 — Browser-extensie** (v0.2.0) — MV3, autocomplete, échte clipboard-wipe. (planning, optioneel)

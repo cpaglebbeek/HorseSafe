@@ -41,7 +41,8 @@ class Settings(BaseSettings):
     argon2_memory_kib: int = 65536  # 64 MiB
     argon2_parallelism: int = 4
 
-    cors_origin: str = "*"
+    cors_origins: str = ""  # Comma-separated; leeg = geen CORS (production-default)
+    rate_limit_enabled: bool = True
     log_level: str = "INFO"
 
 

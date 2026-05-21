@@ -1,6 +1,6 @@
 {
-  "version": "0.0.1",
-  "codename": "Diffie",
+  "version": "0.0.2",
+  "codename": "Hellman",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -12,34 +12,12 @@
     "Adleman",
     "Bellare",
     "Rogaway",
-    "Bernstein",
-    "Kerckhoffs (gebruikt door VeiligDelen v0.1.x)",
-    "Lampson (gebruikt door iCtHorseSupport v0.0.1)"
+    "Bernstein"
   ],
-  "phase": "Phase 1 — backend FastAPI-skeleton LIVE (15/15 tests groen, 96% coverage)",
+  "phase": "Phase 2 — frontend kdbxweb POC LIVE (vendored kdbxweb + argon2-browser, 2 e2e tests groen)",
   "released": "2026-05-21",
   "kdbx_format": 4,
-  "kdf_default": {
-    "algorithm": "argon2id",
-    "iterations": 12,
-    "memory_kib": 131072,
-    "parallelism": 2
-  },
-  "phase1_endpoints": [
-    "GET /health",
-    "POST /auth/register",
-    "POST /auth/login",
-    "POST /auth/logout",
-    "GET /vault",
-    "POST /vault",
-    "GET /vault/{id}",
-    "PUT /vault/{id} (If-Match)",
-    "DELETE /vault/{id}"
-  ],
-  "phase1_test_results": {
-    "tests": 15,
-    "passed": 15,
-    "coverage_pct": 96
-  },
-  "next_version_planned": "0.0.2-Hellman (Phase 2 frontend POC met kdbxweb)"
+  "kdf_in_use_v0_0_2": "AES-KDF (KDBX-spec-conform, snel, opent in KeePassXC-desktop)",
+  "kdf_default_kdbxweb": "Argon2d (= upstream default; bridge naar argon2-browser staat klaar, activeert in v0.0.3+)",
+  "next_version_planned": "0.0.3-Merkle (Phase 3 MFA-integratie + Argon2id-KDF voor nieuwe vaults)"
 }

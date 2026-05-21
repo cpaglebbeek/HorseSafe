@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — Jouw kluis. Niet de onze.</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">Jouw kluis. Niet de onze.</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Zero-knowledge wachtwoord-vault</h2>
+        <p>
+          HorseSafe slaat je wachtwoorden veilig op met een KDBX4-versleutelde kluis. Het
+          master-wachtwoord en de keyfile verlaten <strong>nooit</strong> je browser — de
+          server ziet enkel ciphertext. Bij verlies van je master-wachtwoord is je data
+          permanent weg.
+        </p>
+        <p class="muted">
+          Compatibel met KeePassXC desktop voor disaster-recovery. Open-source-overweging
+          vanaf v0.1.0. Hier is de POC — v0.0.2-Hellman.
+        </p>
+        <div class="actions">
+          <a href="login.html"><button>Inloggen</button></a>
+          <button id="show-register" class="secondary">Account aanmaken</button>
+        </div>
+      </section>
+
+      <section class="card" id="register-card" hidden>
+        <h2>Account aanmaken</h2>
+        <form id="register-form">
+          <label for="reg-email">E-mailadres</label>
+          <input type="email" id="reg-email" required autocomplete="email">
+
+          <label for="reg-pw">Wachtwoord <span class="muted">(min. 12 tekens)</span></label>
+          <input type="password" id="reg-pw" required minlength="12" autocomplete="new-password">
+
+          <div class="checkbox-row">
+            <input type="checkbox" id="reg-ack" required>
+            <label for="reg-ack">
+              Ik begrijp dat als ik mijn vault-wachtwoord verlies, mijn data
+              <strong>permanent verloren is</strong>. HorseSafe kan dit niet herstellen
+              (zero-knowledge architectuur).
+            </label>
+          </div>
+
+          <div id="register-error" class="error" hidden></div>
+          <div id="register-success" class="success" hidden></div>
+
+          <div class="actions">
+            <button type="submit" id="register-submit">Account aanmaken</button>
+            <button type="button" class="secondary" id="register-cancel">Annuleren</button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer>
+      HorseSafe v0.0.2-Hellman — iCt Horse · KvK 96787112
+    </footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    document.getElementById('show-register').addEventListener('click', () => {
+      document.getElementById('register-card').hidden = false;
+      document.getElementById('reg-email').focus();
+    });
+    document.getElementById('register-cancel').addEventListener('click', () => {
+      document.getElementById('register-card').hidden = true;
+    });
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      await HorseSafeAuth.handleRegister();
+    });
+  </script>
+</body>
+</html>

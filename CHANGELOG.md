@@ -3,7 +3,63 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- Fase 2: frontend kdbxweb POC
+- Fase 3: MFA-integratie (TOTP + magic-link) + Argon2id-KDF voor nieuwe vaults
+
+## [0.0.2-Hellman] — 2026-05-21
+
+### Added — Frontend POC LIVE (vanilla ES2022 + vendored libs)
+
+**Frontend:**
+- `frontend/index.html` (S1 landing + inline register-form met ack-checkbox)
+- `frontend/login.html` (S2 account-login)
+- `frontend/vault.html` (S6 unlock/create + S7 entries-CRUD single-page)
+- `frontend/assets/horsesafe.css` — dark-theme uit DESIGN_TOKENS.md (~200 regels, geen framework)
+- `frontend/assets/horsesafe.svg` — placeholder-logo
+- `frontend/js/api.js` — fetch-wrappers naar backend met `credentials: 'include'`
+- `frontend/js/auth.js` — register + login UI met error-mapping (Nederlands)
+- `frontend/js/crypto.js` — kdbxweb-wrapper + argon2-bridge + best-effort 10s clipboard-wipe + password-generator
+- `frontend/js/vault-ui.js` — state-management + entries-table + detail-paneel + entry-edit
+- `frontend/js/main.js` — event-wiring vault.html
+
+**Vendored (geen npm in productie):**
+- `frontend/vendor/kdbxweb/kdbxweb.min.js` — 2.1.1 MIT (135 KB UMD)
+- `frontend/vendor/argon2/argon2-bundled.min.js` + `argon2.wasm` — 1.18.0 MIT (45+25 KB)
+- `frontend/vendor/README.md` met update-procedure
+
+**Backend updates:**
+- `CORSMiddleware` toegevoegd (env-var driven, leeg = uit voor productie)
+- `SecurityHeadersMiddleware` uitgebreid met COOP+COEP voor crossOriginIsolated
+- `RateLimitMiddleware` nu opt-out via `HORSESAFE_RATE_LIMIT_ENABLED=false` (dev/test)
+- Middleware-order: CORS outermost (zodat 429/423-responses ook ACAO-header krijgen)
+
+**Tests:**
+- `frontend/package.json` + `playwright.config.ts` + `tests/smoke.spec.ts`
+- E2E: registreer + login + vault aanmaken (in browser!) + entry toevoegen + detail-pane + pw-toggle + lock + reopen-roundtrip + verkeerd-wachtwoord
+- 2/2 tests groen in 4.1s (Chromium headless)
+
+**Documentatie:**
+- `docs/screens/S01_landing.md` + `S02_login.md` + `S06_unlock.md` + `S07_content.md` (gedetailleerd per scherm)
+- `frontend/README.md` uitgebreid van placeholder naar live run-instructies + e2e how-to
+
+### Decided
+
+- **KDF in v0.0.2 = AES-KDF** (`kdbxweb.Consts.KdfId.Aes`) voor nieuwe vaults. Reden: argon2-browser-WASM is in headless Chromium niet stabiel (hangt op eerste hash-call). AES-KDF is KDBX-spec-conform en opent in KeePassXC-desktop — disaster-recovery garantie blijft intact. Argon2id-bridge staat klaar voor v0.0.3+.
+- **Hostname dev:** frontend en backend beide via `localhost` (niet 127.0.0.1) voor cross-origin-cookie-werking.
+- **CORS-config** alleen actief met expliciete `HORSESAFE_CORS_ORIGINS` env-var. Productie via nginx zelfde-origin.
+
+### Not Yet
+
+- MFA (TOTP + magic-link) → v0.0.3-Merkle
+- Admin-pagina → v0.0.4-Rivest
+- Import/export → v0.0.5-Shamir
+- Argon2id-KDF voor nieuwe vaults → v0.0.3+ (na browser-cross-test in echte Chrome/Firefox/Safari)
+- Browser-extensie + échte clipboard-wipe → v0.2.0-Schneier
+
+### Notes
+
+- Lokaal getest: backend Python 3.14 + frontend Chromium headless via playwright
+- Backend tests 15/15 ✅ + ruff ✅ + black ✅ na alle backend-wijzigingen
+- E2E smoke 2/2 ✅ in 4.1s
 
 ## [0.0.1-Diffie] — 2026-05-21
 

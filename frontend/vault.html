@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — Mijn vault</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">Mijn vault</span>
+    </header>
+
+    <main>
+      <!-- S6: Vault-unlock OF aanmaak -->
+      <section class="card" id="unlock-section">
+        <h2 id="unlock-title">Vault openen</h2>
+        <p class="muted" id="unlock-subtitle">
+          Voer je <strong>vault-wachtwoord</strong> in. Dit verlaat je browser niet.
+        </p>
+
+        <form id="unlock-form">
+          <label for="vault-pw">Vault-wachtwoord</label>
+          <input type="password" id="vault-pw" required minlength="6" autocomplete="off">
+
+          <div id="unlock-error" class="error" hidden></div>
+          <div id="unlock-status" class="muted" hidden></div>
+
+          <div class="actions">
+            <button type="submit" id="unlock-submit">Openen</button>
+            <button type="button" id="logout-from-unlock" class="secondary">Uitloggen</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- S7: Vault content (na unlock) -->
+      <section id="vault-section" hidden>
+        <div class="actions" style="justify-content: space-between; align-items: center;">
+          <div>
+            <strong id="vault-name">default</strong>
+            <span class="muted" id="vault-stats"></span>
+          </div>
+          <div>
+            <button id="add-entry">+ Nieuwe entry</button>
+            <button id="lock-vault" class="secondary">Vergrendel</button>
+            <button id="logout-from-vault" class="secondary">Uitloggen</button>
+          </div>
+        </div>
+
+        <div class="layout-split">
+          <div class="card">
+            <h2 style="font-size: 1rem;">Entries (<span id="entry-count">0</span>)</h2>
+            <table id="entries-table">
+              <thead>
+                <tr><th>Titel</th><th>Gebruikersnaam</th><th>URL</th></tr>
+              </thead>
+              <tbody id="entries-body">
+                <tr><td colspan="3" class="muted">Geen entries — klik "+ Nieuwe entry"</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="card" id="detail-pane" hidden>
+            <h2 style="font-size: 1rem;">Details</h2>
+            <dl class="detail-grid">
+              <dt>Titel</dt>          <dd id="d-title"></dd>
+              <dt>Gebruikersnaam</dt> <dd id="d-username"></dd>
+              <dt>Wachtwoord</dt>     <dd class="pw-cell">
+                                       <span id="d-pw-display" class="pw-hidden">••••••••••••</span>
+                                       <button id="d-pw-toggle" class="secondary" style="margin-left: 8px; padding: 2px 8px;">👁</button>
+                                     </dd>
+              <dt>URL</dt>            <dd><a id="d-url" target="_blank" rel="noopener noreferrer"></a></dd>
+              <dt>Notities</dt>       <dd id="d-notes"></dd>
+            </dl>
+
+            <div class="actions">
+              <button id="d-copy-pw">📋 Kopieer wachtwoord<span class="copy-progress" hidden><span class="copy-progress-bar"></span></span></button>
+              <button id="d-delete" class="danger">Verwijder</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entry-edit modal -->
+        <section class="card" id="edit-section" hidden>
+          <h2>Nieuwe entry</h2>
+          <form id="edit-form">
+            <label for="e-title">Titel</label>
+            <input type="text" id="e-title" required>
+
+            <label for="e-username">Gebruikersnaam</label>
+            <input type="text" id="e-username">
+
+            <label for="e-pw">Wachtwoord</label>
+            <input type="text" id="e-pw">
+
+            <label for="e-url">URL</label>
+            <input type="text" id="e-url" placeholder="https://...">
+
+            <label for="e-notes">Notities</label>
+            <textarea id="e-notes" rows="3"></textarea>
+
+            <div class="actions">
+              <button type="submit">Opslaan</button>
+              <button type="button" id="e-cancel" class="secondary">Annuleren</button>
+              <button type="button" id="e-genpw" class="secondary">🎲 Genereer 20-char wachtwoord</button>
+            </div>
+          </form>
+        </section>
+      </section>
+
+      <p class="muted" id="global-error" hidden></p>
+    </main>
+
+    <footer>
+      HorseSafe v0.0.2-Hellman — Zero-knowledge: server ziet alleen ciphertext
+    </footer>
+  </div>
+
+  <script src="vendor/argon2/argon2-bundled.min.js"></script>
+  <script src="vendor/kdbxweb/kdbxweb.min.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/crypto.js"></script>
+  <script src="js/vault-ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

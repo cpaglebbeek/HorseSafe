@@ -12,7 +12,27 @@ Kleurcodes:
 
 ## Open bugs
 
-_Geen open bugs — repo is skeleton-only._
+### HS-BUG-001 — argon2-browser WASM hangt in headless Chromium
+
+**Kleur:** 🟡 Geel
+**Status:** open (gemitigeerd)
+**Versie ontdekt:** v0.0.2-Hellman (2026-05-21)
+**Versie target-fix:** v0.0.3-Merkle
+
+**Symptoom:** `kdbxweb.Kdbx.create()` met default-Argon2d-KDF hangt op `db.save()` in headless Chromium via Playwright. Geen fout, geen timeout in browser — gewoon nooit klaar. `argon2-bundled.min.js` + `argon2.wasm` correct geladen, `window.argon2` en `window.kdbxweb` beide aanwezig. Hash-call resolveert nooit.
+
+**RCA — drie niveaus:**
+- **Functioneel:** Vault-creation in browser blokkeert voor onbepaalde tijd. Gebruiker ziet "spinner forever" zonder error.
+- **Technisch:** `argon2-bundled.min.js` initialiseert WASM-binary via emscripten-loader. In headless Chromium met `python -m http.server` als origin: ofwel MIME-type-check op `argon2.wasm` mismatcht (server stuurt `application/octet-stream` ipv `application/wasm`), ofwel crossOriginIsolated-eis (geen COOP/COEP op static-server) blokkeert SharedArrayBuffer-pad. argon2-browser hangt zonder errorbericht.
+- **Architectonisch:** Frontend-static-serve-stack heeft geen COOP+COEP-headers in dev. Productie-nginx kan dit wel (SecurityHeadersMiddleware in backend doet dit voor /api responses, niet voor static frontend).
+
+**Mitigatie v0.0.2:** Nieuwe vaults gebruiken **AES-KDF** (`db.header.setKdf(KdfId.Aes)` na `Kdbx.create()`). KDBX-spec-conform, snel, geen externe WASM-deps, opent in KeePassXC-desktop. Argon2-bridge blijft staan in crypto.js voor toekomstige Argon2-vault-imports (Fase 5).
+
+**Fix v0.0.3 (target):**
+- Test argon2-browser in echte Chrome/Firefox/Safari (niet headless) — werkt het daar wel?
+- Custom dev-server-script die COOP+COEP + correcte WASM MIME-type stuurt
+- Of: vervang argon2-browser door alternatief WASM-package (bv. `hash-wasm`)
+- Of: houd Argon2id strikt server-side voor account-pw + houd AES-KDF voor vault-laag (server kent vault-blob niet, dus geen privacy-issue)
 
 ## Gepland te traceren (preventief)
 
