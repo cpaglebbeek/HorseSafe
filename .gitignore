@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+.eggs/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets / runtime state
+.env
+.env.local
+*.kdbx
+*.key
+secrets/
+db/*.db
+db/*.db-journal
+db/*.db-wal
+db/*.db-shm
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build
+dist/
+build/
+*.tar.gz
+*.tar.xz
+
+# Specs — keepassxc source (vendored read-only reference, niet committen)
+specs/keepassxc-source/
+
+# Frontend (toekomstig, geen build-step actief)
+node_modules/
+
+# Test artifacts
+playwright-report/
+test-results/

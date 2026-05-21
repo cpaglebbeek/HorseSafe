@@ -1,0 +1,28 @@
+{
+  "version": "0.0.0",
+  "codename": "Rijndael",
+  "codename_theme": "Cryptografen",
+  "codename_theme_examples": [
+    "Rijndael (Daemen+Rijmen — AES)",
+    "Diffie",
+    "Hellman",
+    "Rivest",
+    "Shamir",
+    "Adleman",
+    "Bellare",
+    "Rogaway",
+    "Bernstein",
+    "Kerckhoffs (gebruikt door VeiligDelen v0.1.x)",
+    "Lampson (gebruikt door iCtHorseSupport v0.0.1)"
+  ],
+  "phase": "Phase 0 — repo-skeleton + ontwerp-documenten",
+  "released": "2026-05-21",
+  "kdbx_format": 4,
+  "kdf_default": {
+    "algorithm": "argon2id",
+    "iterations": 12,
+    "memory_kib": 131072,
+    "parallelism": 2
+  },
+  "next_version_planned": "0.0.1-Diffie (Phase 1 backend-skeleton + FastAPI mac-local-run)"
+}
