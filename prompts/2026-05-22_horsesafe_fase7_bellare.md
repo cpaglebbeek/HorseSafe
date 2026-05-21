@@ -1,8 +1,8 @@
 ---
 date: 2026-05-22
 session: horsesafe_fase7_bellare
-status: open
-resume: "verder met HorseSafe v0.1.0-Massey — public launch: icthorse.nl/HorseSafe/ subdomain + externe pen-test + open-source-beslissing AGPL-3.0 + Dashboard-tile + LinkedIn-aankondiging"
+status: pending
+resume: "verder met HorseSafe v0.1.0-Massey public launch (PARKED 2026-05-22 — eerst intern testen op horsecloud55.ddns.net/HorseSafe/ vóór public-go): subdomain + AGPL + pen-test + Dashboard-tile + LinkedIn + Storagebox + magic-link"
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 parent_master: Meta_iCt_Horse_Diensten

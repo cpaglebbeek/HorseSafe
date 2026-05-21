@@ -70,18 +70,6 @@
 
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
-  <script>
-    document.getElementById('show-register').addEventListener('click', () => {
-      document.getElementById('register-card').hidden = false;
-      document.getElementById('reg-email').focus();
-    });
-    document.getElementById('register-cancel').addEventListener('click', () => {
-      document.getElementById('register-card').hidden = true;
-    });
-    document.getElementById('register-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      await HorseSafeAuth.handleRegister();
-    });
-  </script>
+  <script src="js/page-index.js"></script>
 </body>
 </html>
