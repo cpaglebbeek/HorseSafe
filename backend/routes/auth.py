@@ -286,7 +286,7 @@ async def me(request: Request) -> MeResponse:
     settings = get_settings()
     async with connect(settings.db_path) as conn:
         cursor = await conn.execute(
-            "SELECT email, is_admin, last_login_at FROM users WHERE id = ?",
+            "SELECT email, is_admin, last_login_at, pubkey FROM users WHERE id = ?",
             (user_id,),
         )
         row = await cursor.fetchone()
@@ -300,6 +300,7 @@ async def me(request: Request) -> MeResponse:
         is_admin=bool(row["is_admin"]),
         has_totp=has_totp,
         backup_codes_remaining=backup_remaining,
+        has_keypair=bool(row["pubkey"]),
         mfa_pass=bool(payload.get("mfa", False)),
         last_login_at=int(row["last_login_at"]) if row["last_login_at"] else None,
     )

@@ -3,7 +3,72 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- Fase 6: Sharing tussen users met re-encryptie + asymmetrische key-pair per user (v0.0.6-Adleman)
+- Fase 7: productie-deploy HorseCloud55 + nginx + systemd + Let's Encrypt (v0.0.7-Bellare)
+
+## [0.0.6-Adleman] — 2026-05-21
+
+### Added — Vault-sharing tussen users via ECDH-P256
+
+**Backend (+13 tests, 67/67 ✅):**
+- `routes/shares.py` — 7 nieuwe endpoints:
+  - POST /keypair — set pubkey + encrypted_privkey
+  - POST /keypair/rewrap — vervang encrypted_privkey bij pw-change
+  - GET /keypair — haal eigen keypair op
+  - GET /users/by-email/{email}/pubkey — lookup pubkey voor share-encryptie
+  - POST /shares — encrypted share-payload naar ontvanger
+  - GET /shares/inbox — pending ontvangen shares
+  - GET /shares/sent — verzonden shares (alle statussen)
+  - POST /shares/{id}/accept + /decline
+- `services/share_service.py` — keypair-CRUD + share-CRUD + pubkey-lookup-by-email
+- `models/share.py` — KeypairSet/Rewrap, ShareCreate, ShareInboxItem, PubkeyResponse
+- `models/audit.py` — +4 events: keypair_generated, share_create, share_accept, share_decline
+- `models/admin.py` — MeResponse.has_keypair toegevoegd
+- `routes/auth.py` — /auth/me returnt nu has_keypair
+- `db/migrate.py` + `migrations/004_sharing.sql` — ALTER users (+pubkey, +encrypted_privkey) + CREATE shares
+- `db/schema.sql` — schema-version bumped naar 4 (fresh-install bevat alle migrations)
+- `tests/test_sharing.py` — 13 tests
+
+**Frontend:**
+- `js/sharing.js` — ECDH-P256 (WebCrypto native, geen externe lib):
+  - generateKeypair(masterPw, userId) — random ECDH-P256 + AES-GCM-wrapped private via PBKDF2-key
+  - unwrapPrivateKey(masterPw, userId, encryptedPrivkey)
+  - encryptForRecipient(pubkey, plaintext) — ephemeral ECDH + AES-GCM
+  - decryptFromSender(myPriv, encryptedPayload) — ECDH-shared-secret + AES-GCM
+- `shares.html` (S14) — Inbox + Verzonden + decryptie-pane voor inkomende shares
+- `settings.html` — Keypair-status + generate-form + "Shares-inbox"-link
+- `vault.html` — "📥 Shares" knop in top-bar + "🤝 Deel" knop in detail-pane
+- `js/main.js` — share-flow in detail-pane: prompt email → lookup pubkey → encrypt entry → POST /shares
+- `js/settings.js` — loadKeypairStatus + keypair-generate-form
+
+**Crypto-ontwerp:**
+- ECDH **P-256** (WebCrypto native; Curve25519 zou vendor 50KB vereisen)
+- Private-key at-rest: AES-GCM-encrypted met PBKDF2-SHA256(vault-master-pw + user-id, 100k iter) → 256-bit AES-key
+- Share-payload: ephemeral ECDH-keypair-bij-elke-share + AES-GCM-256 met ECDH-shared-secret
+- Server ziet: pubkey (plain), encrypted_privkey (opaque), encrypted_payload (opaque)
+- Server ziet NIET: private-key, share-content, master-pw, shared-secret
+
+**Schema-migratie:**
+- Migration 004: ALTER users + CREATE shares
+- schema.sql bumped naar versie 4 (alle migrations 001-004 in fresh-install-blob — voorkomt ALTER-failure in nieuwe DBs)
+
+### Decided
+
+- **ECDH-P256** ipv Curve25519 (native in WebCrypto)
+- **PBKDF2-SHA256 100k** voor private-key wrap-key derivation
+- **Per-entry share-eenheid** (hele-vault sharing = v0.0.7+)
+- **Per-email ontvanger** (multi-recipient = meerdere shares)
+- **Lazy keypair-gen** via settings (niet automatisch bij login)
+- **GEEN revocation** in v0.0.6 (zou re-encryption van alle bestaande shares vereisen)
+- **GEEN multi-recipient** per share-actie
+- **GEEN invite-naar-niet-bestaand-account** (404 + UI-melding)
+
+### Changed
+- `version.json` + `backend/config.py` `app_version` → 0.0.6-Adleman
+- `schema_version` 3 → 4
+
+### Not Yet
+- Revocation, hele-vault sharing, multi-recipient, invite → v0.0.7+
+- Curve25519 → v1.0-Bernstein (samen met PQC-overweging)
 
 ## [0.0.5-Shamir] — 2026-05-21
 

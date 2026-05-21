@@ -38,6 +38,10 @@ AuditEvent = Literal[
     "backup_codes_consume",
     "account_password_changed",
     "admin_audit_csv_export",
+    "keypair_generated",
+    "share_create",
+    "share_accept",
+    "share_decline",
     "input_rejected",
 ]
 

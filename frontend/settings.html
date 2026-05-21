@@ -88,6 +88,26 @@
       </section>
 
       <section class="card">
+        <h2>Vault-sharing key-pair (v0.0.6)</h2>
+        <p class="muted">
+          Voor het delen van entries met andere gebruikers heb je een ECDH-key-pair nodig.
+          Public-key wordt opgeslagen op de server; private-key wordt versleuteld met je
+          vault-wachtwoord (AES-GCM) en alleen door jouw browser ontsleuteld.
+        </p>
+        <p>Status: <strong id="keypair-status">Onbekend</strong></p>
+        <form id="keypair-form">
+          <label for="kp-vault-pw">Vault-wachtwoord <span class="muted">(voor key-derivation)</span></label>
+          <input type="password" id="kp-vault-pw">
+          <div id="kp-error" class="error" hidden></div>
+          <div id="kp-success" class="success" hidden></div>
+          <div class="actions">
+            <button type="submit" id="kp-generate-btn">Genereer key-pair</button>
+            <a href="shares.html"><button type="button" class="secondary">📥 Shares-inbox</button></a>
+          </div>
+        </form>
+      </section>
+
+      <section class="card">
         <h2>Backup-codes</h2>
         <p class="muted">10 eenmalig bruikbare codes als vangnet voor TOTP-verlies. Alleen beschikbaar als TOTP is ingeschakeld.</p>
         <div class="actions">
@@ -111,6 +131,7 @@
   <script src="vendor/qrcode/qrcode.js"></script>
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/sharing.js"></script>
   <script src="js/settings.js"></script>
 </body>
 </html>

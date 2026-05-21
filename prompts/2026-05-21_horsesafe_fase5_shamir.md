@@ -1,12 +1,12 @@
 ---
 date: 2026-05-21
 session: horsesafe_fase5_shamir
-status: open
-resume: "verder met HorseSafe Fase 6 — Vault-sharing tussen users met re-encryptie + asymmetrische key-pair per user (v0.0.6-Adleman)"
+status: done
+resume: ""
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 parent_master: Meta_iCt_Horse_Diensten
-linked_actions: [HS-FASE-6-SHARING]
+linked_actions: []
 ---
 
 # Sessie 2026-05-21 — HorseSafe Fase 5 v0.0.5-Shamir: Import/export + KeePassXC-CLI oracle LIVE

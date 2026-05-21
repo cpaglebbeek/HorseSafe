@@ -145,6 +145,46 @@
 
   $('logout-btn').addEventListener('click', () => window.HorseSafeAuth.logout());
 
+  // Keypair-status + generate (v0.0.6-Adleman)
+  let myUserIdCache = null;
+  async function loadKeypairStatus() {
+    try {
+      const r = await fetch(window.HorseSafeAPI.base + '/auth/me', { credentials: 'include' });
+      if (!r.ok) return;
+      const me = await r.json();
+      myUserIdCache = me.id;
+      const el = document.getElementById('keypair-status');
+      if (!el) return;
+      el.textContent = me.has_keypair ? '✓ Aanwezig (sharing actief)' : 'Niet aangemaakt';
+    } catch (_) {}
+  }
+  const kpForm = document.getElementById('keypair-form');
+  if (kpForm) {
+    kpForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hide('kp-error'); hide('kp-success');
+      const vaultPw = document.getElementById('kp-vault-pw').value;
+      if (!vaultPw) { show('kp-error', 'Vault-wachtwoord vereist.'); return; }
+      if (!window.HorseSafeSharing) { show('kp-error', 'Sharing-library niet geladen.'); return; }
+      try {
+        const { pubkey, encrypted_privkey } = await window.HorseSafeSharing.generateKeypair(vaultPw, myUserIdCache);
+        const r = await fetch(window.HorseSafeAPI.base + '/keypair', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pubkey, encrypted_privkey }),
+        });
+        if (r.ok) {
+          show('kp-success', 'Key-pair gegenereerd. Je kunt nu entries delen via shares-inbox.');
+          await loadKeypairStatus();
+        } else {
+          show('kp-error', 'Server-fout: ' + r.status);
+        }
+      } catch (e) {
+        show('kp-error', 'Fout: ' + e.message);
+      }
+    });
+  }
+
   // Pw-change form (v0.0.5-Shamir)
   const pwForm = $('pw-change-form');
   if (pwForm) {
@@ -178,4 +218,5 @@
 
   // Init
   probeTotpStatus();
+  loadKeypairStatus();
 })();

@@ -21,5 +21,6 @@ class MeResponse(BaseModel):
     is_admin: bool
     has_totp: bool
     backup_codes_remaining: int
+    has_keypair: bool = False
     mfa_pass: bool
     last_login_at: int | None = None

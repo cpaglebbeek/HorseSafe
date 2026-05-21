@@ -1,6 +1,6 @@
 {
-  "version": "0.0.5",
-  "codename": "Shamir",
+  "version": "0.0.6",
+  "codename": "Adleman",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -14,16 +14,22 @@
     "Rogaway",
     "Bernstein"
   ],
-  "phase": "Phase 5 — Import/export + KeePassXC-CLI roundtrip-oracle + admin-CSV-audit-export + account-pw-reset LIVE",
+  "phase": "Phase 6 — Vault-sharing tussen users LIVE: ECDH P-256 (WebCrypto native) + AES-GCM-wrapped private-key + zero-knowledge intact",
   "released": "2026-05-21",
   "kdbx_format": 4,
-  "kdf_in_use": "AES-KDF (KDBX-spec-conform, opent in KeePassXC-desktop, geverifieerd via KeePassXC-CLI oracle in CI). Argon2id-default deferred naar v1.0-Bernstein.",
+  "kdf_in_use": "AES-KDF (KDBX-spec-conform, KeePassXC-CLI oracle-verified). Argon2id-default deferred v1.0-Bernstein.",
+  "sharing": {
+    "asymmetric": "ECDH P-256 (WebCrypto native, geen externe lib)",
+    "symmetric": "AES-GCM-256 voor share-payload-encryptie + private-key-wrapping",
+    "kdf_for_wrap": "PBKDF2-SHA256 (100000 iterations) van vault-master-pw + user-id-salt",
+    "share_granularity": "Individuele entries, per-email"
+  },
   "import_formats": ["KDBX3", "KDBX4", "Bitwarden JSON", "KeePass-CSV"],
   "export_formats": ["KDBX4 (encrypted)", "JSON (Bitwarden-compat plaintext)", "CSV (KeePass-kolommen plaintext)"],
   "mfa": {
     "totp": "RFC 6238 SHA-1 30s 6-digits + ±1 window-tolerance",
     "magic_link": "32-byte urlsafe token, 10 min, single-use via Gmail SMTP_SSL",
-    "secret_at_rest": "AES-GCM-encrypted (12-byte nonce + ciphertext + tag) met HORSESAFE_TOTP_ENCRYPTION_KEY",
+    "secret_at_rest": "AES-GCM-encrypted met HORSESAFE_TOTP_ENCRYPTION_KEY",
     "backup_codes": "10 codes XXXXX-XXXXX, bcrypt-hashed, single-use, show-once-flow"
   },
   "account_security": {
@@ -31,10 +37,10 @@
     "pw_reset_forgot": "Via magic-link (geen e-mail-link-met-embed-token wegens security)"
   },
   "test_results": {
-    "backend_pytest": "54/54 ✅ (van 40, +14 Fase 5-tests)",
-    "frontend_e2e_playwright": "5/5 ✅ in 9.8s",
-    "kdbx_oracle_ci": "KeePassXC-CLI roundtrip in nieuwe CI-job 'kdbx-oracle'"
+    "backend_pytest": "67/67 ✅ (van 54, +13 sharing-tests)",
+    "frontend_e2e_playwright": "5/5 ✅ in 9.6s",
+    "kdbx_oracle_ci": "KeePassXC-CLI roundtrip in CI-job kdbx-oracle"
   },
-  "schema_version": 3,
-  "next_version_planned": "0.0.6-Adleman (Phase 6 — sharing tussen users met re-encryptie + asymmetrische key-pair per user)"
+  "schema_version": 4,
+  "next_version_planned": "0.0.7-Bellare (Phase 7 — productie-deploy HorseCloud55 + nginx + systemd + Let's Encrypt + smoke-tests)"
 }

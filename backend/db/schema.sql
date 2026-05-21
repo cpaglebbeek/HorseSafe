@@ -1,5 +1,7 @@
--- HorseSafe SQLite schema v0.0.1-Diffie
+-- HorseSafe SQLite schema v0.0.6-Adleman
 -- Server-side ONLY. Vault-content zelf ligt op disk als KDBX4-ciphertext.
+-- Schema-versie 4: omvat alle migrations 001-004 in één fresh-install-blob.
+-- Bestaande installs van vóór v0.0.6 migreren via db/migrations/*.sql.
 
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
@@ -7,17 +9,19 @@ PRAGMA journal_mode = WAL;
 CREATE TABLE IF NOT EXISTS schema_version (
     version INTEGER PRIMARY KEY
 );
-INSERT OR IGNORE INTO schema_version (version) VALUES (1);
+INSERT OR IGNORE INTO schema_version (version) VALUES (4);
 
 CREATE TABLE IF NOT EXISTS users (
-    id              TEXT PRIMARY KEY,
-    email           TEXT UNIQUE NOT NULL,
-    pw_hash         TEXT NOT NULL,
-    totp_secret     TEXT,
-    magic_link_only INTEGER NOT NULL DEFAULT 0,
-    is_admin        INTEGER NOT NULL DEFAULT 0,
-    created_at      INTEGER NOT NULL,
-    last_login_at   INTEGER,
+    id                TEXT PRIMARY KEY,
+    email             TEXT UNIQUE NOT NULL,
+    pw_hash           TEXT NOT NULL,
+    totp_secret       TEXT,
+    magic_link_only   INTEGER NOT NULL DEFAULT 0,
+    is_admin          INTEGER NOT NULL DEFAULT 0,
+    created_at        INTEGER NOT NULL,
+    last_login_at     INTEGER,
+    pubkey            TEXT,                       -- ECDH P-256 public key (JWK base64); v0.0.6+
+    encrypted_privkey TEXT,                       -- AES-GCM-encrypted ECDH-private; v0.0.6+
     CHECK (email LIKE '%@%')
 );
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -64,6 +68,20 @@ CREATE TABLE IF NOT EXISTS failed_logins (
 );
 CREATE INDEX IF NOT EXISTS idx_failed_ip_ts ON failed_logins(ip, ts);
 CREATE INDEX IF NOT EXISTS idx_failed_email_ts ON failed_logins(email, ts);
+
+-- v0.0.6-Adleman: Vault-sharing tussen users
+CREATE TABLE IF NOT EXISTS shares (
+    id                 TEXT PRIMARY KEY,
+    from_user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    to_user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    encrypted_payload  TEXT NOT NULL,
+    title_hint         TEXT,
+    created_at         INTEGER NOT NULL,
+    accepted_at        INTEGER,
+    declined_at        INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_shares_to_user ON shares(to_user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_shares_from_user ON shares(from_user_id, created_at DESC);
 
 -- v0.0.4-Rivest: MFA backup-codes
 CREATE TABLE IF NOT EXISTS users_backup_codes (
