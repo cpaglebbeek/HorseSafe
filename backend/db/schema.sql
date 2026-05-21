@@ -64,3 +64,13 @@ CREATE TABLE IF NOT EXISTS failed_logins (
 );
 CREATE INDEX IF NOT EXISTS idx_failed_ip_ts ON failed_logins(ip, ts);
 CREATE INDEX IF NOT EXISTS idx_failed_email_ts ON failed_logins(email, ts);
+
+-- v0.0.4-Rivest: MFA backup-codes
+CREATE TABLE IF NOT EXISTS users_backup_codes (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code_hash  TEXT NOT NULL,         -- bcrypt
+    created_at INTEGER NOT NULL,
+    used_at    INTEGER                -- NULL = nog niet gebruikt; single-use
+);
+CREATE INDEX IF NOT EXISTS idx_backup_codes_user ON users_backup_codes(user_id);

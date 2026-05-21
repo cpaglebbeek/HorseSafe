@@ -39,6 +39,7 @@
         <div class="tab-bar">
           <button class="tab-btn active" data-tab="totp">Authenticator-code</button>
           <button class="tab-btn" data-tab="magic">Magic-link via e-mail</button>
+          <button class="tab-btn" data-tab="backup">Backup-code</button>
         </div>
 
         <div id="totp-pane">
@@ -67,6 +68,23 @@
             <div id="magic-status" class="success" hidden></div>
             <div class="actions">
               <button type="submit" id="magic-submit">Verstuur link</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="backup-pane" hidden>
+          <h2 style="font-size: 1rem;">Voer een van je 10 backup-codes in</h2>
+          <p class="muted">
+            Format: <span class="kbd">XXXXX-XXXXX</span>. Elke code is eenmalig bruikbaar.
+            Als je geen codes meer hebt: neem contact op met de admin voor MFA-reset.
+          </p>
+          <form id="backup-form">
+            <input type="text" id="backup-code-input" class="totp-input"
+                   placeholder="XXXXX-XXXXX" maxlength="11" required
+                   style="text-align: center; font-size: 1.25rem;">
+            <div id="backup-error" class="error" hidden></div>
+            <div class="actions">
+              <button type="submit" id="backup-submit">Verifieer code</button>
             </div>
           </form>
         </div>

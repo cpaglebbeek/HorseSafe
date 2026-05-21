@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — Backup-codes</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+  <style>
+    .codes-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--hs-sp-2);
+      font-family: var(--hs-font-mono); font-size: 1.25rem;
+      margin: var(--hs-sp-4) 0; padding: var(--hs-sp-4);
+      background: var(--hs-bg-elevated); border-radius: var(--hs-br-md);
+    }
+    .codes-grid div { padding: var(--hs-sp-2); text-align: center; }
+    .warning { background: rgba(248, 81, 73, 0.1); border: 1px solid var(--hs-danger); padding: var(--hs-sp-3); border-radius: var(--hs-br-md); margin: var(--hs-sp-3) 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">MFA-backup-codes</span>
+    </header>
+
+    <main>
+      <section class="card" id="generate-pane">
+        <h2>Backup-codes genereren</h2>
+        <p>
+          Backup-codes zijn een vangnet voor wanneer je je Authenticator-app niet
+          beschikbaar hebt. Iedere code is <strong>eenmalig bruikbaar</strong>.
+        </p>
+        <div class="warning">
+          <strong>⚠ LET OP:</strong> de codes worden <strong>maar één keer</strong> getoond.
+          Sla ze veilig op (afdrukken, wachtwoord-manager, of papier in kluis).
+          Verlies = je hebt geen backup-route meer (TOTP-app blijft wel werken).
+        </div>
+        <p class="muted">
+          Genereren vervangt alle bestaande backup-codes. Eerdere codes worden ongeldig.
+        </p>
+        <div class="actions">
+          <button id="generate-btn">Genereer 10 codes</button>
+          <a href="settings.html"><button class="secondary">Annuleer</button></a>
+        </div>
+      </section>
+
+      <section class="card" id="show-pane" hidden>
+        <h2>Jouw 10 backup-codes</h2>
+        <p class="muted">Print deze pagina of kopieer de codes naar een veilige plek.</p>
+        <div class="codes-grid" id="codes-grid"></div>
+        <div class="warning">
+          <strong>Bevestigen:</strong> Bevestig dat je de codes hebt opgeslagen.
+          Na bevestiging worden ze permanent verborgen — er is geen "toon nogmaals"-knop.
+        </div>
+        <div class="checkbox-row">
+          <input type="checkbox" id="ack">
+          <label for="ack">Ik heb de 10 codes veilig opgeslagen (afgedrukt, in wachtwoord-manager, of op papier).</label>
+        </div>
+        <div class="actions">
+          <button id="copy-btn" class="secondary">📋 Kopieer alle codes</button>
+          <button id="confirm-btn" disabled>Bevestig + verberg permanent</button>
+        </div>
+      </section>
+    </main>
+
+    <footer>HorseSafe v0.0.4-Rivest — backup-codes zijn bcrypt-gehashed at-rest</footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/backup-codes.js"></script>
+</body>
+</html>

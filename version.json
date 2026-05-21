@@ -1,6 +1,6 @@
 {
-  "version": "0.0.3",
-  "codename": "Merkle",
+  "version": "0.0.4",
+  "codename": "Rivest",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -14,18 +14,20 @@
     "Rogaway",
     "Bernstein"
   ],
-  "phase": "Phase 3 — MFA-integratie LIVE: TOTP setup/verify/disable + magic-link via Gmail SMTP + AES-GCM-encrypted-at-rest TOTP-secret + MFA-gate op vault-routes",
+  "phase": "Phase 4 — Admin-paneel LIVE: user-CRUD + storage-stats + audit-log-viewer + MFA-backup-codes (bcrypt-hashed, single-use) + admin-rescue (disable-MFA + send-magic-link) + /auth/me + CLI promote-admin",
   "released": "2026-05-21",
   "kdbx_format": 4,
   "kdf_in_use": "AES-KDF (KDBX-spec-conform). Argon2id-bridge staat klaar; full re-enable verschoven naar v0.0.5+ na KeePassXC-CLI oracle-test in Fase 5.",
   "mfa": {
     "totp": "RFC 6238 SHA-1 30s 6-digits + ±1 window-tolerance",
     "magic_link": "32-byte urlsafe token, 10 min, single-use via Gmail SMTP_SSL",
-    "secret_at_rest": "AES-GCM-encrypted (12-byte nonce + ciphertext + tag) met HORSESAFE_TOTP_ENCRYPTION_KEY"
+    "secret_at_rest": "AES-GCM-encrypted (12-byte nonce + ciphertext + tag) met HORSESAFE_TOTP_ENCRYPTION_KEY",
+    "backup_codes": "10 codes XXXXX-XXXXX, bcrypt-hashed, single-use, show-once-flow"
   },
   "test_results": {
-    "backend_pytest": "25/25 ✅",
-    "frontend_e2e_playwright": "3/3 ✅ (S1 landing + vault-roundtrip + MFA-flow)"
+    "backend_pytest": "40/40 ✅ (van 15 → 25 → 40)",
+    "frontend_e2e_playwright": "5/5 ✅ (van 3 → 5)"
   },
-  "next_version_planned": "0.0.4-Rivest (Phase 4 admin-pagina + user-CRUD + audit-viewer + MFA-backup-codes)"
+  "schema_version": 3,
+  "next_version_planned": "0.0.5-Shamir (Phase 5 — import/export KDBX/Bitwarden/CSV/XLSX + KeePassXC-CLI roundtrip-oracle + Argon2id re-enable evaluatie)"
 }

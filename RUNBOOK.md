@@ -107,6 +107,56 @@ systemctl reload nginx
 - **Audit-log-rotatie:** dagelijks 03:00 (logrotate)
 - **Audit-anonimisering 13mnd:** weekly cron zondag 04:00
 
+## Admin-procedures (v0.0.4-Rivest+)
+
+### Eerste admin-account aanmaken
+
+```bash
+# 1. Server-shell op HC55
+ssh horsecloud55
+sudo -u horsesafe -i
+
+# 2. User registreert via UI (https://horsecloud55.ddns.net/HorseSafe/) of via direct API-call
+# 3. Promoot bestaand account tot admin
+cd /opt/horsesafe
+/opt/horsesafe/venv/bin/python -m backend.db.promote_admin christian@example.com
+# → "OK: christian@example.com is admin"
+
+# 4. Admin logt in via UI + krijgt admin-link in settings + admin.html
+```
+
+### Admin-rescue: user heeft TOTP-device verloren
+
+1. User belt admin
+2. Admin verifieert identiteit out-of-band (telefoon, in-person)
+3. Admin opent `admin.html`, vindt user-rij
+4. Admin klikt "MFA reset" (rood) — vereist reden (min 10 chars)
+5. User logt opnieuw in zonder TOTP (mfa_required: false)
+6. **Optioneel:** admin stuurt magic-link voor extra zekerheid (POST `/admin/users/{id}/send-magic-link`)
+
+Geen pw-reset — past niet bij zero-knowledge. Account-pw blijft user-only.
+
+### Admin-rescue: user lock-out (failed-logins throttle)
+
+1. User belt admin
+2. Admin verifieert identiteit out-of-band
+3. Admin SSH-t in: `sqlite3 /opt/horsesafe/db/horsesafe.db "DELETE FROM failed_logins WHERE email='...';"`
+4. User kan opnieuw inloggen
+
+### User verwijderen
+
+1. Admin opent `admin.html`, vindt user-rij
+2. Klik "Delete" (rood) — vereist:
+   - Reden (min 10 chars)
+   - Bevestiging: typ user's e-mail in confirm-prompt
+3. Cascade-delete: user-row + alle vaults + backup-codes + magic-links
+4. Vault-blobs op disk worden via `_secure_delete` overschreven vóór unlink (3-pass random)
+5. Audit-log entry: event `admin_user_delete` + reden
+
+### Self-delete-blokkering
+
+Admin kan eigen account niet via `/admin/users/{eigen_id}` verwijderen (HTTP 400 `self_delete_forbidden`). Reden: voorkomen zelf-lockout. Voor admin-account-verwijdering: directe DB-query door tweede admin of via SQL-shell.
+
 ## Contacten
 
 - **Operationeel:** Christian Glebbeek — cglebbeek@gmail.com

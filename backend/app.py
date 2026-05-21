@@ -9,9 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db.init import init_db
+from .db.migrate import run_migrations
 from .middlewares.csp_headers import SecurityHeadersMiddleware
 from .middlewares.ratelimit import RateLimitMiddleware
-from .routes import auth, health, vault
+from .routes import admin, auth, health, vault
 
 logger = logging.getLogger("horsesafe")
 
@@ -24,6 +25,9 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     )
     logger.info("HorseSafe %s starting", settings.app_version)
     await init_db()
+    applied = await run_migrations()
+    if applied:
+        logger.info("Applied migrations: %s", applied)
     settings.vaults_dir.mkdir(parents=True, exist_ok=True)
     logger.info("DB ready at %s; vaults at %s", settings.db_path, settings.vaults_dir)
     yield
@@ -57,6 +61,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(vault.router, prefix="/vault", tags=["vault"])
+    app.include_router(admin.router, prefix="/admin", tags=["admin"])
     return app
 
 

@@ -13,7 +13,40 @@
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
       $('totp-pane').hidden = (tab !== 'totp');
       $('magic-pane').hidden = (tab !== 'magic');
+      $('backup-pane').hidden = (tab !== 'backup');
     });
+  });
+
+  // Backup-code challenge
+  $('backup-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hide('backup-error');
+    const code = $('backup-code-input').value.trim();
+    $('backup-submit').disabled = true;
+    try {
+      const r = await fetch(window.HorseSafeAPI.base + '/auth/backup-codes/verify', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code }),
+      });
+      if (r.ok) {
+        window.location.href = 'vault.html';
+      } else {
+        const data = await r.json().catch(() => null);
+        const err = data?.detail?.error || 'unknown';
+        const msg = (
+          err === 'invalid_code' ? 'Code niet geldig of al gebruikt.' :
+          err === 'throttled' ? 'Te veel mislukte pogingen. Wacht 15 minuten.' :
+          `Fout: ${err}`
+        );
+        show('backup-error', msg);
+      }
+    } catch (e) {
+      show('backup-error', 'Netwerkfout: ' + e.message);
+    } finally {
+      $('backup-submit').disabled = false;
+    }
   });
 
   // TOTP-challenge

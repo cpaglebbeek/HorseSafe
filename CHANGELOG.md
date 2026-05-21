@@ -3,7 +3,70 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- Fase 4: admin-pagina + user-CRUD + audit-viewer + MFA-backup-codes
+- Fase 5: import/export KDBX/Bitwarden/CSV/XLSX + KeePassXC-CLI oracle-test + Argon2id re-enable evaluatie
+
+## [0.0.4-Rivest] — 2026-05-21
+
+### Added — Admin-paneel + MFA-backup-codes + /auth/me
+
+**Backend (40/40 pytest ✅, +15 tests):**
+- `routes/admin.py` — 6 nieuwe endpoints:
+  - `GET /admin/users` — lijst met email/created/last_login/vault_count/storage_bytes/has_totp/backup_codes_remaining
+  - `DELETE /admin/users/{id}` — cascade-delete (user + vault-blobs + magic-links + backup-codes), **reden verplicht** (min 10 chars), zelf-delete blokkering
+  - `POST /admin/users/{id}/disable-mfa` — admin-rescue: TOTP + backup-codes weg
+  - `POST /admin/users/{id}/send-magic-link` — naar USER's e-mail, niet admin's
+  - `GET /admin/stats` — totaal users/vaults/storage + logins-24u + failed-24u + top10-by-storage
+  - `GET /admin/audit?user=&event=&from=&to=&limit=&offset=` — paginated audit-log
+  - `_require_admin()` dependency: vereist JWT + admin + MFA pass
+- `services/admin_service.py` — user-CRUD-helpers + stats-aggregator + paginated audit-query
+- `services/backup_codes_service.py` — bcrypt-hashed codes met look-alike-free alphabet (geen 0/O/1/I/L), single-use, generate-N + consume-by-plaintext + count_remaining
+- `routes/auth.py` — 3 nieuwe endpoints:
+  - `GET /auth/me` → `{id, email, is_admin, has_totp, backup_codes_remaining, mfa_pass, last_login_at}` (vervangt /vault-probe-hack)
+  - `POST /auth/backup-codes/generate` → 10 plaintext codes show-once
+  - `POST /auth/backup-codes/verify` → MFA-bypass via single-use backup-code (zelfde upgrade-pad als TOTP-verify)
+- `models/admin.py` — Pydantic `AdminDeleteRequest`, `AdminRescueRequest`, `BackupCodeVerify`, `MeResponse`
+- `models/audit.py` — 4 nieuwe events: `admin_user_disable_mfa`, `admin_user_send_magic_link`, `backup_codes_generate`, `backup_codes_consume`
+- `db/migrate.py` — versie-gestuurde migration-runner (idempotent)
+- `db/migrations/002_backup_codes.sql` — nieuwe tabel `users_backup_codes(id, user_id, code_hash, created_at, used_at)`
+- `db/migrations/003_audit_log_no_check.sql` — verwijder hardcoded CHECK-constraint op audit_log.event (validatie via Pydantic AuditEvent)
+- `db/promote_admin.py` — CLI: `python -m backend.db.promote_admin <email>` om eerste admin te maken
+- `app.py` lifespan — run_migrations() bij startup; admin-router gemount op `/admin`
+- `requirements.txt` — bcrypt>=4,<6 toegevoegd; passlib[argon2,bcrypt]-extras
+- Nieuwe pytest-tests:
+  - `tests/test_admin.py` — 7 tests (admin-required, list, delete, self-delete-forbidden, disable-mfa, stats, audit)
+  - `tests/test_backup_codes.py` — 5 tests (generate, /me-reflects, consume-as-mfa, invalid-code, regenerate-invalidates-old)
+  - `tests/test_auth_me.py` — 2 tests (unauth, after-login)
+- conftest: `HORSESAFE_BCRYPT_ROUNDS=4` voor snelle test-runs
+
+**Frontend (5/5 e2e ✅, +2 tests):**
+- `admin.html` (S11) — stats-grid + users-tabel met inline actions (MFA-reset/magic-link/delete) + audit-viewer met filters/pagination
+- `backup-codes.html` (S13) — show-once flow met checkbox-acknowledge + copy-all + beforeunload-warning
+- `js/admin.js` — fetch-helpers met 401/403-handling + user-actions (reden-prompt + delete-confirm-by-email-typ) + stats + audit-paginated
+- `js/backup-codes.js` — show-once + ack-checkbox + copy-to-clipboard + reload-warning bij niet-bevestigd
+- `settings.html` — backup-codes-link sectie + admin-link in navigatie + footer-version-bump
+- `js/settings.js` — gebruikt `/auth/me` ipv /vault-probe-hack; toont admin-link bij `is_admin: true` en backup-codes-link bij `has_totp: true`
+- `mfa.html` + `js/mfa.js` — derde tab "Backup-code" met form (XXXXX-XXXXX input) en submit naar /auth/backup-codes/verify
+- `tests/admin.spec.ts` — 2 nieuwe e2e: admin.html-redirect-niet-admin + settings.html /auth/me-probe
+
+### Security
+- **bcrypt-hashed backup-codes** met productie-default rounds=12 (env-var `HORSESAFE_BCRYPT_ROUNDS` voor test-versnelling)
+- **Reden verplicht (min 10 chars)** voor alle destructive admin-acties (delete-user, disable-MFA, send-magic-link)
+- **Self-delete blokkering**: admin kan eigen account niet via /admin/users/{id} verwijderen (HTTP 400)
+- **Admin-magic-link naar USER's geregistreerde e-mail**, niet admin's (voorkomt mailbox-takeover via rescue)
+- **Audit-events**: admin_user_delete, admin_user_disable_mfa, admin_user_send_magic_link, backup_codes_generate, backup_codes_consume
+
+### Changed
+- `version.json` + `backend/config.py` `app_version` → 0.0.4-Rivest
+- Schema-version 1 → 3 (na migrate.py)
+- `backup_codes_service.py` gebruikt directe `bcrypt`-library (niet via passlib — incompatibel met bcrypt 5.x)
+- `audit_log.event` heeft geen DB-CHECK meer (Pydantic AuditEvent enum validates)
+
+### Not Yet
+- CSV-export audit-log → v0.0.5-Shamir
+- Account-pw-reset flow → v0.0.5+
+- Import/export vault-data → v0.0.5-Shamir
+- Argon2id-default-re-enable → v0.0.5+
+- WebAuthn/FIDO2 → v0.5.0-Rogaway
 
 ## [0.0.3-Merkle] — 2026-05-21
 

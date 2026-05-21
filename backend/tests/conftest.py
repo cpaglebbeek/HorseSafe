@@ -26,6 +26,7 @@ def _isolated_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("HORSESAFE_ARGON2_TIME_COST", "2")
     monkeypatch.setenv("HORSESAFE_ARGON2_MEMORY_KIB", "8192")  # 8 MiB voor snelheid
     monkeypatch.setenv("HORSESAFE_ARGON2_PARALLELISM", "1")
+    monkeypatch.setenv("HORSESAFE_BCRYPT_ROUNDS", "4")  # lichte bcrypt voor snelle tests
 
     # Reset cached settings + cryptcontext
     import backend.config as cfg

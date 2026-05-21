@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HorseSafe — Admin</title>
+  <link rel="icon" type="image/svg+xml" href="assets/horsesafe.svg">
+  <link rel="stylesheet" href="assets/horsesafe.css">
+  <style>
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--hs-sp-3); }
+    .stat-card { background: var(--hs-bg-elevated); padding: var(--hs-sp-3); border-radius: var(--hs-br-md); text-align: center; }
+    .stat-value { font-size: 1.5rem; font-weight: 600; color: var(--hs-accent); }
+    .stat-label { font-size: 0.75rem; color: var(--hs-fg-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+    .badge { display: inline-block; padding: 1px 6px; font-size: 0.75rem; border-radius: var(--hs-br-sm); }
+    .badge-admin { background: var(--hs-warning); color: black; }
+    .badge-totp { background: var(--hs-success); color: white; }
+    .row-actions button { padding: 2px 8px; font-size: 0.75rem; margin-right: 4px; }
+    .filter-row { display: flex; gap: var(--hs-sp-2); flex-wrap: wrap; align-items: end; margin-bottom: var(--hs-sp-3); }
+    .filter-row input { width: auto; margin-bottom: 0; }
+    .filter-row label { font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header class="brand">
+      <img src="assets/horsesafe.svg" alt="HorseSafe">
+      <h1>HorseSafe</h1>
+      <span class="slogan">Admin</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Statistieken</h2>
+        <div id="stats-grid" class="stat-grid">
+          <div class="stat-card"><div class="stat-value" id="s-users">…</div><div class="stat-label">Users</div></div>
+          <div class="stat-card"><div class="stat-value" id="s-vaults">…</div><div class="stat-label">Vaults</div></div>
+          <div class="stat-card"><div class="stat-value" id="s-storage">…</div><div class="stat-label">Storage</div></div>
+          <div class="stat-card"><div class="stat-value" id="s-logins">…</div><div class="stat-label">Logins 24u</div></div>
+          <div class="stat-card"><div class="stat-value" id="s-failed">…</div><div class="stat-label">Failed 24u</div></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Gebruikers</h2>
+        <table id="users-table">
+          <thead><tr>
+            <th>E-mail</th><th>Aangemaakt</th><th>Laatste login</th>
+            <th>Vaults</th><th>Storage</th><th>MFA</th><th>Acties</th>
+          </tr></thead>
+          <tbody id="users-body"><tr><td colspan="7" class="muted">Laden…</td></tr></tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>Audit-log</h2>
+        <div class="filter-row">
+          <div><label for="f-event">Event</label><br><input id="f-event" type="text" placeholder="login_success"></div>
+          <div><label for="f-user">User ID</label><br><input id="f-user" type="text"></div>
+          <div><label for="f-limit">Limit</label><br><input id="f-limit" type="number" value="50" min="1" max="500"></div>
+          <button id="f-apply">Filter</button>
+        </div>
+        <table id="audit-table">
+          <thead><tr><th>Tijd</th><th>User</th><th>Event</th><th>IP</th><th>Detail</th><th>Reden</th></tr></thead>
+          <tbody id="audit-body"><tr><td colspan="6" class="muted">Laden…</td></tr></tbody>
+        </table>
+        <div class="actions">
+          <button id="audit-prev" class="secondary">← Vorige</button>
+          <button id="audit-next" class="secondary">Volgende →</button>
+          <span class="muted" id="audit-pagination"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="actions">
+          <a href="vault.html"><button class="secondary">← Terug naar vault</button></a>
+          <a href="settings.html"><button class="secondary">⚙ Instellingen</button></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>HorseSafe v0.0.4-Rivest — admin-paneel (zero-knowledge: admin ziet GEEN vault-content)</footer>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>

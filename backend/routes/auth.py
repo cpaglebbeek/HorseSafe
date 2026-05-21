@@ -5,9 +5,17 @@ from fastapi.responses import RedirectResponse
 
 from ..config import get_settings
 from ..db.connection import connect
+from ..models.admin import BackupCodeVerify, MeResponse
 from ..models.auth import MagicLinkRequest
 from ..models.user import UserLogin, UserRegister
-from ..services import audit_service, auth_service, jwt_service, magic_link_service, mfa_service
+from ..services import (
+    audit_service,
+    auth_service,
+    backup_codes_service,
+    jwt_service,
+    magic_link_service,
+    mfa_service,
+)
 
 router = APIRouter()
 
@@ -264,3 +272,89 @@ async def magic_link_redeem(t: str, request: Request) -> RedirectResponse:
         path="/",
     )
     return redirect
+
+
+# ─────────────── /auth/me ───────────────
+
+
+@router.get("/me", response_model=MeResponse)
+async def me(request: Request) -> MeResponse:
+    """Geeft current-user-meta terug (vervangt de /vault-probe-hack)."""
+    payload = jwt_service.require_auth(request)
+    user_id = str(payload["sub"])
+    settings = get_settings()
+    async with connect(settings.db_path) as conn:
+        cursor = await conn.execute(
+            "SELECT email, is_admin, last_login_at FROM users WHERE id = ?",
+            (user_id,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail={"error": "user_not_found"})
+        has_totp = await mfa_service.user_has_totp(conn, user_id)
+        backup_remaining = await backup_codes_service.count_remaining(conn, user_id)
+    return MeResponse(
+        id=user_id,
+        email=str(row["email"]),
+        is_admin=bool(row["is_admin"]),
+        has_totp=has_totp,
+        backup_codes_remaining=backup_remaining,
+        mfa_pass=bool(payload.get("mfa", False)),
+        last_login_at=int(row["last_login_at"]) if row["last_login_at"] else None,
+    )
+
+
+# ─────────────── Backup-codes ───────────────
+
+
+@router.post("/backup-codes/generate")
+async def backup_codes_generate(request: Request) -> dict[str, list[str]]:
+    """Genereer 10 nieuwe codes (returnt plaintext — show-once aan client)."""
+    payload = jwt_service.require_auth(request)
+    user_id = str(payload["sub"])
+    settings = get_settings()
+    async with connect(settings.db_path) as conn:
+        codes = await backup_codes_service.generate_for_user(conn, user_id, count=10)
+        await audit_service.log(
+            conn,
+            user_id=user_id,
+            event="backup_codes_generate",
+            ip=request.client.host if request.client else None,
+            detail={"count": len(codes)},
+        )
+    return {"codes": codes}
+
+
+@router.post("/backup-codes/verify")
+async def backup_codes_verify(
+    body: BackupCodeVerify, request: Request, response: Response
+) -> dict[str, bool]:
+    """Verifieer backup-code als MFA-bypass (single-use). Upgrade JWT met mfa=true."""
+    payload = jwt_service.require_auth(request)
+    user_id = str(payload["sub"])
+    settings = get_settings()
+    ip = request.client.host if request.client else "unknown"
+    async with connect(settings.db_path) as conn:
+        if await auth_service.is_throttled(conn, ip, None):
+            raise HTTPException(status_code=status.HTTP_423_LOCKED, detail={"error": "throttled"})
+        ok = await backup_codes_service.consume_code(conn, user_id, body.code)
+        if not ok:
+            await auth_service.record_failed_login(conn, ip, None)
+            await audit_service.log(
+                conn,
+                user_id=user_id,
+                event="mfa_fail",
+                ip=ip,
+                detail={"flow": "backup_code"},
+            )
+            raise HTTPException(status_code=400, detail={"error": "invalid_code"})
+        remaining = await backup_codes_service.count_remaining(conn, user_id)
+        await audit_service.log(
+            conn,
+            user_id=user_id,
+            event="backup_codes_consume",
+            ip=ip,
+            detail={"remaining": remaining},
+        )
+    jwt_service.reissue_with_mfa(response, payload)
+    return {"ok": True, "mfa_passed": True}

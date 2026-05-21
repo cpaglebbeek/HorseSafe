@@ -9,25 +9,31 @@
   let currentSecret = null;
 
   async function probeTotpStatus() {
-    // Heuristiek: doe een no-op /vault list-call. Bij 403 met mfa_required = TOTP ingesteld.
-    // Beter zou een /auth/me endpoint zijn — voor POC volstaat dit.
+    // v0.0.4: gebruikt /auth/me ipv /vault-probe-hack
     try {
-      const r = await fetch(window.HorseSafeAPI.base + '/vault', { credentials: 'include' });
-      if (r.status === 200) {
-        // Cookie heeft mfa=true. Dat kan betekenen:
-        //  a) geen TOTP ingesteld (login zet meteen mfa=true)
-        //  b) TOTP ingesteld + zojuist door MFA-challenge gegaan
-        // Voor POC gaan we uit van (a) als deze pagina direct na login wordt geopend.
+      const r = await fetch(window.HorseSafeAPI.base + '/auth/me', { credentials: 'include' });
+      if (r.status === 401) {
+        window.location.href = 'login.html';
+        return;
+      }
+      const me = await r.json();
+      if (me.has_totp) {
+        $('totp-status').textContent = `Ingeschakeld (${me.backup_codes_remaining} backup-codes over)`;
+        $('totp-enable-btn').hidden = true;
+        $('totp-disable-btn').hidden = false;
+      } else {
         $('totp-status').textContent = 'Niet ingeschakeld';
         $('totp-enable-btn').hidden = false;
         $('totp-disable-btn').hidden = true;
-      } else if (r.status === 403) {
-        $('totp-status').textContent = 'Ingeschakeld';
-        $('totp-enable-btn').hidden = true;
-        $('totp-disable-btn').hidden = false;
-      } else if (r.status === 401) {
-        window.location.href = 'login.html';
       }
+      // Admin-link tonen
+      if (me.is_admin) {
+        const adminLink = document.getElementById('admin-link');
+        if (adminLink) adminLink.hidden = false;
+      }
+      // Backup-codes-link tonen indien TOTP enabled
+      const bcLink = document.getElementById('backup-codes-link');
+      if (bcLink) bcLink.hidden = !me.has_totp;
     } catch (e) {
       $('totp-status').textContent = 'Onbekend (' + e.message + ')';
     }

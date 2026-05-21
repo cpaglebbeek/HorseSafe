@@ -67,15 +67,24 @@
       </section>
 
       <section class="card">
+        <h2>Backup-codes</h2>
+        <p class="muted">10 eenmalig bruikbare codes als vangnet voor TOTP-verlies. Alleen beschikbaar als TOTP is ingeschakeld.</p>
+        <div class="actions">
+          <a href="backup-codes.html" id="backup-codes-link" hidden><button>Beheer backup-codes</button></a>
+        </div>
+      </section>
+
+      <section class="card">
         <h2>Navigatie</h2>
         <div class="actions">
           <a href="vault.html"><button>← Terug naar vault</button></a>
+          <a href="admin.html" id="admin-link" hidden><button class="secondary">👑 Admin</button></a>
           <button id="logout-btn" class="secondary">Uitloggen</button>
         </div>
       </section>
     </main>
 
-    <footer>HorseSafe v0.0.3-Merkle</footer>
+    <footer>HorseSafe v0.0.4-Rivest</footer>
   </div>
 
   <script src="vendor/qrcode/qrcode.js"></script>

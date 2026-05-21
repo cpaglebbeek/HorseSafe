@@ -32,6 +32,10 @@ AuditEvent = Literal[
     "admin_user_delete",
     "admin_stats_view",
     "admin_audit_view",
+    "admin_user_disable_mfa",
+    "admin_user_send_magic_link",
+    "backup_codes_generate",
+    "backup_codes_consume",
     "input_rejected",
 ]
 
