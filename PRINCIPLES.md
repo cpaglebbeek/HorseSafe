@@ -12,6 +12,8 @@
 | P-CRYPT-04 | **AEAD voor blobs** | KDBX4 AEAD-mode (AES-256-CBC+HMAC of ChaCha20+Poly1305-impliciet). Geen CBC zonder MAC. |
 | P-CRYPT-05 | **Crypto in browser** | Alle vault-encryptie/-decryptie in browser via `kdbxweb` + libargon2-wasm. Geen server-fallback. |
 | P-CRYPT-06 | **Geen key-escrow** | Geen "master-key herstel" via server, e-mail of secondary account. Verlies = data weg. |
+| P-CRYPT-07 | **Keyfile-format-default = 64-hex-char ASCII** (v0.0.9-Bellare+) | HorseSafe genereert keyfiles in KeePass 1.x-spec-pad (64 hex chars ASCII, decodeert naar 32 bytes interne hash). **Reden**: kdbxweb 2.1.1 browser-side faalt op KeePassXC 2.x XML keyfiles + op 32-byte raw keyfiles met `InvalidKey`, terwijl Node-side en pykeepass beide werken (zie HS-BUG-005 RCA). 64-hex-ASCII gebruikt `hexToBytes` in alle runtimes → consistent. Import van XML 2.0 en 32-byte raw via lokale Node-resave vóór upload is **toegestaan**, niet als generate-default. KeePassXC-desktop accepteert 64-hex-ASCII zonder issue → P-CRYPT-02 disaster-recovery garantie intact. |
+| P-CRYPT-08 | **Per-entry TOTP client-side** (v0.0.9-Bellare+) | TOTP-seeds in vault-entries (custom-field `otp` met `otpauth://`-URI, KeePassXC-compat) blijven binnen encrypted KDBX4-blob. RFC 6238-codes worden client-side berekend via `crypto.subtle.sign('HMAC')` in `frontend/js/totp.js`. Server ziet seed NOOIT — niet bij vault-storage (encrypted blob) en niet bij code-generatie (browser-only). Fundamenteel anders dan account-laag TOTP-MFA (server-side `users.totp_secret` voor login). |
 
 ## P-AUTH — Authenticatie
 

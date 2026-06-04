@@ -29,10 +29,13 @@
 - v0.1.x+: lijst van vaults + "+ Nieuwe vault"-knop
 
 ### S6. Vault-unlock
-- Master-wachtwoord-veld
-- Keyfile-upload (optioneel, drag-drop)
-- Encryptie-modus indicator: 🔑 alleen pw / 📄 alleen keyfile / 🔑+📄 beide
-- Submit → frontend decryptert → S7
+- Master-wachtwoord-veld (`#vault-pw`, type=password, minlength 6 als ingevuld, niet `required` sinds v0.0.9-Bellare)
+- Keyfile-upload `<input type="file" id="vault-keyfile" accept=".keyx,.key,.keyfile,application/octet-stream">` (v0.0.9-Bellare LIVE; drag-drop nog niet)
+- Subtekst onder keyfile (muted, 0.85em): "Wachtwoord óf keyfile is verplicht. Beide combineren kan ook (KeePassXC-compatibel)."
+- Encryptie-modus indicator: 🔑 alleen pw / 📄 alleen keyfile / 🔑+📄 beide (concept; visuele indicator nog te bouwen v0.0.10+)
+- **Keyfile-format-compatibiliteit** (HS-BUG-005): 64-hex-char ASCII (default, alle runtimes) > KeePassXC 2.x XML (import-only via lokale Node-resave) > 32-byte raw (niet ondersteund, kdbxweb-browser-bug)
+- Lock-cleanup: `lockVault()` reset zowel `vault-pw.value=''` als `vault-keyfile.value=''`
+- Submit → `unlockOrCreate()` → `openDatabase(blob, pw, keyFileBuffer)` met `await credentials.ready` → S7
 
 ### S7. Vault-content (hoofdscherm)
 - Linker-zijbalk: groepen-boom (Root → General, Internet, eMail, ...)
@@ -41,6 +44,11 @@
   - Title, Username
   - Password (verborgen, "👁 toon" + "📋 kopieer (10s wipe)" knoppen)
   - URL (klikbaar → `target="_blank" rel="noopener noreferrer"`)
+  - **TOTP (v0.0.9-Bellare+, alleen zichtbaar als entry een `otp`-custom-field met `otpauth://`-URI heeft):**
+    - 6-cijferige code in monospace 1.3em + letter-spacing 0.15em, gegroepeerd "XXX XXX"
+    - Countdown rechts (seconden resterend in het 30s-window, `tabular-nums` voor stabiele alignment)
+    - 📋 copy-button → kopieert huidige code naar clipboard (geen 10s wipe — TOTP-code is per definitie kortstondig)
+    - Render-loop: `setInterval(renderTotpOnce, 1000)`, start in `selectEntry`, stop in `lockVault` en bij entry-wissel
   - Notes (multi-line)
   - Attachments (lijst, download-knop)
   - History (versies van deze entry)

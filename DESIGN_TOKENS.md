@@ -49,6 +49,12 @@
 | `--hs-fw-bold` | `600` |
 | `--hs-lh-tight` | `1.25` |
 | `--hs-lh-base` | `1.5` |
+| `--hs-totp-code-size` | `1.3em` (TOTP-code-display, v0.0.9-Bellare+) |
+| `--hs-totp-letter-spacing` | `0.15em` (TOTP-code-display, v0.0.9-Bellare+) |
+| `--hs-totp-numeric-style` | `tabular-nums` (countdown-seconden, voorkomt UI-shimmer) |
+| `--hs-totp-code-weight` | `600` (= `--hs-fw-bold`) |
+
+> **Toepassing TOTP-tokens** (vault.html `#d-totp-code` / `#d-totp-countdown`): code in `--hs-font-mono` × `--hs-totp-code-size` × `--hs-totp-letter-spacing` × `--hs-totp-code-weight`. Countdown in standard font × `--hs-fs-sm` × `--hs-totp-numeric-style`.
 
 ## Spacing (4-px raster)
 

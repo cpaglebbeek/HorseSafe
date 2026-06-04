@@ -168,3 +168,45 @@ sequenceDiagram
     Browser->>User: aftelling klaar
     Note over Browser: best-effort; v0.2 extensie = echte wipe
 ```
+
+## SQ-8 — Per-entry TOTP-render-loop (v0.0.9-Bellare+)
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Browser
+    participant WebCrypto as crypto.subtle (browser-native)
+
+    User->>Browser: klik entry-rij in vault-content
+    Browser->>Browser: selectEntry(entry)
+    Browser->>Browser: entry.otp = fields.get('otp') — check op otpauth:// URI
+    alt entry.otp aanwezig
+        Browser->>Browser: stopTotpLoop() (oude interval clearen)
+        Browser->>Browser: show d-totp-label + d-totp-cell
+        Browser->>Browser: startTotpLoop(uri) — setInterval(renderTotpOnce, 1000)
+        loop elke 1s
+            Browser->>Browser: HorseSafeTotp.generateTotp(uri)
+            Browser->>Browser: parseOtpauth(uri) → {secret, digits, period, algo}
+            Browser->>Browser: base32Decode(secret) → keyBytes
+            Browser->>Browser: counter = floor(now/period) → 8-byte BE buffer
+            Browser->>WebCrypto: importKey('raw', keyBytes, {HMAC, SHA-1/256/512})
+            WebCrypto-->>Browser: HMAC-key
+            Browser->>WebCrypto: sign('HMAC', key, counter)
+            WebCrypto-->>Browser: sig (Uint8Array 20/32/64 bytes)
+            Browser->>Browser: dynamic truncation (RFC 4226) + mod 10^digits
+            Browser->>Browser: render #d-totp-code (XXX XXX) + #d-totp-countdown (Ns)
+        end
+    else entry.otp ontbreekt
+        Browser->>Browser: hide d-totp-label + d-totp-cell
+        Browser->>Browser: stopTotpLoop()
+    end
+
+    User->>Browser: klik 📋 d-totp-copy
+    Browser->>Browser: copyTotp() → generateTotp(uri) → navigator.clipboard.writeText(code)
+    Browser->>User: button-feedback "✓" (1.5s) → terug naar "📋"
+
+    User->>Browser: klik "Vergrendel vault" of selecteer andere entry
+    Browser->>Browser: stopTotpLoop() (interval clearen, geen geheugen-lek)
+
+    Note over Browser,WebCrypto: TOTP-secret + code blijven in browser-RAM. Server zag seed nooit (zat encrypted in KDBX4-blob). Zero-knowledge intact.
+```

@@ -8,7 +8,8 @@
 |---|---|---|---|---|
 | **kdbxweb** | ^2.1 | MIT | KDBX3/4 read/write in browser | Active maintenance (keeweb-org). Geen alternatief van vergelijkbare kwaliteit. |
 | **libargon2-wasm** | bundled met kdbxweb | Apache-2.0 | Argon2id KDF (zware key-derivation) | WebCrypto heeft GEEN Argon2; deze wasm-bundle is enige optie. |
-| **WebCrypto API** | browser-native | — | AES, SHA, HMAC, random | Standaard, geen lib nodig. |
+| **WebCrypto API** | browser-native | — | AES, SHA, HMAC, random; dekt KDBX4 + per-entry TOTP-HMAC | Standaard, geen lib nodig. |
+| **`js/totp.js`** (eigen, v0.0.9-Bellare+) | n.v.t. (~85 regels) | AGPL-3.0 (deze repo) | RFC 6238 per-entry TOTP-renderer via `crypto.subtle.sign('HMAC')` + base32-decoder + RFC 4226 dynamic truncation | Bewuste keuze WebCrypto-native i.p.v. `otplib`/`@otplib/preset-browser`: 0 KB lib-overhead, geen supply-chain, browser-native sinds 2018, exacte controle over truncation-pad |
 
 **Geen build-step:** vanilla ES2022 modules, ESM-imports via `<script type="module">`. Geen npm/webpack/vite in productie.
 **Dev-only:** Playwright (e2e), eslint, prettier — niet uitgeleverd naar client.

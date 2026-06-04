@@ -24,6 +24,8 @@ Browser-based wachtwoordkluis met client-side KDBX4-encryptie (KeePass-compat), 
 - **Clipboard-wipe:** best-effort overschrijf met `[HorseSafe wiped]` na 10s in browser; extensie kan échte clipboard-wipe (v0.2.0)
 - **Import:** KDBX3/KDBX4 + Bitwarden JSON + KeePass-CSV + XLSX
 - **Export:** alle bovenstaande + KDBX4 (plaintext-formaten unprotected, audit-log + reden-veld verplicht)
+- **Per-entry live TOTP** (v0.0.9-Bellare+): KeePassXC-compatibele `otp`-veld → browser-side RFC 6238 via WebCrypto → 6-cijferige code + 30s countdown in detail-pane, geen externe lib. Seeds blijven in encrypted vault.
+- **Keyfile vault-open** (v0.0.9-Bellare+): `vault.html` accepteert KeePass `.keyx`/`.key`-bestanden naast pw. Default-format = 64-hex-char ASCII (KeePass 1.x-spec); XML 2.0 import via lokale Node-resave (zie HS-BUG-005).
 - **Admin-pagina:** user CRUD + storage-stats + login-pogingen; GEEN vault-toegang
 
 ## Tech-stack
