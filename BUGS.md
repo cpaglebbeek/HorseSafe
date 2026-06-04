@@ -43,6 +43,32 @@ Kleurcodes:
 
 ---
 
+### HS-BUG-004 — vault.html mist `js/auth.js` → uitloggen-knop reageert niet
+
+**Kleur:** 🟡 Geel (logische architectuur — script-dependency-graph)
+**Status:** RESOLVED 2026-05-22 (commit `e04cebc`)
+**Versie ontdekt:** v0.0.7-Bellare (post-CSP-fix intern-test)
+**Versie opgelost:** v0.0.7-Bellare (zelfde dag)
+
+**Symptoom:** "Uitloggen"-knop op vault-pagina reageert niet. Geen redirect naar login. Browser-console toont geen error.
+
+**RCA — drie niveaus:**
+- **Functioneel:** Uitloggen-actie heeft geen effect; gebruiker blijft op vault-pagina.
+- **Technisch:** `vault.html` laadt `js/auth.js` niet (script-include ontbrak). `main.js` riep `window.HorseSafeAuth?.logout?.()` aan met optional-chaining → silent fallthrough als `HorseSafeAuth` undefined → click-handler complete zonder error of effect.
+- **Architectonisch:** Script-dependency-graph werd niet per-HTML gevalideerd. Optional-chaining-pattern (`?.method?.()`) verbergt missing-script-bugs door silent no-op i.p.v. zichtbare ReferenceError.
+
+**Fix:**
+- `vault.html`: `<script src="js/auth.js"></script>` toegevoegd vóór `main.js`.
+- `main.js`: `window.HorseSafeAuth?.logout?.()` → `window.HorseSafeAuth.logout()` (laat fouten zichtbaar worden bij toekomstige missing-script in plaats van silent fail).
+- Commit `e04cebc` + rsync naar HC55.
+
+**Preventie:**
+- Toekomstige HTMLs: valideren dat alle `window.HorseSafe*`-referenties bijbehorende `<script src>` hebben.
+- CI-check: grep voor `window\.HorseSafe[A-Z]\w*` in `*.js` en cross-checken tegen `<script src>` in HTMLs die die js-files laden.
+- Optional-chaining alleen voor genuine-optionele dependencies (bv. extension-injectie), niet voor verwachte same-page modules.
+
+---
+
 ### HS-BUG-003 — CSP blokkeert inline scripts → "Account aanmaken" reageert niet
 
 **Kleur:** 🔴 Rood (frontend onbruikbaar in productie)

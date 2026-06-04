@@ -13,15 +13,17 @@
 - [x] ~~**Per-entry TOTP-renderer** — `js/totp.js` RFC 6238 via WebCrypto + UI rij + interval-lifecycle~~ ✅ 2026-06-05
 - [x] ~~**Deploy naar HC55** — rsync frontend (`vault.html`, 4 js-files, `version.json`) + service active~~ ✅ 2026-06-05
 - [x] ~~**Live smoke-test** — login + vault-open met pw+keyfile + TOTP-codes zichtbaar (GitHub + Exact Online)~~ ✅ 2026-06-05
-- [ ] **Backend version-string fix** — `app.py` `/health` toont nog `0.0.8-Rogaway` (deferred → v0.0.10)
-- [ ] **pytest 67/67 + playwright 5/5 + KeePassXC-CLI roundtrip** rerun met nieuwe keyfile + TOTP-flow (deferred → v0.0.10)
-- [ ] **UI_DESIGN.md** TOTP-cell + keyfile-input documenteren (deferred → v0.0.10)
-- [ ] **DESIGN_TOKENS.md** monospace 1.3em letter-spacing 0.15em + TOTP-color tokens (deferred → v0.0.10)
-- [ ] **DEPENDENCIES.md** `crypto.subtle.sign('HMAC')` browser-native dependency (deferred → v0.0.10)
-- [ ] **SEQUENCE_DIAGRAMS.md** TOTP-render-loop + keyfile-vault-open-flow (deferred → v0.0.10)
-- [ ] **docs/screens/** screenshot detail-pane met TOTP-rij (deferred → v0.0.10)
-- [ ] **Upstream-issue kdbxweb** — open op `antelle/kdbxweb` voor XML 2.0 + 32-byte raw inconsistentie
-- [ ] **/opt/horsesafe/web/ cleanup** — node_modules, tests, test-results, devserver.py, package.json, playwright.config.ts horen niet in productie-pad (pre-existing, P3 in sanitycheck 2026-06-05)
+- [x] ~~**Backend version-string fix** — `config.py` `app_version` `0.0.8-Rogaway` → `0.0.9-Bellare`; LIVE-health geverifieerd~~ ✅ 2026-06-05 P2 (commit cdd4aa8)
+- [ ] **pytest 67/67 + playwright 5/5 + KeePassXC-CLI roundtrip** rerun met nieuwe keyfile + TOTP-flow (gebruiker-actie of v0.0.10)
+- [x] ~~**UI_DESIGN.md** TOTP-cell + keyfile-input documenteren~~ ✅ 2026-06-05 P2
+- [x] ~~**DESIGN_TOKENS.md** monospace 1.3em letter-spacing 0.15em + TOTP-tokens~~ ✅ 2026-06-05 P2 (`--hs-totp-*`)
+- [x] ~~**DEPENDENCIES.md** `crypto.subtle.sign('HMAC')` browser-native dependency~~ ✅ 2026-06-05 P2 (WebCrypto-rij uitgebreid + nieuwe `js/totp.js`-rij)
+- [x] ~~**SEQUENCE_DIAGRAMS.md** TOTP-render-loop + keyfile-vault-open-flow~~ ✅ 2026-06-05 P2 (SQ-8 nieuw + SQ-4 reaffirmed in ARCHITECTURE §2.4)
+- [x] ~~**docs/screens/S06_unlock.md + S07_content.md** content-update met TOTP-rij + keyfile-input + format-restrictie-tabel~~ ✅ 2026-06-05 P3
+- [ ] **docs/screens/** screenshots toevoegen (PNG van detail-pane + unlock-form) — visuele referentie, low-prio
+- [ ] **Upstream-issue kdbxweb** — open op `antelle/kdbxweb` voor XML 2.0 + 32-byte raw inconsistentie. Issue-body = `BUGS.md` HS-BUG-005 RCA-tekst (gebruiker-actie: kopieer naar https://github.com/antelle/kdbxweb/issues/new)
+- [x] ~~**/opt/horsesafe/web/ cleanup** — devserver.py, node_modules, package.json, package-lock.json, playwright.config.ts, README.md, tests/, test-results/ verwijderd; LIVE-health geverifieerd na cleanup~~ ✅ 2026-06-05 P3
+- [x] ~~**BUGS.md HS-BUG-004 doc-entry** (pre-existing gap — commit e04cebc had fix maar geen doc-entry)~~ ✅ 2026-06-05 P3
 
 ## 🆕 2026-05-18 — v0.0.8-Rogaway (XLSX-import + XLSX-export)
 

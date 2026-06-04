@@ -26,6 +26,13 @@
 - Title, Username (read-only)
 - Password — verborgen by default (`••••••••••••`); toggle-knop `👁`
 - URL — klikbare link (`target="_blank" rel="noopener noreferrer"`)
+- **TOTP** (v0.0.9-Bellare+, alleen zichtbaar als entry een `otp`-custom-field met `otpauth://`-URI heeft):
+  - `#d-totp-code` — 6-cijferige code in monospace 1.3em + letter-spacing 0.15em + tussen-spatie `XXX XXX` + bold (`--hs-totp-code-size`, `--hs-totp-letter-spacing`, `--hs-totp-code-weight`)
+  - `#d-totp-countdown` — seconden resterend in 30s-window, `tabular-nums` voor stabiele alignment (`--hs-totp-numeric-style`)
+  - `#d-totp-copy` — 📋-button kopieert huidige code naar clipboard; visuele "✓" feedback 1.5s
+  - Render-loop: `setInterval(renderTotpOnce, 1000)` via `state.totpTimer`, auto-start in `selectEntry`, auto-stop in `lockVault` en bij entry-wissel
+  - Berekening: `frontend/js/totp.js` RFC 6238 via `crypto.subtle.sign('HMAC')` + base32-decoder + RFC 4226 dynamic truncation
+  - **Zero-knowledge**: TOTP-seed staat in encrypted KDBX4-blob; berekening browser-only; server zag seed NOOIT
 - Notes (multi-line)
 - Acties: **📋 Kopieer wachtwoord** (met 10s-aftel-progressbar) + **Verwijder** (rood)
 

@@ -9,15 +9,26 @@
 
 - "Voer je **vault-wachtwoord** in. Dit verlaat je browser niet."
 - v0.0.2: single-vault per user. Eerste keer → maak aan; latere keer → open.
-- Bij verkeerd wachtwoord → "Verkeerd wachtwoord (of vault corrupt)" (kdbxweb.load gooit InvalidKey).
+- v0.0.9-Bellare+: keyfile-input toegevoegd. Wachtwoord óf keyfile is verplicht; beide combineren werkt KeePassXC-compatibel.
+- Bij verkeerd wachtwoord/keyfile → "Vault openen mislukt: `<e.code>`. Check pw + keyfile." (vault-ui.js toont nu de exacte kdbxweb-`KdbxError`-code i.p.v. generieke melding sinds v0.0.9-Bellare).
 
 ## Componenten
 
 - `<header class="brand">`
 - `#unlock-section` (initieel visible) met:
-  - password-input (type=password, autocomplete=off, minlength=6)
+  - `#vault-pw` (type=password, autocomplete=off, minlength=6, **NIET** `required` sinds v0.0.9-Bellare)
+  - `#vault-keyfile` (type=file, accept=`.keyx,.key,.keyfile,application/octet-stream`, autocomplete=off) — v0.0.9-Bellare+
+  - subtekst muted 0.85em: "Wachtwoord óf keyfile is verplicht. Beide combineren kan ook (KeePassXC-compatibel)."
   - submit + secundair-uitloggen buttons
   - error + status (muted)
+
+## Keyfile-format-restrictie (v0.0.9-Bellare, HS-BUG-005)
+
+| Format | kdbxweb-browser | kdbxweb-Node | pykeepass | KeePassXC-desktop | HorseSafe-advies |
+|---|---|---|---|---|---|
+| **64-hex-char ASCII** (KeePass 1.x-spec) | ✅ | ✅ | ✅ | ✅ | **DEFAULT — gebruik voor nieuwe vaults** |
+| KeePassXC 2.x XML (`<KeyFile><Meta><Version>2.0</Version>...`) | ❌ InvalidKey | ✅ | ✅ | ✅ | Import-only via lokale Node-resave vóór upload |
+| 32-byte raw binary | ❌ InvalidKey | ❌ (save/load-inconsistentie) | ✅ | ✅ | Niet gebruiken — kdbxweb-bug |
 
 ## Flows
 
