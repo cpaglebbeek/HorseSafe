@@ -26,6 +26,8 @@
 
   $('d-pw-toggle').addEventListener('click', () => UI.togglePwDisplay());
   $('d-copy-pw').addEventListener('click', () => UI.copyPassword());
+  const totpCopyBtn = $('d-totp-copy');
+  if (totpCopyBtn) totpCopyBtn.addEventListener('click', () => UI.copyTotp());
   $('d-share').addEventListener('click', async () => {
     const entry = UI.state.currentEntry;
     if (!entry) return;

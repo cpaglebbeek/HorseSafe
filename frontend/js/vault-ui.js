@@ -9,7 +9,35 @@
     vaultId: null,
     etag: null,
     currentEntry: null,
+    totpTimer: null,
   };
+
+  function stopTotpLoop() {
+    if (state.totpTimer) {
+      clearInterval(state.totpTimer);
+      state.totpTimer = null;
+    }
+  }
+
+  async function renderTotpOnce(uri) {
+    try {
+      const r = await window.HorseSafeTotp.generateTotp(uri);
+      const codeEl = $('d-totp-code');
+      const cdEl = $('d-totp-countdown');
+      if (codeEl) codeEl.textContent = r.code.replace(/(.{3})(.{3,5})/, '$1 $2');
+      if (cdEl) cdEl.textContent = r.secondsLeft + 's';
+    } catch (e) {
+      const codeEl = $('d-totp-code');
+      if (codeEl) codeEl.textContent = 'TOTP-fout';
+      console.error('[HorseSafe] TOTP-render fout:', e);
+    }
+  }
+
+  function startTotpLoop(uri) {
+    stopTotpLoop();
+    renderTotpOnce(uri);
+    state.totpTimer = setInterval(() => renderTotpOnce(uri), 1000);
+  }
 
   function $(id) { return document.getElementById(id); }
   function show(id) { $(id).hidden = false; }
@@ -71,6 +99,17 @@
     pwDisplay.classList.add('pw-hidden');
     pwDisplay.dataset.shown = '0';
 
+    // TOTP — toon alleen als entry een geldig otpauth-veld heeft
+    stopTotpLoop();
+    if (entry.otp && window.HorseSafeTotp) {
+      show('d-totp-label');
+      show('d-totp-cell');
+      startTotpLoop(entry.otp);
+    } else {
+      hide('d-totp-label');
+      hide('d-totp-cell');
+    }
+
     show('detail-pane');
   }
 
@@ -97,7 +136,16 @@
 
   async function unlockOrCreate() {
     const pw = $('vault-pw').value;
-    if (pw.length < 6) {
+    const keyFileInput = $('vault-keyfile');
+    let keyFileBuffer = null;
+    if (keyFileInput && keyFileInput.files && keyFileInput.files[0]) {
+      keyFileBuffer = await keyFileInput.files[0].arrayBuffer();
+    }
+    if (!pw && !keyFileBuffer) {
+      showError('unlock-error', 'Voer een vault-wachtwoord of keyfile in (of beide).');
+      return;
+    }
+    if (pw && pw.length > 0 && pw.length < 6) {
       showError('unlock-error', 'Vault-wachtwoord moet minimaal 6 tekens zijn (POC; productie ≥12).');
       return;
     }
@@ -143,11 +191,13 @@
           return;
         }
         try {
-          state.db = await window.HorseSafeCrypto.openDatabase(readRes.blob, pw);
+          state.db = await window.HorseSafeCrypto.openDatabase(readRes.blob, pw, keyFileBuffer);
           state.vaultId = meta.id;
           state.etag = readRes.etag;
         } catch (e) {
-          showError('unlock-error', 'Verkeerd wachtwoord (of vault corrupt).');
+          const detail = (e && (e.code || e.name || e.message)) || 'onbekende fout';
+          console.error('[HorseSafe] openDatabase failed:', e);
+          showError('unlock-error', `Vault openen mislukt: ${detail}. Check pw + keyfile.`);
           return;
         }
       }
@@ -166,11 +216,14 @@
   }
 
   function lockVault() {
+    stopTotpLoop();
     state.db = null;
     state.vaultId = null;
     state.etag = null;
     state.currentEntry = null;
     $('vault-pw').value = '';
+    const kf = $('vault-keyfile');
+    if (kf) kf.value = '';
     hide('vault-section');
     show('unlock-section');
   }
@@ -246,6 +299,22 @@
     $('e-pw').value = window.HorseSafeCrypto.generatePassword(20);
   }
 
+  async function copyTotp() {
+    if (!state.currentEntry || !state.currentEntry.otp) return;
+    try {
+      const r = await window.HorseSafeTotp.generateTotp(state.currentEntry.otp);
+      await navigator.clipboard.writeText(r.code);
+      const btn = $('d-totp-copy');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = orig; }, 1500);
+      }
+    } catch (e) {
+      console.error('[HorseSafe] TOTP-copy fout:', e);
+    }
+  }
+
   window.HorseSafeVaultUI = {
     state,
     unlockOrCreate,
@@ -254,6 +323,7 @@
     deleteCurrent,
     togglePwDisplay,
     copyPassword,
+    copyTotp,
     generatePw,
     renderEntries,
   };

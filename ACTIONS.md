@@ -1,6 +1,27 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-05-18
+> Laatst bijgewerkt: 2026-06-05
+
+## 🆕 2026-06-05 — v0.0.9-Bellare (Keyfile vault-open + per-entry live TOTP + KeePass-migratie)
+
+- [x] ~~**Wipe LIVE DB + vault-dir** op HorseCloud55 (2 users → 0)~~ ✅ 2026-06-04
+- [x] ~~**Register `cglebbeek@gmail.com`** met account-pw `[REDACTED-ACCOUNT-PW]`~~ ✅ 2026-06-04
+- [x] ~~**Vault-upload** — 33 entries uit `~/Downloads/Database.kdbx` (KeePass-import) als vault-blob~~ ✅ 2026-06-04
+- [x] ~~**Frontend keyfile-input** — `vault.html` + `crypto.js` `openDatabase(pw, keyfile)` + `vault-ui.js` file-arrayBuffer~~ ✅ 2026-06-04
+- [x] ~~**Versie-bump** — version.json 0.0.8-Rogaway → 0.0.9-Bellare~~ ✅ 2026-06-04
+- [x] ~~**Keyfile-format-shift** naar 64-hex-ASCII (HS-BUG-005 workaround) — vault v5 + lokale pair vervangen~~ ✅ 2026-06-05
+- [x] ~~**Per-entry TOTP-renderer** — `js/totp.js` RFC 6238 via WebCrypto + UI rij + interval-lifecycle~~ ✅ 2026-06-05
+- [x] ~~**Deploy naar HC55** — rsync frontend (`vault.html`, 4 js-files, `version.json`) + service active~~ ✅ 2026-06-05
+- [x] ~~**Live smoke-test** — login + vault-open met pw+keyfile + TOTP-codes zichtbaar (GitHub + Exact Online)~~ ✅ 2026-06-05
+- [ ] **Backend version-string fix** — `app.py` `/health` toont nog `0.0.8-Rogaway` (deferred → v0.0.10)
+- [ ] **pytest 67/67 + playwright 5/5 + KeePassXC-CLI roundtrip** rerun met nieuwe keyfile + TOTP-flow (deferred → v0.0.10)
+- [ ] **UI_DESIGN.md** TOTP-cell + keyfile-input documenteren (deferred → v0.0.10)
+- [ ] **DESIGN_TOKENS.md** monospace 1.3em letter-spacing 0.15em + TOTP-color tokens (deferred → v0.0.10)
+- [ ] **DEPENDENCIES.md** `crypto.subtle.sign('HMAC')` browser-native dependency (deferred → v0.0.10)
+- [ ] **SEQUENCE_DIAGRAMS.md** TOTP-render-loop + keyfile-vault-open-flow (deferred → v0.0.10)
+- [ ] **docs/screens/** screenshot detail-pane met TOTP-rij (deferred → v0.0.10)
+- [ ] **Upstream-issue kdbxweb** — open op `antelle/kdbxweb` voor XML 2.0 + 32-byte raw inconsistentie
+- [ ] **/opt/horsesafe/web/ cleanup** — node_modules, tests, test-results, devserver.py, package.json, playwright.config.ts horen niet in productie-pad (pre-existing, P3 in sanitycheck 2026-06-05)
 
 ## 🆕 2026-05-18 — v0.0.8-Rogaway (XLSX-import + XLSX-export)
 

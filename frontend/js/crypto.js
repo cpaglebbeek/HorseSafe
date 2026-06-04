@@ -56,12 +56,26 @@
   }
 
   /**
-   * Laad een KDBX-blob met master-pw. Returnt Kdbx-instance.
+   * Laad een KDBX-blob met master-pw en/of keyfile. Returnt Kdbx-instance.
    * Throws bij verkeerd wachtwoord (kdbxweb.KdbxError).
+   *
+   * @param {ArrayBuffer} blobBuffer        - KDBX4 ciphertext-blob
+   * @param {string}      masterPassword    - master-pw (mag leeg zijn als keyfile gezet is)
+   * @param {ArrayBuffer} [keyFileBuffer]   - optioneel KeePass-keyfile (.keyx / .key)
    */
-  async function openDatabase(blobBuffer, masterPassword) {
+  async function openDatabase(blobBuffer, masterPassword, keyFileBuffer) {
     const kdb = window.kdbxweb;
-    const credentials = new kdb.Credentials(kdb.ProtectedValue.fromString(masterPassword));
+    const pwArg = masterPassword ? kdb.ProtectedValue.fromString(masterPassword) : null;
+    let keyFileArg = null;
+    if (keyFileBuffer) {
+      // kdbxweb verwacht Uint8Array of ArrayBuffer; bij gebruikersinput is ArrayBuffer veiligst
+      keyFileArg = keyFileBuffer instanceof ArrayBuffer ? keyFileBuffer : new Uint8Array(keyFileBuffer).buffer;
+    }
+    const credentials = new kdb.Credentials(pwArg, keyFileArg);
+    // Credentials constructor is async — wacht expliciet op hash-berekening
+    if (credentials.ready) {
+      await credentials.ready;
+    }
     return await kdb.Kdbx.load(blobBuffer, credentials);
   }
 
@@ -93,15 +107,25 @@
       for (const sub of group.groups) walk(sub);
     }
     walk(db.getDefaultGroup());
-    return all.map(e => ({
-      uuid:     e.uuid.id,
-      title:    e.fields.get('Title') || '',
-      username: e.fields.get('UserName') || '',
-      password: e.fields.get('Password'),  // ProtectedValue
-      url:      e.fields.get('URL') || '',
-      notes:    e.fields.get('Notes') || '',
-      _entry:   e,
-    }));
+    return all.map(e => {
+      const otpField = e.fields.get('otp');
+      let otp = null;
+      if (otpField) {
+        const text = (otpField && typeof otpField === 'object' && otpField.getText)
+          ? otpField.getText() : String(otpField);
+        if (text.startsWith('otpauth://')) otp = text;
+      }
+      return {
+        uuid:     e.uuid.id,
+        title:    e.fields.get('Title') || '',
+        username: e.fields.get('UserName') || '',
+        password: e.fields.get('Password'),  // ProtectedValue
+        url:      e.fields.get('URL') || '',
+        notes:    e.fields.get('Notes') || '',
+        otp,
+        _entry:   e,
+      };
+    });
   }
 
   /** Verwijder entry op uuid. */

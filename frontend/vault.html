@@ -25,7 +25,11 @@
 
         <form id="unlock-form">
           <label for="vault-pw">Vault-wachtwoord</label>
-          <input type="password" id="vault-pw" required minlength="6" autocomplete="off">
+          <input type="password" id="vault-pw" minlength="6" autocomplete="off">
+
+          <label for="vault-keyfile">Keyfile (optioneel — KeePass .keyx of .key)</label>
+          <input type="file" id="vault-keyfile" accept=".keyx,.key,.keyfile,application/octet-stream" autocomplete="off">
+          <p class="muted" style="margin-top:4px;font-size:0.85em;">Wachtwoord óf keyfile is verplicht. Beide combineren kan ook (KeePassXC-compatibel).</p>
 
           <div id="unlock-error" class="error" hidden></div>
           <div id="unlock-status" class="muted" hidden></div>
@@ -78,6 +82,12 @@
                                        <button id="d-pw-toggle" class="secondary" style="margin-left: 8px; padding: 2px 8px;">👁</button>
                                      </dd>
               <dt>URL</dt>            <dd><a id="d-url" target="_blank" rel="noopener noreferrer"></a></dd>
+              <dt id="d-totp-label" hidden>TOTP</dt>
+              <dd id="d-totp-cell" hidden>
+                <span id="d-totp-code" style="font-family:monospace;font-size:1.3em;letter-spacing:0.15em;font-weight:bold;">———</span>
+                <span id="d-totp-countdown" class="muted" style="margin-left:10px;font-variant-numeric:tabular-nums;">—s</span>
+                <button id="d-totp-copy" class="secondary" style="margin-left:8px;padding:2px 8px;">📋</button>
+              </dd>
               <dt>Notities</dt>       <dd id="d-notes"></dd>
             </dl>
 
@@ -130,6 +140,7 @@
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/crypto.js"></script>
+  <script src="js/totp.js"></script>
   <script src="js/sharing.js"></script>
   <script src="js/vault-ui.js"></script>
   <script src="js/main.js"></script>

@@ -12,6 +12,37 @@ Kleurcodes:
 
 ## Open bugs
 
+### HS-BUG-005 — kdbxweb 2.1.1 browser-side faalt op KeePassXC 2.x XML keyfile + op 32-byte raw keyfile
+
+**Kleur:** 🟡 Geel (logische architectuur — KDBX-keyfile-format-restrictie)
+**Status:** RESOLVED 2026-06-05 (via format-shift naar 64-hex-ASCII keyfile)
+**Versie ontdekt:** v0.0.9-Bellare (browser-test van pw + keyfile-vault-open)
+**Versie opgelost:** v0.0.9-Bellare (zelfde sessie — Node-resave-roundtrip)
+
+**Symptoom:** Vault openen via `crypto.subtle` in browser geeft `KdbxError: InvalidKey` ondanks dat zowel pykeepass (Python) als kdbxweb in Node dezelfde db+pw+keyfile-combinatie correct ontsleutelen. SHA-256 van blob op server = identiek aan lokale blob; pw-only-pad werkt; alleen pw+keyfile faalt vanuit de browser.
+
+**RCA — drie niveaus:**
+- **Functioneel:** Eindgebruiker kan KeePassXC-`.keyx` (XML 2.0) keyfiles uit zijn lokale workflow niet hergebruiken voor HorseSafe-vault-open via de webclient. Foutmelding "InvalidKey" misleidt naar "verkeerd wachtwoord" — diagnose duurt onnodig lang.
+- **Technisch:** `kdbxweb 2.1.1` `Credentials.setKeyFile()` heeft twee paden die in browser anders uitkomen dan in Node:
+  1. **32-byte raw**: short-circuit `keyFileHash = ProtectedValue.fromBinary(keyFile)` zonder hashing — bug in roundtrip (save/load berekenen verschillende master-keys).
+  2. **XML 2.0 met `<Data Hash="...">`**: parsing via `XmlUtils.parse` valt onder browser-native `DOMParser` (CSP COEP `require-corp` + whitespace-handling) anders dan Node-`@xmldom/xmldom`. Resultaat: andere keyfileHash → mismatch master-key.
+  3. **64-hex-char ASCII pad** (`/^[a-f\d]{64}$/i`): hex-decode is identiek in alle runtimes → consistent.
+- **Architectonisch:** HorseSafe-cardinaal §2 "KDBX4-compat" + `kdf_in_use: AES-KDF (KeePassXC-CLI-verified)` veronderstelt dat alle kdbxweb-keyfile-formaten interoperabel zijn met KeePassXC-desktop. Praktijk: kdbxweb 2.1.1 ondersteunt **drie input-paden** met **verschillende compatibiliteits-profielen** in browser. Verwachting "default KeePassXC 2.x XML keyfile" (CLAUDE.md cardinaal cryptografische defaults) klopt niet voor de browser-runtime.
+
+**Fix (workaround, niet upstream-fix):**
+- Node-runtime kdbxweb gebruikt om vault te re-encrypteren met **64-hex-char ASCII keyfile** (32 random bytes → hex → ASCII-bytes → `.keyx` met 64 bytes).
+- Database lokaal (`~/Downloads/Database.kdbx` + `Database.keyx`) overschreven met v5-pair; originelen als `.bak-20260605` bewaard.
+- Server-vault via `PUT /vault/{id}` met etag-match geüpdatet naar v5-blob (6887 B, etag `99f60239d80c...`).
+- `kdbxweb`-browser kan v5 nu zonder issue openen — bewezen door 3-runtime roundtrip (Node-kdbxweb + pykeepass + KeePassXC-spec).
+
+**Preventie:**
+- **Cryptografische default-update**: HorseSafe genereert voortaan keyfiles in 64-hex-char ASCII-format (niet KeePass 2.x XML). Update CLAUDE.md "Cryptografische defaults" tabel volgt in v0.1.0-Massey.
+- **CI-uitbreiding**: voeg `kdbxweb-browser ↔ pykeepass ↔ KeePassXC-CLI`-roundtrip toe met alle drie keyfile-formaten als fixture; markeer XML-2.0 en 32-byte raw als "import-only, niet voor generate".
+- **Upstream-issue**: rapport naar `antelle/kdbxweb` voor 32-byte-raw save/load-inconsistentie + XML-2.0-browser-DOMParser-pad (TODO).
+- **Documentatie**: `ARCHITECTURE.md §1.3` keyfile-tabel uitbreiden met "import-compatibel vs generate-default".
+
+---
+
 ### HS-BUG-003 — CSP blokkeert inline scripts → "Account aanmaken" reageert niet
 
 **Kleur:** 🔴 Rood (frontend onbruikbaar in productie)

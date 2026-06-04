@@ -25,11 +25,12 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 |---|---|
 | **Account** | Server-side identiteit: e-mailadres + accountwachtwoord + MFA-secret + JWT-sessie |
 | **Vault** | Encrypted KDBX4-bestand. Eén-per-user in v0.0.x; meerdere benoemde in v0.1.x |
-| **Master-key** | Composiet van (a) master-pw, (b) keyfile, of (c) beide. Alléén in browser. Nooit naar server |
+| **Master-key** | Composiet van (a) master-pw, (b) keyfile, of (c) beide. Alléén in browser. Nooit naar server. **Keyfile-format-default v0.0.9-Bellare+: 64-hex-char ASCII** (KeePass 1.x-spec-pad, kdbxweb-browser-consistent). Import-compatibel met KeePassXC 2.x XML keyfile (`<KeyFile><Meta><Version>2.0</Version></Meta>...`) en 32-byte raw, MAAR via lokale Node-resave naar 64-hex-ASCII vóór upload — zie `BUGS.md` HS-BUG-005 |
 | **Vault-blob** | KDBX4-bestand zoals server het ziet: pure ciphertext. Wordt opgevraagd, gedecrypteerd in browser, gemuteerd, geëncrypteerd, teruggeplaatst |
 | **Entry** | Eén wachtwoord-record binnen vault: title, username, password, URL, notes, attachments, history, expiry |
 | **Magic-link MFA** | Eenmalig e-mail-token, hergebruikt iCt_Horse magic-link infrastructuur |
-| **TOTP MFA** | RFC 6238, 30s window, 6 digits, SHA-1, base32-geseed |
+| **TOTP MFA (account-laag)** | RFC 6238, 30s window, 6 digits, SHA-1, base32-geseed. `totp_secret` in `users`-tabel (server kent secret om login-codes te verifiëren) |
+| **Per-entry TOTP-renderer (vault-laag, v0.0.9-Bellare+)** | RFC 6238 client-side. `otpauth://`-URI in entry-custom-field `otp` (KeePassXC-compat). Server ziet seed NOOIT — zit binnen encrypted KDBX4. UI rendert 6-cijferige code + 30s countdown. Implementatie via `crypto.subtle.sign('HMAC')` browser-native, geen externe lib. |
 
 ### 1.4 Zero-knowledge bewijs
 
@@ -52,6 +53,16 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 **Strict zero-knowledge → server kan vault-content niet recoveren.** Bij verlies master-pw + keyfile = data **permanent** verloren. Hierop wordt expliciet gewaarschuwd bij account-aanmaak (verplichte checkbox).
 
 ## 2. Logisch niveau
+
+### 2.0 Frontend-component-update v0.0.9-Bellare
+
+| Component | File | Doel |
+|---|---|---|
+| `HorseSafeCrypto.openDatabase(blob, pw, keyFileBuffer)` | `frontend/js/crypto.js` | Vault openen met pw en/of keyfile (KeePassXC-compatibel). Wacht expliciet op `credentials.ready` (async Credentials-constructor in kdbxweb 2.1.1). |
+| `HorseSafeCrypto.listEntries()` extractie van `otp` | `frontend/js/crypto.js` | Custom-string `otp` (KeePassXC-compat) parsen naar entry-property; handelt ProtectedValue en plain string. |
+| `HorseSafeTotp.generateTotp(otpauthUri)` | `frontend/js/totp.js` | RFC 6238 via `crypto.subtle.sign('HMAC')`. Base32-decoder + dynamic truncation per RFC 4226. Default SHA-1/6/30, override via URI-params. |
+| `state.totpTimer` + `startTotpLoop`/`stopTotpLoop` | `frontend/js/vault-ui.js` | Interval-lifecycle voor per-entry-TOTP-render. Start in `selectEntry`, stop in `lockVault` en bij entry-wissel. |
+| Detail-pane TOTP-rij (`d-totp-label`/`d-totp-cell`/`d-totp-code`/`d-totp-countdown`/`d-totp-copy`) | `frontend/vault.html` | UI-elementen voor live TOTP-code + countdown + clipboard-copy. Verborgen tot entry een geldig `otp`-veld heeft. |
 
 ### 2.1 Component-decompositie
 
@@ -161,20 +172,30 @@ CREATE TABLE magic_links (
 | GET | `/admin/stats` | JWT+admin | Storage + login-pogingen |
 | GET | `/admin/audit` | JWT+admin | Audit-log |
 
-### 2.4 Flow: vault openen
+### 2.4 Flow: vault openen (v0.0.9-Bellare+)
 
 ```
-1. User → frontend: voer master-pw + optioneel keyfile in
+1. User → frontend (vault.html): voer master-pw én/of keyfile (.keyx) in
+   - pw alleen: gebruik pw als enige master-key-input
+   - keyfile alleen: gebruik keyfile als enige master-key-input
+   - beide: composite key per kdbxweb-Credentials(pw, keyfile)
 2. Frontend → backend: GET /vault/{id} (JWT+MFA cookie)
-3. Backend → frontend: KDBX4-blob + ETag
-4. Frontend: kdbxweb.Kdbx.load(blob, credentials(pw, keyfile))
-5. Frontend: render entries (in-memory)
-6. User → frontend: bewerkt entry
-7. Frontend: kdbxweb.Kdbx.save() → nieuwe blob
-8. Frontend → backend: PUT /vault/{id} met If-Match: <oude-etag>
-9a. Backend: etag matcht → blob vervangen, nieuwe etag berekenen, 200 OK + nieuwe etag
-9b. Backend: etag mismatch → 412 Precondition Failed → user moet refreshen
+3. Backend → frontend: KDBX4-blob + ETag (application/octet-stream)
+4. Frontend: file.arrayBuffer() (keyfile) → ArrayBuffer
+5. Frontend: new kdbxweb.Credentials(ProtectedValue.fromString(pw), keyFileBuffer)
+6. Frontend: await credentials.ready (async constructor)
+7. Frontend: await kdbxweb.Kdbx.load(blobBuffer, credentials)
+8. Frontend: HorseSafeCrypto.listEntries(db) → array met {uuid, title, ..., otp}
+9. Frontend: render entries (in-memory); detail-pane toont TOTP-rij als entry.otp.startsWith('otpauth://')
+10. TOTP-render-loop: state.totpTimer = setInterval(renderTotpOnce(uri), 1000)
+11. User → frontend: bewerkt entry
+12. Frontend: kdbxweb.Kdbx.save() → nieuwe blob
+13. Frontend → backend: PUT /vault/{id} met If-Match: <oude-etag>
+14a. Backend: etag matcht → blob vervangen, nieuwe etag berekenen, 200 OK + nieuwe etag
+14b. Backend: etag mismatch → 412 Precondition Failed → user moet refreshen
 ```
+
+**Keyfile-format-restrictie (v0.0.9-Bellare):** alleen 64-hex-char ASCII keyfiles werken consistent in kdbxweb-browser. XML 2.0 en 32-byte raw vereisen lokale Node-resave vóór gebruik — zie `BUGS.md` HS-BUG-005.
 
 ### 2.5 Flow: import KDBX
 

@@ -5,6 +5,42 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 ## [Unreleased]
 - v0.1.0-Massey: public launch op icthorse.nl/HorseSafe/ + externe pen-test + open-source-beslissing AGPL
 
+## [0.0.9-Bellare] — 2026-06-05
+
+### Added — Vault-open met pw én/of keyfile + per-entry live TOTP-renderer
+
+- **Keyfile-input op vault-open** (`frontend/vault.html` unlock-form): `<input type="file" id="vault-keyfile" accept=".keyx,.key,.keyfile,application/octet-stream">`. Wachtwoord óf keyfile is verplicht; beide combineren werkt KeePassXC-compatibel.
+- **`openDatabase(blobBuffer, masterPassword, keyFileBuffer)`** (`frontend/js/crypto.js`): uitgebreid met optionele keyfile-arg. Coerced naar `ArrayBuffer`. Wacht expliciet op `credentials.ready` (async Credentials-constructor in kdbxweb 2.1.1).
+- **`vault-ui.js` `unlockOrCreate`**: leest `<input type="file">` → `.arrayBuffer()` → geeft door aan `openDatabase`. Strikte input-validatie (pw of keyfile vereist; pw min 6 als gezet).
+- **Per-entry live TOTP-renderer** (`frontend/js/totp.js`, ~85 regels nieuw): RFC 6238 via `crypto.subtle.sign('HMAC')`. Default SHA-1 / 6 digits / 30s, override via `otpauth://`-URI-params (`algorithm`, `digits`, `period`). Base32-decoder + dynamic truncation per RFC 4226. Geen externe lib.
+- **`listEntries()` extractie van `otp`-veld** (`frontend/js/crypto.js`): KeePassXC-compatibele custom-string `otp` met `otpauth://`-URI; afhandeling van zowel ProtectedValue als plain string.
+- **Entry-detail UI** (`frontend/vault.html`): nieuwe rij `TOTP` (initieel hidden) met 6-cijferige code in monospace 1.3em + letter-spacing 0.15em + groep-spatie, seconden-countdown rechts, 📋-copy-button. Toont alleen als entry een geldig otpauth-veld heeft.
+- **TOTP-loop lifecycle** (`frontend/js/vault-ui.js`): `state.totpTimer` interval start in `selectEntry` (refresh 1s), stop in `lockVault` en bij entry-wissel.
+- **TOTP-copy** (`frontend/js/main.js`): wire-up van `d-totp-copy` event-binding naar `UI.copyTotp()`.
+
+### Changed — Keyfile-format default (cryptografische defaults)
+
+- **Default-keyfile-format gewijzigd** van KeePassXC 2.x XML naar **64-hex-char ASCII** (KeePass 1.x-spec-pad). Reden: kdbxweb 2.1.1 browser-side faalt op XML 2.0 + 32-byte raw keyfiles met `InvalidKey`, terwijl Node-side en pykeepass beide werken (zie HS-BUG-005 + RCA).
+- **Live vault-blob** voor `cglebbeek@gmail.com` op HorseCloud55 herversleuteld met pw + 64-hex-ASCII keyfile (etag `99f60239d80c7e04412b8c156ab18c5bd721be596ac92389aa7cb0f46d0864d5`, 6887 B).
+- **Lokale Database-pair** (`~/Downloads/Database.{kdbx,keyx}`) overschreven met v5; originelen `.bak-20260605` bewaard.
+- **CLAUDE.md "Cryptografische defaults"-tabel** is nu STALE; update gepland voor v0.1.0-Massey.
+
+### Fixed — HS-BUG-005
+
+- 🟡 Geel — kdbxweb 2.1.1 browser-side faalt op XML 2.0 keyfile en op 32-byte raw keyfile. Workaround: format-shift naar 64-hex-ASCII (3-runtime roundtrip bewezen: kdbxweb-browser ↔ kdbxweb-Node ↔ pykeepass).
+
+### Migration
+
+- **Wipe + re-register**: alle LIVE-users + vaults op HorseCloud55 weggegooid (2 users → 0). Nieuwe single-user setup: `cglebbeek@gmail.com` met account-pw `[REDACTED-ACCOUNT-PW]` (account-laag) + vault-master-pw `[REDACTED-VAULT-PW]` + keyfile `Database.keyx` (vault-laag).
+- **KeePass-import als upstream**: 33 entries uit `~/Downloads/Database.kdbx` (gegenereerd via pykeepass uit oorspronkelijke `SECURITY_CREDENTIALS_2026-04-12.md` + MCP-credentials + Tuya API-keys + TOTP-seeds + SSH-pointers + Gmail-recovery-codes) als initiele HorseSafe-vault-blob.
+
+### Notes
+
+- **Zero-knowledge ongebroken**: keyfile-bytes en master-pw verlaten browser nooit; Node-resave was lokaal op Mac; server zag alleen ciphertext-blobs en etag-hashes.
+- **Backend ongewijzigd**: alleen frontend-files gepatcht; SQLite-schema, FastAPI-routes en systemd-unit identiek aan v0.0.8-Rogaway.
+- **CI-eis "KDBX4-roundtrip groen"** is NIET gerund vóór deze deploy — gepland voor v0.0.10/v0.1.0-Massey met uitgebreide keyfile-format-fixture (XML 2.0 + 32-byte raw + 64-hex-ASCII).
+- **api/health version-string** toont nog `0.0.8-Rogaway` (backend hardcoded) — gepland voor v0.0.10.
+
 ## [0.0.8-Rogaway] — 2026-05-18
 
 ### Added — XLSX-import + XLSX-export
