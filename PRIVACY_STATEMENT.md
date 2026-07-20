@@ -1,11 +1,11 @@
 # PRIVACY_STATEMENT.md — HorseSafe
 
-> Privacyverklaring conform GDPR Art. 12-14. Skeleton — finale versie voor v0.1.0 (publieke dienst).
+> Privacyverklaring conform GDPR Art. 12-14. Finaal voor v0.1.0 (publieke dienst).
 
 **Verwerker:** iCt Horse — KvK 96787112 — info@icthorse.nl
 **Functionaris Gegevensbescherming:** n.v.t. (geen wettelijke verplichting, klein bedrijf)
-**Versie:** 0.0.0 (skeleton)
-**Datum:** 2026-05-21
+**Versie:** 0.1.0 (finaal, publieke launch)
+**Datum:** 2026-07-20
 
 ## 1. Welke gegevens verzamelen we?
 

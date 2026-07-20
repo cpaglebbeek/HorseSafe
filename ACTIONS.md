@@ -2,6 +2,21 @@
 
 > Laatst bijgewerkt: 2026-07-20
 
+## 🆕 2026-07-20 — v0.1.0-Massey (public launch, deels)
+
+- [x] ~~**icthorse.nl/HorseSafe/ LIVE** — Hostinger subdir-.htaccess 302 → HC55, beide casings, e2e geverifieerd~~ ✅
+- [x] ~~**Pen-test-checklist v0.1.0** — 8 punten tegen LIVE; 1 fix (OpenAPI-docs dicht in productie via `docs_enabled=false`), rest groen; SECURITY.md-tabel~~ ✅
+- [x] ~~**Versie-bump** 0.0.10-Goldwasser → 0.1.0-Massey (config.py + version.json)~~ ✅
+- [x] ~~**Backend pytest** 68/68 groen (incl. nieuwe docs-off test)~~ ✅
+- [x] ~~**Deploy HC55** — git pull + docs-env + restart; health toont 0.1.0-Massey; /api/docs → 404~~ ✅
+- [x] ~~**Privacy-statement finaal** (0.1.0) + LAUNCH_PREP.md (LinkedIn-draft + sitemap-entry)~~ ✅
+- [ ] 🚧 **BLOKKEREND: git-history-scrub** — plaintext-wachtwoorden (`[REDACTED-PREFIX]*`) in history; scrub-procedure in LAUNCH_PREP.md §1. Public-go pas hierna.
+- [ ] **Repo PUBLIC + AGPL-3.0** — na scrub (LAUNCH_PREP.md §2)
+- [ ] **Sitemap + LinkedIn** — na public (LAUNCH_PREP.md §3-4)
+- [ ] **Backup Storagebox** — GEBLOKKEERD op Storagebox SSH-credentials (LAUNCH_PREP.md §5)
+- [ ] **Magic-link mail** — GEBLOKKEERD op Gmail App Password (LAUNCH_PREP.md §5)
+- [ ] **Dashboard health-tile** — nieuwe feature in Dashboard-repo, uitgesteld (LAUNCH_PREP.md §6)
+
 ## 🆕 2026-07-20 — v0.0.10-Goldwasser (test-rerun + HS-BUG-006 unlock-foutmelding)
 
 - [x] ~~**Backend pytest rerun** — 67/67 groen (Python 3.14 venv)~~ ✅ 2026-07-20
