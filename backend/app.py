@@ -36,11 +36,19 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    # OpenAPI-schema + interactieve docs alleen in dev/test. In productie uit:
+    # ze onthullen de volledige API-oppervlakte van een zero-knowledge dienst.
+    docs_kwargs = (
+        {}
+        if settings.docs_enabled
+        else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    )
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,
         description="Zero-knowledge wachtwoord-vault SaaS (KeePass-KDBX4-compat)",
         lifespan=lifespan,
+        **docs_kwargs,
     )
     # Middleware-order: Starlette wrapt in reverse-add-order. Laatst-toegevoegd =
     # outermost. CORS MOET outermost zijn zodat ook 429/423-responses van

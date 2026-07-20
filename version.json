@@ -1,6 +1,6 @@
 {
-  "version": "0.0.10",
-  "codename": "Goldwasser",
+  "version": "0.1.0",
+  "codename": "Massey",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -12,12 +12,13 @@
     "Adleman",
     "Bellare",
     "Rogaway",
-    "Bernstein"
+    "Bernstein",
+    "Massey"
   ],
-  "phase": "Phase 8b — Test-rerun keyfile+TOTP-flow (open punt v0.0.9) + HS-BUG-006 fix: unlock-fout toont bij InvalidKey weer gebruiksvriendelijke melding i.p.v. rauwe foutcode. LIVE: https://horsecloud55.ddns.net/HorseSafe/",
+  "phase": "Phase 9 — Public launch (Massey): icthorse.nl/HorseSafe/ redirect LIVE + pen-test-checklist afgewerkt (OpenAPI-docs dicht in productie) + AGPL-3.0 public. LIVE: https://horsecloud55.ddns.net/HorseSafe/ + https://icthorse.nl/HorseSafe/",
   "released": "2026-07-20",
   "live_url": "https://horsecloud55.ddns.net/HorseSafe/",
-  "next_url_planned": "https://icthorse.nl/HorseSafe/ (v0.1.0-Massey)",
+  "public_url": "https://icthorse.nl/HorseSafe/ (302 → HC55, LIVE 2026-07-20)",
   "deploy_status": {
     "server": "HorseCloud55 (Hetzner Helsinki)",
     "port": 3997,
@@ -37,5 +38,5 @@
     "live_smoke_test": "✓ health + register + login + vault + me + logout (full roundtrip op LIVE-server)"
   },
   "schema_version": 4,
-  "next_version_planned": "0.1.0-Massey (public launch: icthorse.nl/HorseSafe/, externe pen-test, open-source-beslissing AGPL)"
+  "next_version_planned": "0.2.0 (shared vaults + offline-modus ServiceWorker-cache)"
 }

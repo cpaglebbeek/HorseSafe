@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "HorseSafe"
-    app_version: str = "0.0.10-Goldwasser"
+    app_version: str = "0.1.0-Massey"
 
     db_path: Path = Field(default=Path("./db/horsesafe.db"))
     vaults_dir: Path = Field(default=Path("./vaults"))
@@ -43,6 +43,7 @@ class Settings(BaseSettings):
 
     cors_origins: str = ""  # Comma-separated; leeg = geen CORS (production-default)
     rate_limit_enabled: bool = True
+    docs_enabled: bool = False  # OpenAPI /docs + /openapi.json; uit in productie (info-disclosure)
 
     # MFA — Fase 3 (v0.0.3-Merkle)
     totp_encryption_key: str = ""  # 32-byte hex; leeg = test/dev-mode (plaintext fallback)

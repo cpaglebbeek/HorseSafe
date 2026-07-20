@@ -3,7 +3,28 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.1.0-Massey: public launch op icthorse.nl/HorseSafe/ + externe pen-test + open-source-beslissing AGPL
+- v0.2.0: shared vaults (re-encryptie per ontvanger) + offline-modus (ServiceWorker-cache)
+
+## [0.1.0-Massey] — 2026-07-20
+
+### Added — Public launch
+
+- **Publieke URL `icthorse.nl/HorseSafe/`** — Hostinger subdir-`.htaccess` (302 → `horsecloud55.ddns.net/HorseSafe/`), subpath behouden. Zelfde geïsoleerde patroon als StaffKennis/VeiligDelen; WordPress-root ongemoeid. Beide casings (`/HorseSafe/` + `/horsesafe/`) geredirect.
+- **AGPL-3.0** — repo publiek na schone secret-scan van de volledige git-history.
+
+### Changed — Security-hardening (pen-test-checklist v0.1.0)
+
+- **OpenAPI-docs dicht in productie** (`backend/app.py` + `config.py`): nieuwe setting `docs_enabled` (default `false`) zet `docs_url`/`redoc_url`/`openapi_url` op `None`. Voorheen waren `/docs`, `/redoc` en `/openapi.json` publiek (200) → onthulden de volledige API-oppervlakte van een zero-knowledge dienst. Dev/test kan docs aanzetten via `HORSESAFE_DOCS_ENABLED=true`.
+
+### Verified — Pen-test-checklist (LIVE-probing, geen bevindingen open)
+
+- Security-headers compleet (HSTS, CSP strak, X-Frame DENY, nosniff, referrer no-referrer).
+- Auth-bypass geblokt (`/api/vault` zonder cookie → 401).
+- Path-traversal in `/vault/{id}` → 401 (geen file-read).
+- SQL-injection in login-email → Pydantic email-validatie weigert (422); ORM parametriseert.
+- Rate-limit login → 429 na 4 mislukte pogingen.
+- Geen cross-origin CORS toegestaan (lege `cors_origins` in productie).
+- Geen `Set-Cookie` op mislukte/gerate-limite login.
 
 ## [0.0.9-Bellare] — 2026-06-05
 

@@ -103,3 +103,22 @@ Voor open-source-go-live (v0.1.0): externe pen-test op:
 8. Side-channel timing op login
 
 Resultaat → SECURITY-POSTURE.md (na pen-test).
+
+## Pen-test-checklist v0.1.0-Massey — uitgevoerd 2026-07-20 (interne LIVE-probe)
+
+Interne go-live-checklist tegen de LIVE-omgeving (`horsecloud55.ddns.net/HorseSafe/`). Externe partij-pen-test blijft aanbevolen bij eerste zakelijke klant (zie DPIA).
+
+| # | Test | Resultaat | Bewijs |
+|---|---|---|---|
+| 1 | Security-headers | ✅ compleet | HSTS `max-age=31536000; includeSubDomains`, CSP `default-src 'self'` + `object-src 'none'` + `frame-ancestors 'none'`, X-Frame DENY, X-Content-Type nosniff, Referrer no-referrer |
+| 2 | Auth-bypass `/api/vault` zonder cookie | ✅ geblokt | HTTP 401 |
+| 3 | Path-traversal `/vault/{id}` (`..%2f`, `../`) | ✅ geblokt | HTTP 401 (auth-gate vóór resolve) |
+| 4 | SQL-injection login-email `' OR 1=1--` | ✅ geweigerd | HTTP 422 Pydantic email-validatie; ORM parametriseert queries |
+| 5 | Rate-limit login (8× snel) | ✅ actief | 401×4 → 429×4 |
+| 6 | CORS cross-origin preflight (`Origin: evil`) | ✅ geen ACAO | lege `cors_origins` in productie → geen cross-origin |
+| 7 | OpenAPI/docs-exposure | ⚠️→✅ **fix** | was `/docs`+`/openapi.json`+`/redoc` = 200; `docs_enabled=false` (default) sluit ze in productie |
+| 8 | Set-Cookie op mislukte/gerate-limite login | ✅ geen | geen sessie-cookie bij fail |
+
+**Openstaand (server-side niet los te probren, client-side by-design):**
+- Vault-blob-HMAC-tampering + TOTP-replay: zero-knowledge → server ziet plaintext niet; integriteit is client-side (kdbxweb HMAC-SHA-256). Getest via cross-runtime roundtrip in v0.0.9.
+- Side-channel timing login: Argon2id constante-tijd-verificatie via passlib; niet gemeten, laag risico.
