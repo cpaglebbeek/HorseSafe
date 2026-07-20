@@ -12,6 +12,28 @@ Kleurcodes:
 
 ## Open bugs
 
+### HS-BUG-006 — unlock-fout toont rauwe foutcode "InvalidKey" i.p.v. gebruiksvriendelijke melding
+
+**Kleur:** 🟢 Groen (snel herstel — fysiek niveau)
+**Status:** RESOLVED 2026-07-20 (v0.0.10-Goldwasser)
+**Versie ontdekt:** v0.0.10-Goldwasser (e2e-rerun, open punt uit v0.0.9)
+**Versie opgelost:** v0.0.10-Goldwasser (zelfde sessie)
+
+**Symptoom:** Bij verkeerd master-pw toont het unlock-scherm "Vault openen mislukt: InvalidKey. Check pw + keyfile." — een rauwe kdbxweb-foutcode. E2e-test `smoke.spec.ts` verwacht "Verkeerd wachtwoord" → 4/5 i.p.v. 5/5.
+
+**RCA — drie niveaus:**
+- **Functioneel:** Eindgebruiker krijgt jargon ("InvalidKey") in plaats van een begrijpelijke melding; onduidelijk of pw of keyfile fout is.
+- **Technisch:** v0.0.9 (commit `e876865`) verving in `vault-ui.js` de vaste melding "Verkeerd wachtwoord" door generieke `${detail}`-interpolatie voor het keyfile-debug-pad, zonder het bekende `InvalidKey`-geval apart af te handelen.
+- **Architectonisch:** Diagnostiek-behoefte (HS-BUG-005-debugsessie) en gebruikers-UX deelden één error-pad; e2e-suite werd niet gererund in dezelfde sessie waardoor de regressie 6 weken onopgemerkt bleef (het openstaande "rerun"-vinkje in ACTIONS.md was juist hiervoor bedoeld).
+
+**Fix:**
+- `vault-ui.js`: bekend geval `InvalidKey` → "Verkeerd wachtwoord of verkeerde keyfile."; overige fouten behouden `${detail}`-diagnostiek. Console-log blijft voor debugging.
+
+**Preventie:**
+- E2e-suite altijd rerunnen in dezelfde sessie als een frontend-flow-wijziging (was al ACTIONS-item; nu ook bewezen waarom).
+
+---
+
 ### HS-BUG-005 — kdbxweb 2.1.1 browser-side faalt op KeePassXC 2.x XML keyfile + op 32-byte raw keyfile
 
 **Kleur:** 🟡 Geel (logische architectuur — KDBX-keyfile-format-restrictie)

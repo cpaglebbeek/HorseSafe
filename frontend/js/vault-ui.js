@@ -197,7 +197,11 @@
         } catch (e) {
           const detail = (e && (e.code || e.name || e.message)) || 'onbekende fout';
           console.error('[HorseSafe] openDatabase failed:', e);
-          showError('unlock-error', `Vault openen mislukt: ${detail}. Check pw + keyfile.`);
+          if (detail === 'InvalidKey') {
+            showError('unlock-error', 'Verkeerd wachtwoord of verkeerde keyfile.');
+          } else {
+            showError('unlock-error', `Vault openen mislukt: ${detail}. Check pw + keyfile.`);
+          }
           return;
         }
       }

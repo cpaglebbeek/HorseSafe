@@ -1,6 +1,6 @@
 {
-  "version": "0.0.9",
-  "codename": "Bellare",
+  "version": "0.0.10",
+  "codename": "Goldwasser",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -14,8 +14,8 @@
     "Rogaway",
     "Bernstein"
   ],
-  "phase": "Phase 8 — Keyfile-vault-open + KeePass-migratie + per-entry TOTP (RFC 6238 via WebCrypto): otpauth-URI in custom-field 'otp' rendert 6-cijferige code + 30s countdown. LIVE: https://horsecloud55.ddns.net/HorseSafe/",
-  "released": "2026-06-05",
+  "phase": "Phase 8b — Test-rerun keyfile+TOTP-flow (open punt v0.0.9) + HS-BUG-006 fix: unlock-fout toont bij InvalidKey weer gebruiksvriendelijke melding i.p.v. rauwe foutcode. LIVE: https://horsecloud55.ddns.net/HorseSafe/",
+  "released": "2026-07-20",
   "live_url": "https://horsecloud55.ddns.net/HorseSafe/",
   "next_url_planned": "https://icthorse.nl/HorseSafe/ (v0.1.0-Massey)",
   "deploy_status": {

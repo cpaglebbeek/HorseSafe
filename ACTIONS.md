@@ -1,6 +1,15 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-06-05
+> Laatst bijgewerkt: 2026-07-20
+
+## 🆕 2026-07-20 — v0.0.10-Goldwasser (test-rerun + HS-BUG-006 unlock-foutmelding)
+
+- [x] ~~**Backend pytest rerun** — 67/67 groen (Python 3.14 venv)~~ ✅ 2026-07-20
+- [x] ~~**Playwright e2e rerun** — eerst 4/5 (regressie ontdekt), na fix **5/5 groen**~~ ✅ 2026-07-20
+- [x] ~~**HS-BUG-006 fix** — `vault-ui.js` toont bij `InvalidKey` weer "Verkeerd wachtwoord of verkeerde keyfile." i.p.v. rauwe foutcode; BUGS.md-entry met RCA~~ ✅ 2026-07-20
+- [x] ~~**Versie-bump** — config.py + version.json → 0.0.10-Goldwasser~~ ✅ 2026-07-20
+- [ ] **KeePassXC-CLI roundtrip** — draait in CI bij push (lokaal geen keepassxc-cli); CI-status verifiëren na push
+- [ ] **Deploy naar HC55** — vault-ui.js + version.json + backend config.py + service-restart + live-health-check
 
 ## 🆕 2026-06-05 — v0.0.9-Bellare (Keyfile vault-open + per-entry live TOTP + KeePass-migratie)
 
@@ -14,7 +23,7 @@
 - [x] ~~**Deploy naar HC55** — rsync frontend (`vault.html`, 4 js-files, `version.json`) + service active~~ ✅ 2026-06-05
 - [x] ~~**Live smoke-test** — login + vault-open met pw+keyfile + TOTP-codes zichtbaar (GitHub + Exact Online)~~ ✅ 2026-06-05
 - [x] ~~**Backend version-string fix** — `config.py` `app_version` `0.0.8-Rogaway` → `0.0.9-Bellare`; LIVE-health geverifieerd~~ ✅ 2026-06-05 P2 (commit cdd4aa8)
-- [ ] **pytest 67/67 + playwright 5/5 + KeePassXC-CLI roundtrip** rerun met nieuwe keyfile + TOTP-flow (gebruiker-actie of v0.0.10)
+- [x] ~~**pytest 67/67 + playwright 5/5 + KeePassXC-CLI roundtrip** rerun met nieuwe keyfile + TOTP-flow~~ ✅ 2026-07-20 v0.0.10-Goldwasser (pytest 67/67 + playwright 5/5 lokaal; oracle via CI)
 - [x] ~~**UI_DESIGN.md** TOTP-cell + keyfile-input documenteren~~ ✅ 2026-06-05 P2
 - [x] ~~**DESIGN_TOKENS.md** monospace 1.3em letter-spacing 0.15em + TOTP-tokens~~ ✅ 2026-06-05 P2 (`--hs-totp-*`)
 - [x] ~~**DEPENDENCIES.md** `crypto.subtle.sign('HMAC')` browser-native dependency~~ ✅ 2026-06-05 P2 (WebCrypto-rij uitgebreid + nieuwe `js/totp.js`-rij)
