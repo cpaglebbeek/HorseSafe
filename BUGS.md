@@ -63,6 +63,8 @@ Kleurcodes:
 - **Upstream-issue**: rapport naar `antelle/kdbxweb` voor 32-byte-raw save/load-inconsistentie + XML-2.0-browser-DOMParser-pad (TODO).
 - **Documentatie**: `ARCHITECTURE.md §1.3` keyfile-tabel uitbreiden met "import-compatibel vs generate-default".
 
+**Update 2026-07-21 — restrictie niet meer gereproduceerd op live:** Playwright-e2e (headless chromium) op `horsecloud55.ddns.net/HorseSafe/` opende de huidige AES-KDF-vault (45 entries) succesvol met master-pw + **KeePassXC XML 2.0 keyfile** én met 64-hex — beide browser-side. De harde regel "XML faalt in browser" geldt dus niet (meer) voor de huidige blob/omgeving; oorspronkelijke failure was mogelijk gebonden aan de toenmalige vault-blob of testcontext. **64-hex blijft de generate-default en aanbeveling**; XML wordt beschouwd als "werkt, maar niet gegarandeerd over alle browsers" totdat de CI-roundtrip met alle drie formaten bestaat. Zie `prompts/2026-07-21_vault_toegang_fix.md`.
+
 ---
 
 ### HS-BUG-004 — vault.html mist `js/auth.js` → uitloggen-knop reageert niet

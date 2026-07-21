@@ -25,7 +25,7 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 |---|---|
 | **Account** | Server-side identiteit: e-mailadres + accountwachtwoord + MFA-secret + JWT-sessie |
 | **Vault** | Encrypted KDBX4-bestand. Eén-per-user in v0.0.x; meerdere benoemde in v0.1.x |
-| **Master-key** | Composiet van (a) master-pw, (b) keyfile, of (c) beide. Alléén in browser. Nooit naar server. **Keyfile-format-default v0.0.9-Bellare+: 64-hex-char ASCII** (KeePass 1.x-spec-pad, kdbxweb-browser-consistent). Import-compatibel met KeePassXC 2.x XML keyfile (`<KeyFile><Meta><Version>2.0</Version></Meta>...`) en 32-byte raw, MAAR via lokale Node-resave naar 64-hex-ASCII vóór upload — zie `BUGS.md` HS-BUG-005 |
+| **Master-key** | Composiet van (a) master-pw, (b) keyfile, of (c) beide. Alléén in browser. Nooit naar server. **Keyfile-format-default v0.0.9-Bellare+: 64-hex-char ASCII** (KeePass 1.x-spec-pad, kdbxweb-browser-consistent). Import-compatibel met KeePassXC 2.x XML keyfile (`<KeyFile><Meta><Version>2.0</Version></Meta>...`) — per 2026-07-21 ook direct browser-side bewezen op de live AES-KDF-vault; 32-byte raw blijft Node-resave vereisen — zie `BUGS.md` HS-BUG-005 (incl. update 2026-07-21) |
 | **Vault-blob** | KDBX4-bestand zoals server het ziet: pure ciphertext. Wordt opgevraagd, gedecrypteerd in browser, gemuteerd, geëncrypteerd, teruggeplaatst |
 | **Entry** | Eén wachtwoord-record binnen vault: title, username, password, URL, notes, attachments, history, expiry |
 | **Magic-link MFA** | Eenmalig e-mail-token, hergebruikt iCt_Horse magic-link infrastructuur |
@@ -195,7 +195,7 @@ CREATE TABLE magic_links (
 14b. Backend: etag mismatch → 412 Precondition Failed → user moet refreshen
 ```
 
-**Keyfile-format-restrictie (v0.0.9-Bellare):** alleen 64-hex-char ASCII keyfiles werken consistent in kdbxweb-browser. XML 2.0 en 32-byte raw vereisen lokale Node-resave vóór gebruik — zie `BUGS.md` HS-BUG-005.
+**Keyfile-format (v0.0.9-Bellare, genuanceerd 2026-07-21):** 64-hex-char ASCII is de generate-default en aanbeveling. XML 2.0 werkte per 2026-07-21 wél browser-side op de live AES-KDF-vault (Playwright-bewijs), maar geldt als "werkt, niet gegarandeerd" tot de CI-roundtrip alle drie formaten dekt; 32-byte raw blijft af te raden — zie `BUGS.md` HS-BUG-005 (incl. update 2026-07-21).
 
 ### 2.5 Flow: import KDBX
 

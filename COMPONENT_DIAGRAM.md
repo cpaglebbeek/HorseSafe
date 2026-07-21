@@ -97,7 +97,7 @@ frontend/
 │   │                      ───► auto-start in selectEntry, auto-stop in lockVault
 │   └── main.js            ───► binding #d-totp-copy → UI.copyTotp()
 └── vendor/
-    └── kdbxweb v2.1.1     (browser-side keyfile-format-restrictie → HS-BUG-005)
+    └── kdbxweb v2.1.1     (keyfile: 64-hex default; XML werkt sinds 2026-07-21 ook browser-side → HS-BUG-005-update)
 ```
 
 ## Sequence-overzicht
