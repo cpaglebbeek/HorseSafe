@@ -4,7 +4,7 @@
 > git-history-scrub hieronder is uitgevoerd (zie §1). Alle overige launch-content staat
 > klaar zodat public-go daarna één schone stap is.
 
-## 1. BLOKKEREND — git-history bevat plaintext-wachtwoorden
+## 1. ✅ UITGEVOERD 2026-07-21 — git-history-scrub (was BLOKKEREND)
 
 Secret-scan 2026-07-20 (`git grep` over volledige history) vond echte wachtwoord-strings
 in de commit-history:

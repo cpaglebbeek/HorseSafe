@@ -1,6 +1,13 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-07-20
+> Laatst bijgewerkt: 2026-07-21
+
+## 🆕 2026-07-21 — v0.1.0-Massey public-go afgerond
+
+- [x] ~~**git-history-scrub** — mirror-clone + git-filter-repo v2.47.0 (single-file script, brew geblokkeerd op Xcode-licentie); 4 replace-rules (3 wachtwoorden — incl. derde vondst live mail-login — + kaal prefix-patroon); verificatie 0 hits over 31 revisies; force-push `de53295`→`073656f`; lokale clone + HC55 `/opt/horsesafe/repo` ge-reset op nieuwe history~~ ✅ 2026-07-21
+- [x] ~~**Repo PUBLIC + AGPL-3.0** — LICENSE toegevoegd; `gh repo edit --visibility public`; GitHub detecteert "GNU Affero General Public License v3.0"~~ ✅ 2026-07-21
+- [x] ~~**Sitemap** — icthorse.nl had géén sitemap; nieuwe minimale `sitemap.xml` (/, /HorseSafe/) + `Sitemap:`-regel in robots.txt; live geverifieerd~~ ✅ 2026-07-21
+- [ ] **LinkedIn-post** — draft staat klaar in LAUNCH_PREP.md §4; publiceren doet Christian zelf na review
 
 ## 🆕 2026-07-20 — v0.1.0-Massey (public launch, deels)
 
@@ -10,9 +17,9 @@
 - [x] ~~**Backend pytest** 68/68 groen (incl. nieuwe docs-off test)~~ ✅
 - [x] ~~**Deploy HC55** — git pull + docs-env + restart; health toont 0.1.0-Massey; /api/docs → 404~~ ✅
 - [x] ~~**Privacy-statement finaal** (0.1.0) + LAUNCH_PREP.md (LinkedIn-draft + sitemap-entry)~~ ✅
-- [ ] 🚧 **BLOKKEREND: git-history-scrub** — plaintext-wachtwoorden (`[REDACTED-PREFIX]*`) in history; scrub-procedure in LAUNCH_PREP.md §1. Public-go pas hierna.
-- [ ] **Repo PUBLIC + AGPL-3.0** — na scrub (LAUNCH_PREP.md §2)
-- [ ] **Sitemap + LinkedIn** — na public (LAUNCH_PREP.md §3-4)
+- [x] ~~🚧 **BLOKKEREND: git-history-scrub** — plaintext-wachtwoorden (`[REDACTED-PREFIX]*`) in history; scrub-procedure in LAUNCH_PREP.md §1. Public-go pas hierna.~~ ✅ 2026-07-21
+- [x] ~~**Repo PUBLIC + AGPL-3.0** — na scrub (LAUNCH_PREP.md §2)~~ ✅ 2026-07-21
+- [x] ~~**Sitemap** — na public (LAUNCH_PREP.md §3)~~ ✅ 2026-07-21 (LinkedIn-draft blijft open, zie boven)
 - [ ] **Backup Storagebox** — GEBLOKKEERD op Storagebox SSH-credentials (LAUNCH_PREP.md §5)
 - [ ] **Magic-link mail** — GEBLOKKEERD op Gmail App Password (LAUNCH_PREP.md §5)
 - [ ] **Dashboard health-tile** — nieuwe feature in Dashboard-repo, uitgesteld (LAUNCH_PREP.md §6)
