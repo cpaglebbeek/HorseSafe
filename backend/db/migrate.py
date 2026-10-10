@@ -13,9 +13,9 @@ MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 async def get_current_version() -> int:
     settings = get_settings()
     async with connect(settings.db_path) as conn:
-        cursor = await conn.execute("SELECT version FROM schema_version LIMIT 1")
+        cursor = await conn.execute("SELECT MAX(version) AS version FROM schema_version")
         row = await cursor.fetchone()
-        return int(row["version"]) if row else 1
+        return int(row["version"]) if row and row["version"] is not None else 1
 
 
 async def run_migrations() -> list[int]:

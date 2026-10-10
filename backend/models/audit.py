@@ -43,6 +43,13 @@ AuditEvent = Literal[
     "share_accept",
     "share_decline",
     "input_rejected",
+    "vault_key_add",
+    "vault_key_delete",
+    "vault_key_reseal",
+    "vault_key_unlock",
+    "recovery_release_requested",
+    "recovery_release_cancelled",
+    "recovery_key_used",
 ]
 
 
