@@ -16,6 +16,9 @@
     </header>
 
     <main>
+      <!-- v0.2.0-Koblitz: waarschuwing bij lopende vrijgave van een noodsleutel -->
+      <div id="recovery-alert" class="error" hidden></div>
+
       <!-- S6: Vault-unlock OF aanmaak -->
       <section class="card" id="unlock-section">
         <h2 id="unlock-title">Vault openen</h2>
@@ -39,6 +42,22 @@
             <button type="button" id="logout-from-unlock" class="secondary">Uitloggen</button>
           </div>
         </form>
+
+        <!-- v0.2.0-Koblitz: ontgrendelen met hardware-sleutel -->
+        <div id="hwkey-unlock" hidden>
+          <hr>
+          <div class="actions">
+            <button type="button" id="hwkey-unlock-btn">🔑 Ontgrendel met YubiKey</button>
+          </div>
+          <p class="muted">Steek de sleutel in en leg je vinger erop zodra hij knippert.</p>
+          <details id="recovery-details" hidden>
+            <summary>Noodsleutel gebruiken (reserve-YubiKey uit de kluis)</summary>
+            <p class="muted">Een noodsleutel werkt pas <strong>24 uur na aanvraag</strong>. Je krijgt daarvan een melding,
+              zodat misbruik op tijd te stoppen is.</p>
+            <div id="recovery-list"></div>
+          </details>
+          <div id="hwkey-unlock-error" class="error" hidden></div>
+        </div>
       </section>
 
       <!-- S7: Vault content (na unlock) -->
@@ -54,6 +73,7 @@
             <a href="export.html"><button class="secondary">↑ Exporteer</button></a>
             <button id="lock-vault" class="secondary">Vergrendel</button>
             <a href="shares.html"><button class="secondary">📥 Shares</button></a>
+            <button id="keys-open" class="secondary">🔑 Sleutels</button>
             <a href="settings.html"><button class="secondary">⚙ Instellingen</button></a>
             <button id="logout-from-vault" class="secondary">Uitloggen</button>
           </div>
@@ -99,6 +119,30 @@
           </div>
         </div>
 
+        <!-- v0.2.0-Koblitz: hardware-sleutels beheren -->
+        <section class="card" id="keys-section" hidden>
+          <h2>Sleutels</h2>
+          <p class="muted">Open deze kluis met je vingerafdruk op een <strong>YubiKey Bio</strong>. Een
+            <strong>noodsleutel</strong> (reserve-YubiKey, alleen lange PIN) bewaar je in een fysieke kluis; hij werkt
+            pas 24 uur na aanvraag. Je wachtwoord/keyfile blijft altijd werken — ook in KeePassXC.</p>
+          <table>
+            <thead><tr><th>Naam</th><th>Soort</th><th>Gekoppeld</th><th>Laatst gebruikt</th><th>Status</th><th></th></tr></thead>
+            <tbody id="keys-body"><tr><td colspan="6" class="muted">Nog geen sleutels gekoppeld.</td></tr></tbody>
+          </table>
+          <label for="key-label">Naam van de nieuwe sleutel</label>
+          <input type="text" id="key-label" maxlength="64" placeholder="bijv. YubiKey Bio sleutelbos">
+          <div class="actions">
+            <button type="button" id="key-add-bio">+ YubiKey Bio koppelen</button>
+            <button type="button" id="key-add-recovery" class="secondary">+ Noodsleutel koppelen</button>
+            <button type="button" id="keys-reseal" class="secondary">↻ Opnieuw verzegelen</button>
+            <button type="button" id="keys-close" class="secondary">Sluiten</button>
+          </div>
+          <p class="muted">"Opnieuw verzegelen" gebruik je nadat je wachtwoord of keyfile van de kluis is veranderd:
+            alle sleutels krijgen dan het nieuwe materiaal, zonder dat je ze erbij hoeft te pakken.</p>
+          <div id="keys-error" class="error" hidden></div>
+          <div id="keys-status" class="success" hidden></div>
+        </section>
+
         <!-- Entry-edit modal -->
         <section class="card" id="edit-section" hidden>
           <h2>Nieuwe entry</h2>
@@ -131,7 +175,7 @@
     </main>
 
     <footer>
-      HorseSafe v0.0.2-Hellman — Zero-knowledge: server ziet alleen ciphertext
+      HorseSafe v0.2.0-Koblitz — Zero-knowledge: server ziet alleen ciphertext
     </footer>
   </div>
 
@@ -142,7 +186,9 @@
   <script src="js/crypto.js"></script>
   <script src="js/totp.js"></script>
   <script src="js/sharing.js"></script>
+  <script src="js/hwkeys.js"></script>
   <script src="js/vault-ui.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/hwkeys-ui.js"></script>
 </body>
 </html>
