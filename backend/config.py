@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "HorseSafe"
-    app_version: str = "0.1.0-Massey"
+    app_version: str = "0.2.0-Koblitz"
 
     db_path: Path = Field(default=Path("./db/horsesafe.db"))
     vaults_dir: Path = Field(default=Path("./vaults"))
@@ -53,6 +53,11 @@ class Settings(BaseSettings):
     magic_link_ttl_minutes: int = 10
     public_url: str = "http://localhost:8000"  # Voor magic-link redemption URL
     mfa_required: bool = False  # Force MFA voor alle accounts (v0.1.0 dienst)
+
+    # Hardware-sleutels — v0.2.0-Koblitz
+    vault_keys_max: int = 10
+    recovery_delay_hours: int = 24  # wachttijd voordat een noodsleutel bruikbaar is
+    recovery_window_hours: int = 24  # zo lang blijft een vrijgegeven noodsleutel bruikbaar
 
     log_level: str = "INFO"
 
