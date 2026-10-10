@@ -9,7 +9,16 @@ from fastapi import HTTPException, Request, Response, status
 from ..config import get_settings
 
 
-def issue(user_id: str, is_admin: bool, mfa_passed: bool = False) -> str:
+def issue(
+    user_id: str,
+    is_admin: bool,
+    mfa_passed: bool = False,
+    *,
+    stepup_until: int | None = None,
+    stepup_method: str | None = None,
+) -> str:
+    """Nieuw JWT. Step-up-claims (v0.2.0-Koblitz, §12.8) alleen als beide gezet zijn;
+    een gewone login of ``reissue_with_mfa`` laat ze weg, zodat een step-up dan vervalt."""
     settings = get_settings()
     now = int(time.time())
     payload: dict[str, Any] = {
@@ -19,6 +28,9 @@ def issue(user_id: str, is_admin: bool, mfa_passed: bool = False) -> str:
         "iat": now,
         "exp": now + settings.jwt_ttl_minutes * 60,
     }
+    if stepup_until is not None and stepup_method is not None:
+        payload["stepup_until"] = int(stepup_until)
+        payload["stepup_method"] = stepup_method
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 

@@ -46,6 +46,7 @@
         <!-- v0.2.0-Koblitz: ontgrendelen met hardware-sleutel -->
         <div id="hwkey-unlock" hidden>
           <hr>
+          <div id="hwkey-support" class="error" hidden></div>
           <div class="actions">
             <button type="button" id="hwkey-unlock-btn">🔑 Ontgrendel met YubiKey</button>
           </div>
@@ -53,7 +54,8 @@
           <details id="recovery-details" hidden>
             <summary>Noodsleutel gebruiken (reserve-YubiKey uit de kluis)</summary>
             <p class="muted">Een noodsleutel werkt pas <strong>24 uur na aanvraag</strong>. Je krijgt daarvan een melding,
-              zodat misbruik op tijd te stoppen is.</p>
+              zodat misbruik op tijd te stoppen is. Blokkeren kan altijd; opheffen alleen met je YubiKey Bio.</p>
+            <p id="recovery-notify" class="error" hidden>Meldingen zijn niet ingesteld: vrijgave van de noodsleutel is uitgeschakeld.</p>
             <div id="recovery-list"></div>
           </details>
           <div id="hwkey-unlock-error" class="error" hidden></div>
@@ -77,6 +79,11 @@
             <a href="settings.html"><button class="secondary">⚙ Instellingen</button></a>
             <button id="logout-from-vault" class="secondary">Uitloggen</button>
           </div>
+        </div>
+
+        <div id="stale-banner" class="error" hidden>
+          Kopie verouderd. Je wachtwoord of keyfile is buiten HorseSafe gewijzigd; je YubiKeys openen deze kluis
+          pas weer na bijwerken. Open "🔑 Sleutels" en klik "↻ Bijwerken".
         </div>
 
         <div class="layout-split">
@@ -125,6 +132,8 @@
           <p class="muted">Open deze kluis met je vingerafdruk op een <strong>YubiKey Bio</strong>. Een
             <strong>noodsleutel</strong> (reserve-YubiKey, alleen lange PIN) bewaar je in een fysieke kluis; hij werkt
             pas 24 uur na aanvraag. Je wachtwoord/keyfile blijft altijd werken — ook in KeePassXC.</p>
+          <p id="notify-banner" class="error" hidden>Meldingen zijn niet ingesteld: vrijgave van de noodsleutel is
+            uitgeschakeld tot de beheerder e-mail heeft ingesteld.</p>
           <table>
             <thead><tr><th>Naam</th><th>Soort</th><th>Gekoppeld</th><th>Laatst gebruikt</th><th>Status</th><th></th></tr></thead>
             <tbody id="keys-body"><tr><td colspan="6" class="muted">Nog geen sleutels gekoppeld.</td></tr></tbody>
@@ -134,13 +143,31 @@
           <div class="actions">
             <button type="button" id="key-add-bio">+ YubiKey Bio koppelen</button>
             <button type="button" id="key-add-recovery" class="secondary">+ Noodsleutel koppelen</button>
-            <button type="button" id="keys-reseal" class="secondary">↻ Opnieuw verzegelen</button>
+            <button type="button" id="keys-reseal" class="secondary">↻ Bijwerken</button>
             <button type="button" id="keys-close" class="secondary">Sluiten</button>
           </div>
-          <p class="muted">"Opnieuw verzegelen" gebruik je nadat je wachtwoord of keyfile van de kluis is veranderd:
-            alle sleutels krijgen dan het nieuwe materiaal, zonder dat je ze erbij hoeft te pakken.</p>
+          <p class="muted">"Bijwerken" gebruik je nadat je wachtwoord of keyfile buiten HorseSafe (bijv. in KeePassXC)
+            is veranderd: alle sleutels krijgen dan het materiaal waarmee de kluis nu open is, zonder dat je ze erbij
+            hoeft te pakken.</p>
           <div id="keys-error" class="error" hidden></div>
           <div id="keys-status" class="success" hidden></div>
+
+          <h3>Wachtwoord of keyfile wijzigen</h3>
+          <p class="muted">Wijzigt de kluis en werkt alle gekoppelde sleutels in één keer bij (ook de noodsleutel in
+            je kluis). Je bevestigt eerst met je YubiKey Bio of authenticator-code.</p>
+          <form id="rekey-form">
+            <label for="rekey-pw">Nieuw kluis-wachtwoord (leeg = geen wachtwoord)</label>
+            <input type="password" id="rekey-pw" autocomplete="new-password">
+            <label for="rekey-pw2">Herhaal nieuw wachtwoord</label>
+            <input type="password" id="rekey-pw2" autocomplete="new-password">
+            <label for="rekey-keyfile">Nieuwe keyfile (optioneel — KeePass .keyx of .key)</label>
+            <input type="file" id="rekey-keyfile" accept=".keyx,.key,.keyfile,application/octet-stream">
+            <div class="actions">
+              <button type="submit" id="rekey-submit" class="secondary">Wijzigen</button>
+            </div>
+          </form>
+          <div id="rekey-error" class="error" hidden></div>
+          <div id="rekey-status" class="success" hidden></div>
         </section>
 
         <!-- Entry-edit modal -->
@@ -171,6 +198,26 @@
         </section>
       </section>
 
+      <!-- v0.2.0-Koblitz: step-up (bevestigen met YubiKey Bio of, zonder Bio, authenticator-code) -->
+      <section class="card" id="stepup-section" role="dialog" aria-modal="true" aria-labelledby="stepup-title" hidden>
+        <h2 id="stepup-title">Bevestig dat jij het bent</h2>
+        <p class="muted" id="stepup-intro">Raak je YubiKey Bio aan.</p>
+        <div class="actions" id="stepup-bio-actions">
+          <button type="button" id="stepup-bio">🔑 Bevestig met YubiKey Bio</button>
+        </div>
+        <form id="stepup-totp-form" hidden>
+          <label for="stepup-code">Code uit je authenticator-app</label>
+          <input type="text" id="stepup-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8">
+          <div class="actions">
+            <button type="submit">Bevestigen</button>
+          </div>
+        </form>
+        <div id="stepup-error" class="error" hidden></div>
+        <div class="actions">
+          <button type="button" id="stepup-cancel" class="secondary">Annuleren</button>
+        </div>
+      </section>
+
       <p class="muted" id="global-error" hidden></p>
     </main>
 
@@ -189,6 +236,7 @@
   <script src="js/hwkeys.js"></script>
   <script src="js/vault-ui.js"></script>
   <script src="js/main.js"></script>
+  <script src="js/stepup.js"></script>
   <script src="js/hwkeys-ui.js"></script>
 </body>
 </html>

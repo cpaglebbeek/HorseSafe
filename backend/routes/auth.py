@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import time
+
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 
@@ -8,6 +10,7 @@ from ..db.connection import connect
 from ..models.admin import BackupCodeVerify, MeResponse
 from ..models.auth import MagicLinkRequest
 from ..models.user import UserLogin, UserRegister
+from ..models.webauthn import StepupBio, StepupRequest
 from ..services import (
     audit_service,
     auth_service,
@@ -16,7 +19,10 @@ from ..services import (
     magic_link_service,
     mfa_service,
     pw_service,
+    stepup_service,
 )
+from ..services import vault_key_service as vk_svc
+from ..services import webauthn_service as wa
 
 router = APIRouter()
 
@@ -220,12 +226,13 @@ async def magic_link_request(body: MagicLinkRequest, request: Request) -> dict[s
     """Vraag magic-link aan. Stuurt e-mail. Geeft GEEN onthullende informatie over
     of het e-mailadres bestaat (info-leak-resistant)."""
     settings = get_settings()
+    mail_body: str | None = None
     async with connect(settings.db_path) as conn:
         cursor = await conn.execute("SELECT id FROM users WHERE email = ?", (body.email.lower(),))
         row = await cursor.fetchone()
         if row:
             user_id = str(row["id"])
-            await magic_link_service.issue_magic_link(conn, user_id, body.email)
+            _token, mail_body = await magic_link_service.create_magic_link(conn, user_id)
             await audit_service.log(
                 conn,
                 user_id=user_id,
@@ -233,6 +240,9 @@ async def magic_link_request(body: MagicLinkRequest, request: Request) -> dict[s
                 ip=request.client.host if request.client else None,
                 detail={"step": "issued"},
             )
+    # Mail pas na het sluiten van de DB-verbinding, buiten de event-loop (v0.2.0-Koblitz).
+    if mail_body is not None:
+        await magic_link_service.send_magic_link(body.email, mail_body)
     return {"ok": True}
 
 
@@ -392,3 +402,108 @@ async def change_password(body: dict[str, str], request: Request) -> dict[str, b
             ip=request.client.host if request.client else None,
         )
     return {"ok": True}
+
+
+# ─────────────── Step-up (v0.2.0-Koblitz, docs/HARDWARE_KEYS.md §12.8) ───────────────
+
+STEPUP_FAIL_MAX = 5
+STEPUP_FAIL_WINDOW_SECONDS = 15 * 60
+
+
+@router.post("/stepup")
+async def stepup(body: StepupRequest, request: Request, response: Response) -> dict[str, object]:
+    """Korte bevestiging bovenop de sessie: YubiKey Bio, of TOTP als er geen actieve Bio is."""
+    payload = stepup_service.session(request)
+    user_id = str(payload["sub"])
+    settings = get_settings()
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    clone: tuple[str, str] | None = None
+    async with connect(settings.db_path) as conn:
+        if isinstance(body, StepupBio):
+            try:
+                row = await wa.consume_challenge(conn, body.challenge_id, user_id)
+                if row["purpose"] != "stepup":
+                    raise wa.WebAuthnError("invalid_challenge")
+                key = next(
+                    (k for k in await vk_svc.user_bio_keys(conn, user_id)
+                     if k["credential_id"] == body.credential_id),
+                    None,
+                )
+                if key is None:
+                    raise wa.WebAuthnError("credential_mismatch")
+                new_count = wa.verify_assertion(
+                    credential_id=body.credential_id,
+                    client_data_json=body.client_data_json,
+                    authenticator_data=body.authenticator_data,
+                    signature=body.signature,
+                    user_handle=body.user_handle,
+                    challenge_row=row,
+                    cose_public_key=key["cose_public_key"],
+                    stored_sign_count=int(key["sign_count"]),
+                )
+            except wa.WebAuthnError as e:
+                if e.code == "sign_count_regression":
+                    await audit_service.log(
+                        conn, user_id=user_id, event="vault_key_clone_suspect", ip=ip,
+                        user_agent=ua,
+                        detail={"vault_id": key["vault_id"], "key_id": key["id"], "kind": "bio"},
+                    )
+                    clone = (await vk_svc.user_email(conn, user_id) or "", str(key["label"]))
+                    err = HTTPException(status_code=e.status, detail={"error": e.code})
+                else:
+                    raise HTTPException(status_code=e.status, detail={"error": e.code}) from e
+            else:
+                err = None
+                await vk_svc.update_key(
+                    conn, key["id"], sign_count=new_count, last_used_at=vk_svc.now()
+                )
+        else:
+            err = None
+            if await vk_svc.user_bio_keys(conn, user_id):
+                raise HTTPException(status_code=403, detail={"error": "stepup_method_not_allowed"})
+            secret = await mfa_service.get_user_totp(conn, user_id)
+            if not secret:
+                raise HTTPException(status_code=409, detail={"error": "stepup_unavailable"})
+            cur = await conn.execute(
+                "SELECT COUNT(*) AS n FROM audit_log WHERE user_id = ? AND event = 'stepup_fail' "
+                "AND ts > ?",
+                (user_id, int(time.time()) - STEPUP_FAIL_WINDOW_SECONDS),
+            )
+            fails = await cur.fetchone()
+            if fails and int(fails["n"]) >= STEPUP_FAIL_MAX:
+                raise HTTPException(status_code=429, detail={"error": "too_many_attempts"})
+            if not mfa_service.verify_code(secret, body.code):
+                await audit_service.log(
+                    conn, user_id=user_id, event="stepup_fail", ip=ip, user_agent=ua,
+                    detail={"method": "totp"},
+                )
+                raise HTTPException(status_code=401, detail={"error": "invalid_code"})
+        if err is None:
+            until = vk_svc.now() + settings.stepup_ttl_seconds
+            await audit_service.log(
+                conn, user_id=user_id, event="stepup", ip=ip, user_agent=ua,
+                detail={"method": body.method},
+            )
+    if err is not None:
+        if clone is not None:
+            await vk_svc.notify_user(
+                clone[0], "HorseSafe: verdachte sleutel-teller",
+                vk_svc.notify_body(
+                    "De teller van een hardware-sleutel ging terug. Dat kan wijzen op een "
+                    "gekloonde sleutel; de sleutel is geweigerd.",
+                    label=clone[1], ip=ip,
+                    advice="Ontgrendel met je keyfile, controleer je sleutels en verwijder deze sleutel.",
+                ),
+                user_id=user_id, event="vault_key_clone_suspect", ip=ip, user_agent=ua,
+            )
+        raise err
+    token = jwt_service.issue(
+        user_id,
+        bool(payload.get("admin", False)),
+        mfa_passed=True,
+        stepup_until=until,
+        stepup_method=body.method,
+    )
+    jwt_service.set_cookie(response, token)
+    return {"ok": True, "method": body.method, "stepup_until": until}

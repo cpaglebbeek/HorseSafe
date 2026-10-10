@@ -1,5 +1,5 @@
 /* HorseSafe Vault UI v0.2.0-Koblitz (sinds v0.0.2-Hellman)
- * State per pagina-load: { db, vaultId, etag, currentEntry }
+ * State per pagina-load: { db, vaultId, etag, currentEntry, secret }
  */
 (function () {
   'use strict';
@@ -10,8 +10,32 @@
     etag: null,
     currentEntry: null,
     totpTimer: null,
-    secret: null, // {pw, kf} — alleen tab-RAM, alleen zolang de vault open is
+    // v0.2.0-Koblitz: ontgrendelmateriaal {ph, kh} als kdbxweb.ProtectedValue (of null), nooit het
+    // leesbare wachtwoord of de keyfile. Alleen tab-RAM, alleen zolang de vault open is.
+    secret: null,
+    idleTimer: null,
   };
+
+  // Automatisch vergrendelen na inactiviteit (v0.2.0-Koblitz)
+  const AUTO_LOCK_MS = 15 * 60 * 1000;
+  const ACTIVITY_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart'];
+
+  function resetIdleTimer() {
+    if (state.idleTimer) clearTimeout(state.idleTimer);
+    state.idleTimer = state.db ? setTimeout(() => { if (state.db) lockVault(); }, AUTO_LOCK_MS) : null;
+  }
+  ACTIVITY_EVENTS.forEach((ev) => document.addEventListener(ev, resetIdleTimer, { passive: true }));
+
+  function wipeSecret() {
+    if (state.secret && window.HorseSafeHwKeys) window.HorseSafeHwKeys.wipeSecret(state.secret);
+    state.secret = null;
+  }
+
+  function clearUnlockInputs() {
+    $('vault-pw').value = '';
+    const kf = $('vault-keyfile');
+    if (kf) kf.value = '';
+  }
 
   function stopTotpLoop() {
     if (state.totpTimer) {
@@ -136,24 +160,22 @@
   }
 
   /**
-   * Open de vault met het formulier, of — v0.2.0-Koblitz — met materiaal uit een hardware-sleutel
-   * (override = {pw, keyFileBuffer}). Returnt true bij succes.
+   * Open de vault met het formulier, of — v0.2.0-Koblitz — met een kdbxweb.Credentials-object uit een
+   * hardware-sleutel (override = {credentials}, zie HorseSafeHwKeys.credentialsFromHashes).
+   * Returnt true bij succes.
    */
   async function unlockOrCreate(override) {
-    const viaKey = !!(override && typeof override === 'object' && !(override instanceof Event));
-    let pw;
+    const viaKey = !!(override && typeof override === 'object' && !(override instanceof Event) && override.credentials);
+    let pw = '';
     let keyFileBuffer = null;
-    if (viaKey) {
-      pw = override.pw || '';
-      keyFileBuffer = override.keyFileBuffer || null;
-    } else {
+    if (!viaKey) {
       pw = $('vault-pw').value;
       const keyFileInput = $('vault-keyfile');
       if (keyFileInput && keyFileInput.files && keyFileInput.files[0]) {
         keyFileBuffer = await keyFileInput.files[0].arrayBuffer();
       }
     }
-    if (!pw && !keyFileBuffer) {
+    if (!viaKey && !pw && !keyFileBuffer) {
       showError('unlock-error', 'Voer een vault-wachtwoord of keyfile in (of beide).');
       return false;
     }
@@ -207,13 +229,19 @@
           return false;
         }
         try {
-          state.db = await window.HorseSafeCrypto.openDatabase(readRes.blob, pw, keyFileBuffer);
+          state.db = viaKey
+            ? await window.HorseSafeCrypto.openDatabaseWithCredentials(readRes.blob, override.credentials)
+            : await window.HorseSafeCrypto.openDatabase(readRes.blob, pw, keyFileBuffer);
           state.vaultId = meta.id;
           state.etag = readRes.etag;
         } catch (e) {
           const detail = (e && (e.code || e.name || e.message)) || 'onbekende fout';
           console.error('[HorseSafe] openDatabase failed:', e);
-          if (detail === 'InvalidKey') {
+          if (detail === 'InvalidKey' && viaKey) {
+            // De kopie ging open, maar de KDBX weigert: wachtwoord/keyfile is buiten HorseSafe gewijzigd.
+            showError('unlock-error', window.HorseSafeHwKeys.MESSAGES.stale_copy);
+            document.dispatchEvent(new CustomEvent('horsesafe:stale-copy'));
+          } else if (detail === 'InvalidKey') {
             showError('unlock-error', 'Verkeerd wachtwoord of verkeerde keyfile.');
           } else {
             showError('unlock-error', `Vault openen mislukt: ${detail}. Check pw + keyfile.`);
@@ -222,12 +250,24 @@
         }
       }
 
-      // Ontgrendelmateriaal in tab-RAM houden zolang de vault open is: nodig om een
-      // hardware-sleutel te koppelen (v0.2.0-Koblitz). Wordt bij vergrendelen gewist.
-      state.secret = {
-        pw: pw || null,
-        kf: window.HorseSafeHwKeys ? window.HorseSafeHwKeys.keyfileToB64(keyFileBuffer) : null,
-      };
+      // Het wachtwoordveld direct legen; het leesbare wachtwoord blijft niet bewaard.
+      clearUnlockInputs();
+      pw = '';
+      keyFileBuffer = null;
+
+      // Ontgrendelmateriaal {ph, kh} in tab-RAM houden zolang de vault open is: nodig om een
+      // hardware-sleutel te koppelen of opnieuw te verzegelen (v0.2.0-Koblitz, P-CRYPT-09).
+      // Afgeleid uit de Credentials waarmee de KDBX écht open ging. Wordt bij vergrendelen gewist.
+      wipeSecret();
+      if (window.HorseSafeHwKeys) {
+        try {
+          state.secret = await window.HorseSafeHwKeys.secretFromCredentials(state.db.credentials);
+        } catch (e) {
+          console.warn('[HorseSafe] ontgrendelmateriaal niet beschikbaar:', e && e.code);
+          state.secret = null;
+        }
+      }
+      resetIdleTimer();
 
       // Switch UI
       hide('unlock-section');
@@ -251,10 +291,9 @@
     state.vaultId = null;
     state.etag = null;
     state.currentEntry = null;
-    state.secret = null;
-    $('vault-pw').value = '';
-    const kf = $('vault-keyfile');
-    if (kf) kf.value = '';
+    wipeSecret();
+    resetIdleTimer();
+    clearUnlockInputs();
     hide('vault-section');
     show('unlock-section');
     document.dispatchEvent(new CustomEvent('horsesafe:locked'));
@@ -347,8 +386,19 @@
     }
   }
 
+  /**
+   * v0.2.0-Koblitz: wissel het ontgrendelmateriaal na een geslaagde /rekey. De kluis is al met de nieuwe
+   * Credentials opgeslagen; hier alleen de etag en {ph, kh} in RAM bijwerken.
+   */
+  async function adoptRekey(etag) {
+    state.etag = etag;
+    wipeSecret();
+    state.secret = await window.HorseSafeHwKeys.secretFromCredentials(state.db.credentials);
+  }
+
   window.HorseSafeVaultUI = {
     state,
+    adoptRekey,
     unlockOrCreate,
     lockVault,
     addNewEntry,

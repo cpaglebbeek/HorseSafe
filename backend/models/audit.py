@@ -43,13 +43,23 @@ AuditEvent = Literal[
     "share_accept",
     "share_decline",
     "input_rejected",
+    # v0.2.0-Koblitz — hardware-sleutels (docs/HARDWARE_KEYS.md §12.10). Detail bevat nooit
+    # sealed, ph, kh, PRF-uitvoer, challenges, client-data, signatures, TOTP-codes of SMTP-gegevens.
     "vault_key_add",
+    "vault_key_add_rejected",
     "vault_key_delete",
-    "vault_key_reseal",
     "vault_key_unlock",
-    "recovery_release_requested",
-    "recovery_release_cancelled",
+    "vault_key_reseal",
+    "vault_key_clone_suspect",
+    "vault_rekey",
+    "recovery_release_request",
+    "recovery_release_cancel",
     "recovery_key_used",
+    "recovery_block",
+    "recovery_unblock",
+    "stepup",
+    "stepup_fail",
+    "notify_failed",
 ]
 
 

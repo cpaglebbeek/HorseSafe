@@ -9,10 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .db.init import init_db
-from .db.migrate import run_migrations
+from .db.migrate import check_vault_keys_schema, run_migrations
 from .middlewares.csp_headers import SecurityHeadersMiddleware
 from .middlewares.ratelimit import RateLimitMiddleware
-from .routes import admin, auth, health, shares, vault, vault_keys
+from .routes import admin, auth, health, shares, vault, vault_keys, webauthn
+from .services import mail_service
 
 logger = logging.getLogger("horsesafe")
 
@@ -28,14 +29,27 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     applied = await run_migrations()
     if applied:
         logger.info("Applied migrations: %s", applied)
+    await check_vault_keys_schema()
+    mail_service.warn_config()
     settings.vaults_dir.mkdir(parents=True, exist_ok=True)
     logger.info("DB ready at %s; vaults at %s", settings.db_path, settings.vaults_dir)
     yield
     logger.info("HorseSafe stopped")
 
 
+PRODUCTION_RP_ID = "icthorsecloud.nl"
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
+    # R12 (docs/HARDWARE_KEYS.md §12.4): de attestation-uitzondering is alleen voor tests.
+    if settings.test_attestation and settings.webauthn_rp_id == PRODUCTION_RP_ID:
+        logger.critical(
+            "HORSESAFE_TEST_ATTESTATION staat aan met rpId %s — start geweigerd.", PRODUCTION_RP_ID
+        )
+        raise RuntimeError(
+            "HORSESAFE_TEST_ATTESTATION=1 is niet toegestaan met rpId icthorsecloud.nl"
+        )
     # OpenAPI-schema + interactieve docs alleen in dev/test. In productie uit:
     # ze onthullen de volledige API-oppervlakte van een zero-knowledge dienst.
     docs_kwargs = (
@@ -70,6 +84,7 @@ def create_app() -> FastAPI:
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(vault.router, prefix="/vault", tags=["vault"])
     app.include_router(vault_keys.router, prefix="/vault", tags=["vault-keys"])
+    app.include_router(webauthn.router, prefix="/webauthn", tags=["webauthn"])
     app.include_router(admin.router, prefix="/admin", tags=["admin"])
     app.include_router(shares.router, tags=["shares"])
     return app

@@ -1,56 +1,29 @@
 from __future__ import annotations
 
 import secrets
-import smtplib
-import ssl
 import time
-from email.message import EmailMessage
-from typing import Protocol
 
 import aiosqlite
 
 from ..config import get_settings
+from . import mail_service
+
+# Compat: deze namen leefden hier vóór v0.2.0-Koblitz; de mailer zit nu in mail_service.
+EmailSender = mail_service.EmailSender
+GmailSMTPSender = mail_service.GmailSMTPSender
+
+SUBJECT = "HorseSafe — inlog-link"
 
 
-class EmailSender(Protocol):
-    """Interface voor e-mail verzending — gemockt in tests."""
-
-    def send(self, to_email: str, subject: str, body: str) -> None: ...
-
-
-class GmailSMTPSender:
-    """Productie-zender via Gmail SMTP_SSL (vereist App Password)."""
-
-    def send(self, to_email: str, subject: str, body: str) -> None:
-        settings = get_settings()
-        if not settings.gmail_user or not settings.gmail_app_password:
-            raise RuntimeError(
-                "Gmail credentials not configured (HORSESAFE_GMAIL_USER/APP_PASSWORD)"
-            )
-        msg = EmailMessage()
-        msg["From"] = settings.gmail_user
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.set_content(body)
-        ctx = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ctx) as s:
-            s.login(settings.gmail_user, settings.gmail_app_password)
-            s.send_message(msg)
+def set_sender(sender: mail_service.EmailSender | None) -> None:
+    """Compat voor tests: delegeert naar de generieke mailer."""
+    mail_service.set_sender(sender)
 
 
-# Global sender (kan gemockt worden in tests via monkeypatch).
-_sender: EmailSender = GmailSMTPSender()
+async def create_magic_link(conn: aiosqlite.Connection, user_id: str) -> tuple[str, str]:
+    """Sla een nieuw magic-link-token op (gecommit). Return ``(token, mail-body)``.
 
-
-def set_sender(sender: EmailSender) -> None:
-    global _sender
-    _sender = sender
-
-
-async def issue_magic_link(conn: aiosqlite.Connection, user_id: str, email: str) -> str | None:
-    """Genereer + sla magic-link-token op, stuur e-mail. Return token (voor tests).
-
-    Faalt stil (return None) als e-mail niet verzonden kan worden.
+    Versturen gebeurt los hiervan via ``send_magic_link``, buiten de DB-verbinding.
     """
     settings = get_settings()
     token = secrets.token_urlsafe(32)
@@ -72,9 +45,22 @@ async def issue_magic_link(conn: aiosqlite.Connection, user_id: str, email: str)
         f"Heb je deze e-mail niet aangevraagd? Negeer hem.\n\n"
         f"— HorseSafe (zero-knowledge wachtwoord-vault)"
     )
-    try:
-        _sender.send(email, "HorseSafe — inlog-link", body)
-    except Exception:  # noqa: BLE001  # niet onthullen wáárom e-mail faalt
+    return token, body
+
+
+async def send_magic_link(email: str, body: str) -> bool:
+    """Verstuur via de generieke mailer (niet-blokkerend). Faalt stil (``False``)."""
+    return await mail_service.send_async(email, SUBJECT, body)
+
+
+async def issue_magic_link(conn: aiosqlite.Connection, user_id: str, email: str) -> str | None:
+    """Compat-wrapper: opslaan + versturen. Return token (voor tests) of None als mail faalt.
+
+    Routes gebruiken liever create_magic_link + send_magic_link, zodat de mail buiten de
+    DB-verbinding loopt.
+    """
+    token, body = await create_magic_link(conn, user_id)
+    if not await send_magic_link(email, body):
         return None
     return token
 

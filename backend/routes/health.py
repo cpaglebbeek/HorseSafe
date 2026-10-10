@@ -18,4 +18,5 @@ async def health() -> dict[str, object]:
         "version": settings.app_version,
         "db": "ok" if db_ok else "missing",
         "vaults_dir": "ok" if settings.vaults_dir.exists() else "missing",
+        "test_attestation": bool(settings.test_attestation),
     }

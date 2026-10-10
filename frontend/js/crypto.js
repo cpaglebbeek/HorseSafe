@@ -72,11 +72,20 @@
       keyFileArg = keyFileBuffer instanceof ArrayBuffer ? keyFileBuffer : new Uint8Array(keyFileBuffer).buffer;
     }
     const credentials = new kdb.Credentials(pwArg, keyFileArg);
+    return openDatabaseWithCredentials(blobBuffer, credentials);
+  }
+
+  /**
+   * v0.2.0-Koblitz: laad een KDBX-blob met een kant-en-klaar kdbxweb.Credentials-object
+   * (hardware-route: HorseSafeHwKeys.credentialsFromHashes({ph, kh})).
+   * Throws KdbxError InvalidKey bij verkeerd materiaal.
+   */
+  async function openDatabaseWithCredentials(blobBuffer, credentials) {
     // Credentials constructor is async — wacht expliciet op hash-berekening
     if (credentials.ready) {
       await credentials.ready;
     }
-    return await kdb.Kdbx.load(blobBuffer, credentials);
+    return await window.kdbxweb.Kdbx.load(blobBuffer, credentials);
   }
 
   /** Serialiseer Kdbx terug naar ArrayBuffer (encrypted). */
@@ -178,6 +187,7 @@
   window.HorseSafeCrypto = {
     createDatabase,
     openDatabase,
+    openDatabaseWithCredentials,
     saveDatabase,
     addEntry,
     listEntries,
