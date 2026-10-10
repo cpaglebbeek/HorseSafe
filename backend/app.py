@@ -12,7 +12,7 @@ from .db.init import init_db
 from .db.migrate import run_migrations
 from .middlewares.csp_headers import SecurityHeadersMiddleware
 from .middlewares.ratelimit import RateLimitMiddleware
-from .routes import admin, auth, health, shares, vault
+from .routes import admin, auth, health, shares, vault, vault_keys
 
 logger = logging.getLogger("horsesafe")
 
@@ -69,6 +69,7 @@ def create_app() -> FastAPI:
     app.include_router(health.router)
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
     app.include_router(vault.router, prefix="/vault", tags=["vault"])
+    app.include_router(vault_keys.router, prefix="/vault", tags=["vault-keys"])
     app.include_router(admin.router, prefix="/admin", tags=["admin"])
     app.include_router(shares.router, tags=["shares"])
     return app

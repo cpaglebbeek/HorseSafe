@@ -1,4 +1,4 @@
-/* HorseSafe Vault UI v0.0.2-Hellman
+/* HorseSafe Vault UI v0.2.0-Koblitz (sinds v0.0.2-Hellman)
  * State per pagina-load: { db, vaultId, etag, currentEntry }
  */
 (function () {
@@ -10,6 +10,7 @@
     etag: null,
     currentEntry: null,
     totpTimer: null,
+    secret: null, // {pw, kf} — alleen tab-RAM, alleen zolang de vault open is
   };
 
   function stopTotpLoop() {
@@ -134,20 +135,31 @@
     }
   }
 
-  async function unlockOrCreate() {
-    const pw = $('vault-pw').value;
-    const keyFileInput = $('vault-keyfile');
+  /**
+   * Open de vault met het formulier, of — v0.2.0-Koblitz — met materiaal uit een hardware-sleutel
+   * (override = {pw, keyFileBuffer}). Returnt true bij succes.
+   */
+  async function unlockOrCreate(override) {
+    const viaKey = !!(override && typeof override === 'object' && !(override instanceof Event));
+    let pw;
     let keyFileBuffer = null;
-    if (keyFileInput && keyFileInput.files && keyFileInput.files[0]) {
-      keyFileBuffer = await keyFileInput.files[0].arrayBuffer();
+    if (viaKey) {
+      pw = override.pw || '';
+      keyFileBuffer = override.keyFileBuffer || null;
+    } else {
+      pw = $('vault-pw').value;
+      const keyFileInput = $('vault-keyfile');
+      if (keyFileInput && keyFileInput.files && keyFileInput.files[0]) {
+        keyFileBuffer = await keyFileInput.files[0].arrayBuffer();
+      }
     }
     if (!pw && !keyFileBuffer) {
       showError('unlock-error', 'Voer een vault-wachtwoord of keyfile in (of beide).');
-      return;
+      return false;
     }
-    if (pw && pw.length > 0 && pw.length < 6) {
+    if (!viaKey && pw && pw.length > 0 && pw.length < 6) {
       showError('unlock-error', 'Vault-wachtwoord moet minimaal 6 tekens zijn (POC; productie ≥12).');
-      return;
+      return false;
     }
     clearError('unlock-error');
     $('unlock-submit').disabled = true;
@@ -158,16 +170,20 @@
       if (!listRes.ok) {
         if (listRes.status === 401) {
           window.location.href = 'login.html';
-          return;
+          return false;
         }
         if (listRes.status === 403 && listRes.data?.detail?.error === 'mfa_required') {
           window.location.href = 'mfa.html';
-          return;
+          return false;
         }
         showError('unlock-error', `Fout bij vault-list: ${listRes.status}`);
-        return;
+        return false;
       }
 
+      if (listRes.data.length === 0 && viaKey) {
+        showError('unlock-error', 'Er is nog geen vault om met een sleutel te openen.');
+        return false;
+      }
       if (listRes.data.length === 0) {
         // Geen vault — maak nieuwe aan
         $('unlock-status').textContent = 'Nog geen vault — nieuwe wordt aangemaakt met dit wachtwoord...';
@@ -176,7 +192,7 @@
         const createRes = await window.HorseSafeAPI.createVault('default', blob);
         if (!createRes.ok) {
           showError('unlock-error', `Vault create-fout: ${createRes.status}`);
-          return;
+          return false;
         }
         state.db = db;
         state.vaultId = createRes.data.id;
@@ -188,7 +204,7 @@
         const readRes = await window.HorseSafeAPI.readVault(meta.id);
         if (!readRes.ok) {
           showError('unlock-error', `Read-fout: ${readRes.status}`);
-          return;
+          return false;
         }
         try {
           state.db = await window.HorseSafeCrypto.openDatabase(readRes.blob, pw, keyFileBuffer);
@@ -202,9 +218,16 @@
           } else {
             showError('unlock-error', `Vault openen mislukt: ${detail}. Check pw + keyfile.`);
           }
-          return;
+          return false;
         }
       }
+
+      // Ontgrendelmateriaal in tab-RAM houden zolang de vault open is: nodig om een
+      // hardware-sleutel te koppelen (v0.2.0-Koblitz). Wordt bij vergrendelen gewist.
+      state.secret = {
+        pw: pw || null,
+        kf: window.HorseSafeHwKeys ? window.HorseSafeHwKeys.keyfileToB64(keyFileBuffer) : null,
+      };
 
       // Switch UI
       hide('unlock-section');
@@ -212,8 +235,11 @@
       $('vault-name').textContent = listRes.data[0]?.name || 'default';
       $('vault-stats').textContent = ' — zero-knowledge (server ziet alleen ciphertext)';
       renderEntries();
+      document.dispatchEvent(new CustomEvent('horsesafe:unlocked'));
+      return true;
     } catch (e) {
       showError('unlock-error', 'Onverwachte fout: ' + e.message);
+      return false;
     } finally {
       $('unlock-submit').disabled = false;
     }
@@ -225,11 +251,13 @@
     state.vaultId = null;
     state.etag = null;
     state.currentEntry = null;
+    state.secret = null;
     $('vault-pw').value = '';
     const kf = $('vault-keyfile');
     if (kf) kf.value = '';
     hide('vault-section');
     show('unlock-section');
+    document.dispatchEvent(new CustomEvent('horsesafe:locked'));
   }
 
   async function addNewEntry(e) {
