@@ -14,7 +14,7 @@ ssh horsecloud55 'journalctl -u horsesafe -n 50 --no-pager'
 ```bash
 ssh horsecloud55 'systemctl restart horsesafe'
 # Verify
-curl -fsS https://horsecloud55.ddns.net/HorseSafe/api/health
+curl -fsS https://icthorsecloud.nl/HorseSafe/api/health
 ```
 
 ### Code-update
@@ -116,7 +116,7 @@ systemctl reload nginx
 ssh horsecloud55
 sudo -u horsesafe -i
 
-# 2. User registreert via UI (https://horsecloud55.ddns.net/HorseSafe/) of via direct API-call
+# 2. User registreert via UI (https://icthorsecloud.nl/HorseSafe/) of via direct API-call
 # 3. Promoot bestaand account tot admin
 cd /opt/horsesafe
 /opt/horsesafe/venv/bin/python -m backend.db.promote_admin christian@example.com

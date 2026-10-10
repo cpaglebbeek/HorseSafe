@@ -2,7 +2,7 @@
 date: 2026-05-22
 session: horsesafe_fase7_bellare
 status: pending
-resume: "verder met HorseSafe v0.1.0-Massey public launch (PARKED 2026-05-22 — eerst intern testen op horsecloud55.ddns.net/HorseSafe/ vóór public-go): subdomain + AGPL + pen-test + Dashboard-tile + LinkedIn + Storagebox + magic-link"
+resume: "verder met HorseSafe v0.1.0-Massey public launch (PARKED 2026-05-22 — eerst intern testen op icthorsecloud.nl/HorseSafe/ vóór public-go): subdomain + AGPL + pen-test + Dashboard-tile + LinkedIn + Storagebox + magic-link"
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 parent_master: Meta_iCt_Horse_Diensten
@@ -14,7 +14,7 @@ linked_actions: [HS-V010-PUBLIC-LAUNCH]
 ## Trigger
 Gebruiker akkoord op WhatIf Fase 7 + optie (c) — AI provisioneert + dry-run, gebruiker approve't laatste 2 stappen.
 
-## 🎉 LIVE OP `https://horsecloud55.ddns.net/HorseSafe/`
+## 🎉 LIVE OP `https://icthorsecloud.nl/HorseSafe/`
 
 ## Wat is uitgevoerd
 
@@ -55,7 +55,7 @@ Gebruiker akkoord op WhatIf Fase 7 + optie (c) — AI provisioneert + dry-run, g
 | Punt | Keuze | Reden |
 |---|---|---|
 | Deploy-flow | Optie (c): AI bootstrap + dry-run, jij approve't nginx-reload + service-start | Maximale review-moment vóór persistent mutation |
-| URL | `horsecloud55.ddns.net/HorseSafe/` (intern) | Snel live, `icthorse.nl/HorseSafe/` pas v0.1.0 |
+| URL | `icthorsecloud.nl/HorseSafe/` (intern) | Snel live, `icthorse.nl/HorseSafe/` pas v0.1.0 |
 | `auth_basic off` | Verplicht voor /HorseSafe/* | HorseSafe heeft eigen JWT+MFA — dubbele-auth zou eindgebruikers blokkeren |
 | Eerste admin | Niet automatisch | Bij echte first-user-registratie + handmatige promote |
 | Backup-target | Cron actief maar HORSESAFE_BACKUP_TARGET leeg | SKIP-flow tot Storagebox-credentials ingesteld |

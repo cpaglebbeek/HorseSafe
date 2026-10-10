@@ -6,7 +6,7 @@
 
 | Item | Waarde |
 |---|---|
-| Host | `horsecloud55.ddns.net` (Hetzner CX21, Helsinki) |
+| Host | `icthorsecloud.nl` (Hetzner CX21, Helsinki) |
 | OS | Ubuntu 24.04 LTS |
 | Python | 3.12 |
 | Webserver | nginx 1.24 (gedeeld) |
@@ -152,7 +152,7 @@ ssh u123456@u123456.your-storagebox.de "ls /horsesafe/ | sort | head -n -30 | xa
 2. Restore: `rsync -av $BACKUP/ /opt/horsesafe/`
 3. `chown -R horsesafe:horsesafe /opt/horsesafe/{db,vaults}`
 4. Start: `systemctl start horsesafe`
-5. Verify: `curl https://horsecloud55.ddns.net/HorseSafe/api/health`
+5. Verify: `curl https://icthorsecloud.nl/HorseSafe/api/health`
 
 ## Rollback
 
@@ -166,7 +166,7 @@ systemctl restart horsesafe
 ## Smoke-tests post-deploy
 
 ```bash
-curl -fsS https://horsecloud55.ddns.net/HorseSafe/                # 200 + HTML
-curl -fsS https://horsecloud55.ddns.net/HorseSafe/api/health      # 200 {"status":"ok"}
-curl -fsS https://horsecloud55.ddns.net/HorseSafe/api/openapi.json | jq .info.version
+curl -fsS https://icthorsecloud.nl/HorseSafe/                # 200 + HTML
+curl -fsS https://icthorsecloud.nl/HorseSafe/api/health      # 200 {"status":"ok"}
+curl -fsS https://icthorsecloud.nl/HorseSafe/api/openapi.json | jq .info.version
 ```

@@ -9,7 +9,7 @@
 - nginx 1.24+ draait (gedeeld met andere services)
 - Python 3.12 beschikbaar via apt
 - Poort 3997 vrij: `ss -tlnp | grep 3997` → leeg
-- Let's Encrypt cert dekt `horsecloud55.ddns.net`
+- Let's Encrypt cert dekt `icthorsecloud.nl`
 
 ### Eerste deploy
 
@@ -37,7 +37,7 @@ sudo systemctl status horsesafe   # → active (running)
 sudo journalctl -u horsesafe -n 20 --no-pager
 
 # 6. Smoke-test
-curl -fsS https://horsecloud55.ddns.net/HorseSafe/api/health
+curl -fsS https://icthorsecloud.nl/HorseSafe/api/health
 bash /opt/horsesafe/repo/scripts/post_deploy_smoke.sh
 
 # 7. Eerste admin (Christian registreert via UI, daarna promote)
@@ -126,6 +126,6 @@ sudo -u horsesafe bash /opt/horsesafe/backup.sh
 
 ## Bekende limieten v0.0.7-Bellare
 
-- **URL nog op `horsecloud55.ddns.net/HorseSafe/`** — `icthorse.nl/HorseSafe/` subdomain pas v0.1.0
+- **URL nog op `icthorsecloud.nl/HorseSafe/`** — `icthorse.nl/HorseSafe/` subdomain pas v0.1.0
 - **Geen Dashboard-tile** — komt v0.0.8+
 - **Geen externe pen-test** — pre-v0.1.0 publicatie

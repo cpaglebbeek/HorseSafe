@@ -4,7 +4,7 @@
 
 set -uo pipefail
 
-BASE="${1:-https://horsecloud55.ddns.net/HorseSafe/api}"
+BASE="${1:-https://icthorsecloud.nl/HorseSafe/api}"
 TS=$(date +%s)
 EMAIL="smoke+${TS}@example.com"
 PW="SmokeTestPw1234"

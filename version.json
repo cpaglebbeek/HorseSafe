@@ -15,9 +15,9 @@
     "Bernstein",
     "Massey"
   ],
-  "phase": "Phase 9 — Public launch (Massey): icthorse.nl/HorseSafe/ redirect LIVE + pen-test-checklist afgewerkt (OpenAPI-docs dicht in productie) + AGPL-3.0 public. LIVE: https://horsecloud55.ddns.net/HorseSafe/ + https://icthorse.nl/HorseSafe/",
+  "phase": "Phase 9 — Public launch (Massey): icthorse.nl/HorseSafe/ redirect LIVE + pen-test-checklist afgewerkt (OpenAPI-docs dicht in productie) + AGPL-3.0 public. LIVE: https://icthorsecloud.nl/HorseSafe/ + https://icthorse.nl/HorseSafe/",
   "released": "2026-07-20",
-  "live_url": "https://horsecloud55.ddns.net/HorseSafe/",
+  "live_url": "https://icthorsecloud.nl/HorseSafe/",
   "public_url": "https://icthorse.nl/HorseSafe/ (302 → HC55, LIVE 2026-07-20)",
   "deploy_status": {
     "server": "HorseCloud55 (Hetzner Helsinki)",

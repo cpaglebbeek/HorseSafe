@@ -106,7 +106,7 @@ Resultaat → SECURITY-POSTURE.md (na pen-test).
 
 ## Pen-test-checklist v0.1.0-Massey — uitgevoerd 2026-07-20 (interne LIVE-probe)
 
-Interne go-live-checklist tegen de LIVE-omgeving (`horsecloud55.ddns.net/HorseSafe/`). Externe partij-pen-test blijft aanbevolen bij eerste zakelijke klant (zie DPIA).
+Interne go-live-checklist tegen de LIVE-omgeving (`icthorsecloud.nl/HorseSafe/`). Externe partij-pen-test blijft aanbevolen bij eerste zakelijke klant (zie DPIA).
 
 | # | Test | Resultaat | Bewijs |
 |---|---|---|---|

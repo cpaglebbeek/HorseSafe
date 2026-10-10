@@ -88,7 +88,7 @@ HORSESAFE_COOKIE_SECURE=true
 HORSESAFE_COOKIE_SAMESITE=strict
 HORSESAFE_RATE_LIMIT_ENABLED=true
 HORSESAFE_BCRYPT_ROUNDS=12
-HORSESAFE_PUBLIC_URL=https://horsecloud55.ddns.net/HorseSafe
+HORSESAFE_PUBLIC_URL=https://icthorsecloud.nl/HorseSafe
 # Vul Gmail-credentials hieronder in vóór magic-link in gebruik te nemen:
 HORSESAFE_GMAIL_USER=
 HORSESAFE_GMAIL_APP_PASSWORD=
@@ -152,7 +152,7 @@ echo "       sudo systemctl enable --now horsesafe"
 echo "       sudo systemctl status horsesafe"
 echo ""
 echo "  5. Smoke-test:"
-echo "       curl -fsS https://horsecloud55.ddns.net/HorseSafe/api/health"
+echo "       curl -fsS https://icthorsecloud.nl/HorseSafe/api/health"
 echo "       bash $INSTALL_DIR/repo/scripts/post_deploy_smoke.sh"
 echo ""
 echo "  6. Eerste admin (na registratie via UI):"

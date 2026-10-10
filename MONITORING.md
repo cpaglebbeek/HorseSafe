@@ -86,7 +86,7 @@ Output → e-mail-digest naar cglebbeek@gmail.com.
 Voor elke deploy:
 ```bash
 # Health-endpoint
-curl -fsS https://horsecloud55.ddns.net/HorseSafe/api/health
+curl -fsS https://icthorsecloud.nl/HorseSafe/api/health
 # Login round-trip
 ./scripts/smoke-test.sh
 # Vault roundtrip (encrypted blob byte-identiek?)

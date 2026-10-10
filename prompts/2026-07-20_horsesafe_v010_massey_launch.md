@@ -24,7 +24,7 @@ Geparkeerde Massey-launch overnemen. User-keuzes vooraf: **volledige Massey-scop
 ### 1. icthorse.nl/HorseSafe/ LIVE ✅
 - Hostinger SSH (key uit ClaudeSecrets/hostinger), subdir-`.htaccess` in
   `domains/icthorse.nl/public_html/{HorseSafe,horsesafe}/` → 302 naar
-  `horsecloud55.ddns.net/HorseSafe/`. Zelfde geïsoleerde patroon als StaffKennis; WP-root ongemoeid.
+  `icthorsecloud.nl/HorseSafe/`. Zelfde geïsoleerde patroon als StaffKennis; WP-root ongemoeid.
 - E2e: `icthorse.nl/HorseSafe/api/health` → 200 `0.1.0-Massey`.
 
 ### 2. Pen-test-checklist v0.1.0 ✅ (1 fix)

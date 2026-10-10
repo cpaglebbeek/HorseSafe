@@ -5,7 +5,7 @@
 
 ## Basis-URL
 
-- **v0.0.x intern:** `https://horsecloud55.ddns.net/HorseSafe/api/`
+- **v0.0.x intern:** `https://icthorsecloud.nl/HorseSafe/api/`
 - **v0.1.x dienst:** `https://icthorse.nl/HorseSafe/api/`
 
 ## Authenticatie

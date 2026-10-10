@@ -42,7 +42,7 @@ Browser-based wachtwoordkluis met client-side KDBX4-encryptie (KeePass-compat), 
 
 ## URL-pad
 
-- **v0.0.x intern:** `https://horsecloud55.ddns.net/HorseSafe/`
+- **v0.0.x intern:** `https://icthorsecloud.nl/HorseSafe/`
 - **v0.1.x dienst:** `https://icthorse.nl/HorseSafe/`
 
 ## Documenten

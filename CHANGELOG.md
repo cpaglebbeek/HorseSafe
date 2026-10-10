@@ -9,7 +9,7 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 
 ### Added — Public launch
 
-- **Publieke URL `icthorse.nl/HorseSafe/`** — Hostinger subdir-`.htaccess` (302 → `horsecloud55.ddns.net/HorseSafe/`), subpath behouden. Zelfde geïsoleerde patroon als StaffKennis/VeiligDelen; WordPress-root ongemoeid. Beide casings (`/HorseSafe/` + `/horsesafe/`) geredirect.
+- **Publieke URL `icthorse.nl/HorseSafe/`** — Hostinger subdir-`.htaccess` (302 → `icthorsecloud.nl/HorseSafe/`), subpath behouden. Zelfde geïsoleerde patroon als StaffKennis/VeiligDelen; WordPress-root ongemoeid. Beide casings (`/HorseSafe/` + `/horsesafe/`) geredirect.
 - **AGPL-3.0** — repo publiek na schone secret-scan van de volledige git-history.
 
 ### Changed — Security-hardening (pen-test-checklist v0.1.0)
@@ -84,7 +84,7 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 
 ### Added — Productie-deploy HorseCloud55 LIVE
 
-**LIVE op:** `https://horsecloud55.ddns.net/HorseSafe/`
+**LIVE op:** `https://icthorsecloud.nl/HorseSafe/`
 
 **Server-state op HC55:**
 - `/opt/horsesafe/` met `repo/`, `venv/`, `db/`, `vaults/`, `logs/`, `tmp/`, `web/`
@@ -117,7 +117,7 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 
 ### Decided
 
-- **URL**: `horsecloud55.ddns.net/HorseSafe/` (intern, achter LE-TLS); `icthorse.nl/HorseSafe/` v0.1.0
+- **URL**: `icthorsecloud.nl/HorseSafe/` (intern, achter LE-TLS); `icthorse.nl/HorseSafe/` v0.1.0
 - **`auth_basic off`** voor /HorseSafe/* (eigen JWT+MFA)
 - **Deploy-strategie**: optie (c) uit WhatIf — AI provisioneert + dry-run; gebruiker approve't laatste 2 stappen
 - **Eerste admin**: niet automatisch — handmatig promote na eerste-user-registratie
