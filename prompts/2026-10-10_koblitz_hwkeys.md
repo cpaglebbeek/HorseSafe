@@ -38,3 +38,16 @@
 ## Open
 - Veldtest met echte YubiKey Bio (Christian).
 - Akkoord voor v0.3.0-Miller (Android-app) — per fase.
+
+## Vervolg 2026-10-11 — v0.2.1-Koblitz (open Koblitz-punten, sessie 42d3ff7c)
+
+Prompt: "akkoord" op het voorstel om de open Koblitz-punten als v0.2.1 op te pakken (geen deploy).
+
+- e2e-specs admin/mfa/smoke via `frontend/tests/isolated.ts` op een eigen tijdelijke backend; vangnet breekt
+  verzoeken naar :3997 (LIVE) af — negatief geverifieerd met een tijdelijke probe-spec (faalde zoals bedoeld).
+- Deploy-excludes in `scripts/deploy_hc55.sh` + runbook; vastgesteld dat live `devserver.py` en `README.md`
+  publiek serveert (200, geen geheimen) — verdwijnt bij de volgende deploy.
+- Privacy/GDPR (Hostinger-subverwerker, sleutelmetadata) en UI-docs (S6, S14-S16) bijgewerkt.
+- Tests lokaal: pytest 196/196, node --test 59/59, Playwright 10/10; CI GitHub groen (run 38128879042).
+- **Open:** `ci.yml`-wijziging kon niet gepusht worden (gh-token mist scope `workflow`) — Christian:
+  `gh auth refresh -s workflow`, daarna commit + push. Deploy v0.2.1 alleen na akkoord.
