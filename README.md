@@ -3,7 +3,7 @@
 > SaaS password-safe op HorseCloud55 met KeePassXC-equivalente functionaliteit en strict zero-knowledge server-architectuur.
 
 **Productnaam:** HorseSafe
-**Versie:** 0.2.0-Koblitz (in bouw; LIVE draait 0.1.0-Massey)
+**Versie:** 0.2.0-Koblitz (LIVE sinds 2026-10-11)
 **Status:** Koblitz — hardware-sleutels (YubiKey Bio + noodsleutel) in het web, server-geverifieerd. Ontwerp: `docs/HARDWARE_KEYS.md`.
 **Ecosysteem:** iCt Horse Diensten (sub-master: `Meta_iCt_Horse_Diensten`)
 **Repo-zichtbaarheid:** PUBLIC, AGPL-3.0 (sinds v0.1.0-Massey)
@@ -66,4 +66,4 @@ Browser-based wachtwoordkluis met client-side KDBX4-encryptie (KeePass-compat), 
 
 ## Status
 
-v0.1.0-Massey is LIVE en publiek (AGPL-3.0). v0.2.0-Koblitz (web + backend) is in bouw en nog niet gedeployed; acceptatiecriteria in `docs/HARDWARE_KEYS.md` §10. Daarna: v0.3.0-Miller (Android-app) en v0.4.0-Montgomery (laptop ontgrendelen via telefoon-QR + vinger). v0.5.0-Lange (native kluis in de app) is gepland maar wordt pas na de veldtest van v0.4 gebouwd.
+v0.2.0-Koblitz (web + backend) is LIVE sinds 2026-10-11 (publiek, AGPL-3.0); veldtest met echte YubiKey Bio volgt. Acceptatiecriteria in `docs/HARDWARE_KEYS.md` §10. Daarna: v0.3.0-Miller (Android-app) en v0.4.0-Montgomery (laptop ontgrendelen via telefoon-QR + vinger). v0.5.0-Lange (native kluis in de app) is gepland maar wordt pas na de veldtest van v0.4 gebouwd.
