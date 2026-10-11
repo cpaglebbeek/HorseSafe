@@ -1,0 +1,96 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Klantreis: registreren en MFA instellen"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "Account aanmaken met akkoord op dataverlies, inloggen, TOTP instellen, tweede stap bevestigen, backup-codes aanmaken (SQ-1, SQ-2, R14)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_business "Business" {
+    -width 1220
+    -height 310
+}
+BusinessActor ba_gebruiker "Eindgebruiker (Christian)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_registreren "Registreren met akkoord op permanent dataverlies" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_inloggen "Inloggen met accountwachtwoord" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_totp_instellen "TOTP instellen (QR) en bevestigen" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_mfa "Tweede stap: TOTP-code, magic-link of backup-code" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_backupcodes "Backup-codes aanmaken (alleen met MFA-sessie)" in laag_business {
+    -step 5
+    -attr status = "ontwerp"
+}
+BusinessService bs_account "Account met MFA" in laag_business {
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 620
+    -height 180
+}
+ApplicationComponent ac_webui "HorseSafe-webclient (vanilla HTML/JS, geen build-step)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend"
+    -description "Pagina's login, mfa, vault, settings, shares, import, export, backup-codes en admin; statisch geserveerd door nginx."
+}
+ApplicationComponent ac_auth "Account en MFA (/auth)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:POST /register, route:POST /login, route:POST /logout, route:GET /me, route:POST /password, route:POST /totp/*, route:* /magic-link*, route:POST /backup-codes/*, dep:pip:pyotp, dep:pip:argon2-cffi, dep:pip:passlib, dep:pip:pyjwt, dep:pip:bcrypt, dep:pip:email-validator, config:HORSESAFE_BCRYPT_ROUNDS"
+    -description "Argon2id-wachtwoord, TOTP RFC 6238, magic-link alleen als tweede stap (R14), bcrypt-backup-codes, JWT in HttpOnly-cookie."
+}
+ApplicationComponent ac_mailer "Mailer (SMTP 587 STARTTLS, Gmail-fallback)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/services"
+    -description "mail_service.py: magic-links en beveiligingsmeldingen; From = SMTP-gebruiker; send_async via asyncio.to_thread."
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_business 40, 40
+pos ba_gebruiker 60, 90
+pos bp_registreren 260, 90
+pos bp_inloggen 460, 90
+pos bp_totp_instellen 660, 90
+pos bp_mfa 860, 90
+pos bp_backupcodes 1060, 90
+pos bs_account 60, 220
+pos laag_application 40, 390
+pos ac_webui 60, 440
+pos ac_auth 260, 440
+pos ac_mailer 460, 440
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ba_gebruiker associates bs_account "gebruikt"
+ac_auth realizes bs_account
+ac_auth serves ac_mailer "magic-link"
+ac_auth serves bp_registreren
+ac_auth serves bp_inloggen
+ac_auth serves bp_totp_instellen
+ac_auth serves bp_mfa
+ac_mailer serves bp_mfa
+ac_auth serves bp_backupcodes
+ac_webui serves bp_registreren
+bp_registreren realizes bs_account
+bp_registreren -> bp_inloggen
+bp_inloggen -> bp_totp_instellen
+bp_totp_instellen -> bp_mfa
+bp_mfa -> bp_backupcodes
+ba_gebruiker -> bp_registreren "start"

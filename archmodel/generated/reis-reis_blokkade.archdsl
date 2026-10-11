@@ -1,0 +1,105 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Klantreis: noodsleutel blokkeren en opheffen met step-up"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "Blokkeren kan altijd; opheffen alleen na Bio-step-up met een Bio die al vóór de blokkade gekoppeld was (besluit 3, §12.6.7)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_motivation "Motivatie" {
+    -width 400
+    -height 180
+}
+Constraint cn_unblock "Noodsleutel-blokkade alleen opheffen met Bio-step-up, nooit met alleen wachtwoord of TOTP (besluit 3)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+
+Group laag_business "Business" {
+    -width 1020
+    -height 180
+}
+BusinessActor ba_gebruiker "Eindgebruiker (Christian)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_blokkeren "Noodsleutel blokkeren (altijd, zonder step-up)" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_melding "Mail + audit; 24 uur wachttijd loopt" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_stepup "Step-up met Bio (of TOTP zolang er geen Bio is)" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_deblokkeren "Blokkade opheffen na Bio-step-up" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 620
+    -height 180
+}
+ApplicationComponent ac_mailer "Mailer (SMTP 587 STARTTLS, Gmail-fallback)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/services"
+    -description "mail_service.py: magic-links en beveiligingsmeldingen; From = SMTP-gebruiker; send_async via asyncio.to_thread."
+}
+ApplicationComponent ac_nood "Noodsleutel-statusmachine (release, block)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:* /(vault_id)/keys/(key_id)/release, route:* /(vault_id)/keys/(key_id)/block"
+    -description "idle → waiting (24 u) → released (24 u) → consumed/expired; blocked tot opheffen met Bio-step-up (§12.7)."
+}
+ApplicationComponent ac_stepup "Step-up (/auth/stepup)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:POST /stepup"
+    -description "Verse Bio-assertion of TOTP-code; zet stepup_until/stepup_method als JWT-claim (300 s); TOTP-afkoeltijd 24 uur (R6)."
+}
+
+Group laag_technology "Technologie" {
+    -width 400
+    -height 180
+}
+Device dv_bio "YubiKey Bio (vinger, PRF, PIN van 63 tekens)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_motivation 40, 40
+pos cn_unblock 60, 90
+pos laag_business 40, 260
+pos ba_gebruiker 60, 310
+pos bp_blokkeren 260, 310
+pos bp_melding 460, 310
+pos bp_stepup 660, 310
+pos bp_deblokkeren 860, 310
+pos laag_application 40, 480
+pos ac_mailer 60, 530
+pos ac_nood 260, 530
+pos ac_stepup 460, 530
+pos laag_technology 40, 700
+pos dv_bio 60, 750
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+cn_unblock influences bp_deblokkeren "begrenst"
+ac_nood serves ac_mailer "melding vrijgave/gebruik/blokkade"
+ac_stepup serves bp_stepup
+dv_bio serves bp_stepup
+ac_mailer serves bp_melding
+ac_nood serves bp_melding
+ac_nood serves bp_blokkeren
+ac_nood serves bp_deblokkeren
+bp_blokkeren -> bp_melding
+bp_melding -> bp_stepup
+bp_stepup -> bp_deblokkeren
+ba_gebruiker -> bp_blokkeren "start"

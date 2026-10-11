@@ -1,0 +1,31 @@
+{
+  "tool": "ModelArchDSL",
+  "toolVersion": "0.1.0",
+  "engineSha256": "0bdabb3b46febb6190ec1e1698d285c5b140e15f4c7f07e7c22a85f2105dacae",
+  "tobeSha256": "40e36748d3a1449e396bba9374c690f5008a1550526f05862ac611ba24b42a7d",
+  "factsSha256": "df30baccdd6ce02ccc392f89e989dfba9a07ba6dc9e47c21d2384e8b7c5fe03f",
+  "plates": {
+    "conceptueel.archdsl": "c6c9661112add346b5ac0aeba192ab4440923ebecee721c7a51f5ed72731a15f",
+    "logisch.archdsl": "18b9224332a7119d6c5863f13e31bf36688ebe2731c9ab1d484f7413157cac74",
+    "fysiek.archdsl": "ade77b3098c64d6d56c7e130e41f5f113d6ca398c1e4efd798262ddbd949f4d3",
+    "reis-reis_registreren.archdsl": "9eb3cfbf355867789641186d845f0ffc594105496efca56724cfd008ae31b3cd",
+    "reis-reis_openen_pw.archdsl": "327197e531df3b7fb5fb0d445d5bd3f2efa806f228fb681e286f3ff46516913c",
+    "reis-reis_koppelen.archdsl": "4c4d5e825bd5bb9795b7fe8108cf1d7f71f38bf966cdf36193053dc3f04032ef",
+    "reis-reis_bio.archdsl": "e95bc0f555743b39c31219094d6e08d635abac102a78b107d0c9649112ebd7b3",
+    "reis-reis_noodsleutel.archdsl": "f92074fbd4527bef9fe30f9ba2f1b79b3fd3176d06ee44d0e70fc5a53885584d",
+    "reis-reis_blokkade.archdsl": "70119c6eb4f7df62ebbb26f01c356ee875e2fc05efa5d89f54b897c2d20361de",
+    "reis-reis_rekey.archdsl": "815c6882d93086b02de714a83b342a1c7afec46198e22bb6c3dacb70a840f883"
+  },
+  "counts": {
+    "gebouwd": 38,
+    "deels": 0,
+    "gepland": 7,
+    "alleen_code": 0,
+    "ongetraceerd": 0,
+    "extern": 9,
+    "ontwerp": 54
+  },
+  "facts": 94,
+  "unclaimedFacts": 0,
+  "warnings": 0
+}

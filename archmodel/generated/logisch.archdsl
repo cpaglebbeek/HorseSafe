@@ -1,0 +1,351 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Logisch"
+set subtitle "Architectuurplaat logisch niveau (ArchiMate/Dragon1)"
+set purpose "Browser-based wachtwoordkluis op HC55 waarin de server alleen ciphertext ziet (KDBX4, KeePassXC-compatibel), met MFA op de accountlaag en ontgrendelen met een YubiKey Bio (v0.2.0-Koblitz)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_application "Applicatie" {
+    -width 1220
+    -height 960
+}
+ApplicationComponent ac_webui "HorseSafe-webclient (vanilla HTML/JS, geen build-step)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend"
+    -description "Pagina's login, mfa, vault, settings, shares, import, export, backup-codes en admin; statisch geserveerd door nginx."
+}
+ApplicationComponent ac_browsercrypto "Crypto-engine in de browser (kdbxweb, per-entry TOTP, delen)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend/js"
+    -description "crypto.js, totp.js, sharing.js, import-export.js: alle KDBX4-crypto client-side (P-CRYPT-05)."
+}
+ApplicationComponent ac_hwkeys_web "HwKeys-client (WebAuthn PRF, Seal_v2, step-up-dialoog)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend/js"
+    -description "hwkeys.js, hwkeys-ui.js, stepup.js, vault-ui.js: fail-closed checkSupport, verzegelen, credentialsFromHashes, sleutelbeheer."
+}
+ApplicationInterface ai_api "REST-API /HorseSafe/api (JWT-cookie + MFA)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend, module:backend/routes, route:GET /health, dep:pip:fastapi, dep:pip:python-multipart"
+    -description "FastAPI-app (backend/app.py) met routers /auth, /vault, /webauthn, /admin en delen; /health toont versie en test_attestation."
+}
+ApplicationComponent ac_auth "Account en MFA (/auth)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:POST /register, route:POST /login, route:POST /logout, route:GET /me, route:POST /password, route:POST /totp/*, route:* /magic-link*, route:POST /backup-codes/*, dep:pip:pyotp, dep:pip:argon2-cffi, dep:pip:passlib, dep:pip:pyjwt, dep:pip:bcrypt, dep:pip:email-validator, config:HORSESAFE_BCRYPT_ROUNDS"
+    -description "Argon2id-wachtwoord, TOTP RFC 6238, magic-link alleen als tweede stap (R14), bcrypt-backup-codes, JWT in HttpOnly-cookie."
+}
+ApplicationComponent ac_stepup "Step-up (/auth/stepup)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:POST /stepup"
+    -description "Verse Bio-assertion of TOTP-code; zet stepup_until/stepup_method als JWT-claim (300 s); TOTP-afkoeltijd 24 uur (R6)."
+}
+ApplicationComponent ac_vault "Kluisopslag (/vault, blob-CRUD met If-Match)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:GET /(vault_id), route:PUT /(vault_id), route:DELETE /(vault_id), route:POST /(vault_id)/audit-export, route:POST /(vault_id)/audit-import"
+    -description "Bewaart alleen ciphertext; 412 bij ETag-mismatch; audit-export/-import vóór plaintext-export. GET/POST /vault (leeg pad) staat in de code maar wordt niet gemeten."
+}
+ApplicationComponent ac_webauthn "WebAuthn-opties en -verificatie" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:POST /options, dep:pip:webauthn, dep:pip:cryptography"
+    -description "Challenges voor register/unlock/stepup; py_webauthn plus eigen controles op UV, BE, AAGUID-allowlist en signCount."
+}
+ApplicationComponent ac_vertrouwensanker "Vertrouwensanker-bouwscripts (Yubico-roots, AAGUID-allowlist)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/tools"
+    -description "build_yubico_roots.py en build_aaguids.py maken backend/data/yubico_fido_roots.pem en aaguids.json (gevendord publiek materiaal)."
+}
+ApplicationComponent ac_vaultkeys "Hardware-sleutels per kluis (/vault/(vid)/keys, rekey)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:GET /(vault_id)/keys, route:POST /(vault_id)/keys, route:POST /(vault_id)/keys/(key_id)/unlock, route:PUT /(vault_id)/keys/sealed, route:PUT /(vault_id)/rekey, route:DELETE /(vault_id)/keys/(key_id)"
+    -description "Koppelen, ontgrendelen (kopie pas na geverifieerde assertion), opnieuw verzegelen, rekey en verwijderen (§12.6)."
+}
+ApplicationComponent ac_nood "Noodsleutel-statusmachine (release, block)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:* /(vault_id)/keys/(key_id)/release, route:* /(vault_id)/keys/(key_id)/block"
+    -description "idle → waiting (24 u) → released (24 u) → consumed/expired; blocked tot opheffen met Bio-step-up (§12.7)."
+}
+ApplicationComponent ac_services "Servicelaag (auth, MFA, opslag, sleutels, audit)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/services"
+    -description "auth/jwt/mfa/magic_link/backup_codes/stepup/webauthn/vault_key/storage/share/audit/admin-services."
+}
+ApplicationComponent ac_mailer "Mailer (SMTP 587 STARTTLS, Gmail-fallback)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/services"
+    -description "mail_service.py: magic-links en beveiligingsmeldingen; From = SMTP-gebruiker; send_async via asyncio.to_thread."
+}
+ApplicationComponent ac_middleware "Middleware: rate-limit en CSP-headers" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/middlewares"
+}
+ApplicationComponent ac_models "Pydantic-modellen (API-contract)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/models, dep:pip:pydantic"
+}
+ApplicationComponent ac_db "Opslaglaag SQLite (schema, migraties, promote_admin)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/db, dep:pip:aiosqlite, table:schema_version"
+    -description "schema.sql + migraties tot schemaversie 5 (005_vault_keys); promote_admin maakt de eerste beheerder."
+}
+ApplicationComponent ac_shares "Delen (ECDH-P256, per entry)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:* /keypair*, route:* /shares*, route:GET /users/by-email/(email)/pubkey"
+    -description "Server kent alleen publieke sleutels en ondoorzichtige ciphertexts (v0.0.6-Adleman)."
+}
+ApplicationComponent ac_admin "Beheer (/admin)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:GET /users, route:DELETE /users/(user_id), route:POST /users/(user_id)/*, route:GET /stats, route:GET /audit, route:GET /audit/export"
+    -description "Gebruikers, MFA uitzetten, magic-link sturen, opslagstatistiek, audit-log en CSV-export; geen vault-toegang."
+}
+ApplicationComponent ac_testvectors "Seal_v2-testvectoren (JS = Python, later Kotlin)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:specs/testvectors"
+}
+ApplicationInterface ai_webauthn "WebAuthn + PRF in Chrome/Edge (navigator.credentials)" in laag_application {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+DataObject do_user "Account (e-mail, argon2id-hash, TOTP-secret, publieke deelsleutel)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:users"
+}
+DataObject do_vault "Kluis-metadata + ETag (blob op disk)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:vaults"
+}
+DataObject do_vaultkey "Hardware-sleutel: pk_c + verzegelde kopie + recovery-status" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:vault_keys"
+}
+DataObject do_challenge "WebAuthn-challenge (eenmalig)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:webauthn_challenges"
+}
+DataObject do_audit "Auditregel (append-only)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:audit_log"
+}
+DataObject do_magiclink "Magic-link-token (10 min, eenmalig)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:magic_links"
+}
+DataObject do_failed "Mislukte login (throttle)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:failed_logins"
+}
+DataObject do_backupcode "Backup-code (bcrypt, eenmalig)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:users_backup_codes"
+}
+DataObject do_share "Gedeelde entry (ciphertext per ontvanger)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:shares"
+}
+DataObject do_devices "Toestel (tabel bestaat, leeg tot Miller)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "table:devices"
+}
+DataObject do_ck "Ontgrendelmateriaal (ph,kh) (alleen browser-RAM)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend/js"
+    -description "Directe invoer van de KDBX4-composite-key; kdbxweb.ProtectedValue, nooit naar de server behalve verzegeld (P-CRYPT-09)."
+}
+ApplicationComponent ac_android "HorseSafe Android-app (v0.3.0-Miller, gepland)" in laag_application {
+    -fill "#fff7ed"
+    -stroke "#ea580c"
+    -state target
+    -attr status = "gepland"
+    -attr trace = "module:android*"
+    -attr ontbreekt = "module:android*"
+    -description "android/ in deze repo: YubiKey inrichten, telefoon koppelen (QR + SAS), telefoon-credential BIOMETRIC_STRONG, noodsleutel blokkeren, update via HorseAPK (§7)."
+}
+ApplicationInterface ai_deviceapi "Device-API: koppelen, status, sealed, recovery-block, app-update (v0.3.0-Miller, gepland)" in laag_application {
+    -fill "#fff7ed"
+    -stroke "#ea580c"
+    -state target
+    -attr status = "gepland"
+    -attr trace = "route:* *pairings*, route:* *device/v1/*, route:* *app/latest"
+    -attr ontbreekt = "route:* *pairings*, route:* *device/v1/*, route:* *app/latest"
+    -description "§6 fase M: /devices/pairings…, /devices, /device/v1/*, /app/latest, /app/download; device-handtekening K_dev."
+}
+DataObject do_pairings "Koppelingen + device-nonces (migratie 006, gepland)" in laag_application {
+    -fill "#fff7ed"
+    -stroke "#ea580c"
+    -state target
+    -attr status = "gepland"
+    -attr trace = "table:pairings, table:device_nonces"
+    -attr ontbreekt = "table:pairings, table:device_nonces"
+}
+ApplicationComponent ac_approve "Goedkeuring laptop via telefoon-QR + vinger (v0.4.0-Montgomery, gepland)" in laag_application {
+    -fill "#fff7ed"
+    -stroke "#ea580c"
+    -state target
+    -attr status = "gepland"
+    -attr trace = "route:* *approvals*"
+    -attr ontbreekt = "route:* *approvals*"
+    -description "§5: server alleen doorgifte; Seal_v2 purpose relay naar tijdelijke laptopsleutel; WebView-ontgrendelen in de app."
+}
+DataObject do_approvals "Goedkeuringen + ingetrokken sessies (migratie 007, gepland)" in laag_application {
+    -fill "#fff7ed"
+    -stroke "#ea580c"
+    -state target
+    -attr status = "gepland"
+    -attr trace = "table:approvals, table:revoked_sessions"
+    -attr ontbreekt = "table:approvals, table:revoked_sessions"
+}
+ApplicationComponent ac_native "Native read-only kluis in de app (v0.5.0-Lange, gepland, niet bouwen vóór veldtest v0.4)" in laag_application {
+    -fill "#fff7ed"
+    -stroke "#ea580c"
+    -state target
+    -attr status = "gepland"
+}
+Artifact ar_vaults "Vaults-dir /opt/horsesafe/vaults/<user>/<vault>.kdbx (600)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/services"
+    -description "storage_service.py schrijft de ciphertext-blobs; rekey vervangt atomair."
+}
+Artifact ar_env "Instellingen /opt/horsesafe/.env (HORSESAFE_*, 600)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "config:HORSESAFE_*, dep:pip:pydantic-settings"
+    -description "pydantic-settings met env_prefix HORSESAFE_ (backend/config.py); o.a. HORSESAFE_SMTP_*, HORSESAFE_TEST_ATTESTATION."
+}
+Artifact ar_trustdata "Vertrouwensanker backend/data (Yubico-roots, aaguids.json)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/tools"
+}
+Artifact ar_devtools "Test- en lintgereedschap (pytest, httpx, mypy, ruff, black)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "dep:pip:pytest*, dep:pip:httpx, dep:pip:mypy, dep:pip:ruff, dep:pip:black"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_application 40, 40
+pos ac_webui 60, 90
+pos ac_browsercrypto 260, 90
+pos ac_hwkeys_web 460, 90
+pos ai_api 660, 90
+pos ac_auth 860, 90
+pos ac_stepup 1060, 90
+pos ac_vault 60, 220
+pos ac_webauthn 260, 220
+pos ac_vertrouwensanker 460, 220
+pos ac_vaultkeys 660, 220
+pos ac_nood 860, 220
+pos ac_services 1060, 220
+pos ac_mailer 60, 350
+pos ac_middleware 260, 350
+pos ac_models 460, 350
+pos ac_db 660, 350
+pos ac_shares 860, 350
+pos ac_admin 1060, 350
+pos ac_testvectors 60, 480
+pos ai_webauthn 260, 480
+pos do_user 460, 480
+pos do_vault 660, 480
+pos do_vaultkey 860, 480
+pos do_challenge 1060, 480
+pos do_audit 60, 610
+pos do_magiclink 260, 610
+pos do_failed 460, 610
+pos do_backupcode 660, 610
+pos do_share 860, 610
+pos do_devices 1060, 610
+pos do_ck 60, 740
+pos ac_android 260, 740
+pos ai_deviceapi 460, 740
+pos do_pairings 660, 740
+pos ac_approve 860, 740
+pos do_approvals 1060, 740
+pos ac_native 60, 870
+pos ar_vaults 260, 870
+pos ar_env 460, 870
+pos ar_trustdata 660, 870
+pos ar_devtools 860, 870
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ac_webui composes ac_browsercrypto
+ac_webui composes ac_hwkeys_web
+ac_webui serves ai_api "fetch met JWT-cookie"
+ac_hwkeys_web serves ai_webauthn "credentials.create/get + PRF"
+ai_api composes ac_auth
+ai_api composes ac_stepup
+ai_api composes ac_vault
+ai_api composes ac_webauthn
+ai_api composes ac_vaultkeys
+ai_api composes ac_nood
+ai_api composes ac_shares
+ai_api composes ac_admin
+ai_api composes ac_middleware
+ai_api associates ac_models "valideert met"
+ac_auth serves ac_services
+ac_vault serves ac_services
+ac_vaultkeys serves ac_services
+ac_stepup serves ac_webauthn "Bio-assertion"
+ac_vaultkeys serves ac_webauthn "attestation + assertion"
+ac_nood serves ac_mailer "melding vrijgave/gebruik/blokkade"
+ac_auth serves ac_mailer "magic-link"
+ac_vertrouwensanker serves ac_webauthn "Yubico-roots + AAGUID-allowlist"
+ac_testvectors associates ac_hwkeys_web "bewijst Seal_v2"
+ac_services serves ac_db
+ac_auth accesses do_user "schrijft"
+ac_auth accesses do_magiclink "schrijft"
+ac_auth accesses do_backupcode "schrijft"
+ac_auth accesses do_failed "schrijft"
+ac_vault accesses do_vault "schrijft"
+ac_vaultkeys accesses do_vaultkey "schrijft"
+ac_nood accesses do_vaultkey "recovery-status"
+ac_webauthn accesses do_challenge "schrijft en verbruikt"
+ac_services accesses do_audit "schrijft"
+ac_admin accesses do_audit "leest"
+ac_admin accesses do_user "beheert"
+ac_shares accesses do_share "schrijft"
+ac_db composes do_devices
+ac_hwkeys_web accesses do_ck "verzegelt"
+ac_browsercrypto accesses do_ck "leidt af"
+ac_android serves ai_deviceapi "device-handtekening"
+ai_deviceapi accesses do_pairings
+ai_deviceapi accesses do_devices
+ac_approve accesses do_approvals
+ac_android serves ac_approve "goedkeuren met vinger"
+ac_android composes ac_native
+ar_vaults realizes do_vault "blob"
+ar_trustdata associates ac_webauthn "laadt"

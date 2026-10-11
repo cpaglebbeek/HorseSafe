@@ -1,0 +1,480 @@
+// HorseSafe — architectuurontwerp (to-be) in ArchDSL.
+// Bron van het ONTWERP. Platen in generated/ komen hieruit plus de gemeten code
+// (asis.facts.json) via /ModelArchDSL update. Niet de platen bewerken, wel dit bestand.
+// Inhoud overgenomen uit README.md, CLAUDE.md, ARCHITECTURE.md, COMPONENT_DIAGRAM.md,
+// SEQUENCE_DIAGRAMS.md (SQ-1..SQ-12), DATA_MODEL.md, API.md, PRINCIPLES.md, ROADMAP.md,
+// ACTIONS.md en docs/HARDWARE_KEYS.md (§1-§12, besluiten 10-10-2026).
+//
+// Conventies: ArchPortal/docs/DSL_CONVENTIES.md
+//   -view conceptueel|logisch|fysiek · -attr trace = "<glob op feit-id>" · -attr status = "gepland"|"extern"
+//
+// Let op bij traces: de extractor meet FastAPI-routes ZONDER router-prefix (app.py:84-89 zet
+// /auth, /vault, /webauthn, /admin). "route:POST /login" is dus /auth/login, "route:GET /{vault_id}"
+// is /vault/{vault_id}. Routes met een leeg pad (GET/POST /vault, routes/vault.py:38/47) meet de
+// extractor niet; zie het gat bij ac_vault. Frontend-bestanden zijn alleen per module meetbaar.
+
+set title "HorseSafe"
+set subtitle "Zero-knowledge wachtwoordkluis (KDBX4) met hardware-sleutels"
+set purpose "Browser-based wachtwoordkluis op HC55 waarin de server alleen ciphertext ziet (KDBX4, KeePassXC-compatibel), met MFA op de accountlaag en ontgrendelen met een YubiKey Bio (v0.2.0-Koblitz)."
+
+// ================= Conceptueel =================
+Driver dr_zk "Zero-knowledge: de server ziet nooit wachtwoord, keyfile of afgeleide sleutel (P-CRYPT-01)"
+Driver dr_kdbx "KDBX4-compat: KeePassXC-desktop blijft de noodroute (P-CRYPT-02)"
+Driver dr_vinger "Keyfile op USB-stick vervangen door iets dat alleen met de vinger werkt (HARDWARE_KEYS §1)"
+Goal go_kluis "Eigen wachtwoordkluis als SaaS op HC55, ook bij volledige servercompromittering onleesbaar"
+Goal go_hw "Ontgrendelen met hardware-afgedwongen biometrie (E1)"
+Goal go_dr "Disaster-recovery: kluis altijd als KDBX4 te downloaden en in KeePassXC te openen (P-UX-04)"
+Requirement rq_mfa "MFA verplicht voor vault-toegang: wachtwoord + TOTP, magic-link of backup-code (P-AUTH-02, R14)"
+Requirement rq_browsercrypto "Alle vault-crypto in de browser via kdbxweb, geen server-fallback (P-CRYPT-05)"
+Requirement rq_twolayers "Twee onafhankelijke lagen: account (server kent) en vault (alleen client kent) (P-AUTH-01)"
+Requirement rq_seal "Verzegelde ontgrendelkopie {ph,kh} alleen naar gebruikershardware, Seal_v2 (P-CRYPT-09)"
+Requirement rq_devicebound "Alleen device-bound hardware-sleutels: UV=1, BE=0, Yubico-attestation + AAGUID-allowlist (P-AUTH-08)"
+Requirement rq_stepup "Step-up (300 s) voor uitbreidende sleutelacties; defensieve acties zonder step-up maar gemeld (P-AUTH-07)"
+Requirement rq_optlock "Optimistic locking: PUT van een kluis vereist If-Match (P-DATA-03)"
+Requirement rq_export "Plaintext-export alleen met reden, bevestiging en audit (P-UX-03)"
+Requirement rq_audit "Append-only audit; nooit sealed, ph, kh, PRF-uitvoer of assertions in een auditregel (P-DATA-04, §12.10)"
+Requirement rq_throttle "Failed-login throttle: max 5 per 15 min per IP en per account (P-AUTH-05)"
+Constraint cn_noescrow "Geen key-escrow en geen herstel via de server: verlies van pw + keyfile = data weg (P-CRYPT-06)"
+Constraint cn_meldkanaal "Geen noodsleutel-vrijgave zonder meldkanaal; mislukte melding draait de vrijgave terug (P-OPS-07)"
+Constraint cn_unblock "Noodsleutel-blokkade alleen opheffen met Bio-step-up, nooit met alleen wachtwoord of TOTP (besluit 3)"
+Constraint cn_wachttijd "Noodsleutel pas bruikbaar na 24 uur wachttijd, venster van 24 uur, één keer (E7)"
+Constraint cn_sharedinfra "Gedeelde server: poort 3997 gereserveerd, nginx alleen na SHARED_INFRASTRUCTURE.md (P-OPS-01)"
+Constraint cn_secrets "SMTP-gegevens alleen in /opt/horsesafe/.env, nooit in code, docs of logs (P-OPS-07, P-DEV-06)"
+
+BusinessActor ba_gebruiker "Eindgebruiker (Christian)"
+BusinessActor ba_admin "Administrator (ziet geen vault-inhoud)"
+
+BusinessService bs_kluis "Zero-knowledge wachtwoordkluis"
+BusinessService bs_account "Account met MFA"
+BusinessService bs_hwsleutel "Ontgrendelen met hardware-sleutel (YubiKey Bio)"
+BusinessService bs_nood "Noodtoegang met noodsleutel"
+BusinessService bs_importexport "Import en export (KDBX3/4, Bitwarden JSON, CSV, XLSX)"
+BusinessService bs_delen "Entries delen met andere gebruikers"
+BusinessService bs_beheer "Accountbeheer en statistiek (admin)"
+
+// Stappen: registreren + MFA (SQ-1, SQ-2, SQ-3)
+BusinessProcess bp_registreren "Registreren met akkoord op permanent dataverlies"
+BusinessProcess bp_inloggen "Inloggen met accountwachtwoord"
+BusinessProcess bp_totp_instellen "TOTP instellen (QR) en bevestigen"
+BusinessProcess bp_mfa "Tweede stap: TOTP-code, magic-link of backup-code"
+BusinessProcess bp_backupcodes "Backup-codes aanmaken (alleen met MFA-sessie)"
+
+// Stappen: kluis openen met wachtwoord/keyfile (SQ-4, SQ-5)
+BusinessProcess bp_blob_ophalen "Versleutelde KDBX4-blob + ETag ophalen"
+BusinessProcess bp_ontsleutelen_pw "Ontsleutelen met wachtwoord en/of keyfile in de browser"
+BusinessProcess bp_opslaan "Bewerken en opslaan met If-Match"
+
+// Stappen: YubiKey Bio koppelen (SQ-9, §12.6.1)
+BusinessProcess bp_stepup "Step-up met Bio (of TOTP zolang er geen Bio is)"
+BusinessProcess bp_registreer_sleutel "Sleutel registreren met vinger (credentials.create + PRF)"
+BusinessProcess bp_verzegelen "Ontgrendelmateriaal verzegelen en sleutel vastpinnen in de KDBX"
+BusinessProcess bp_server_verifieert "Server verifieert attestation, UV, BE, AAGUID en sealed-vorm"
+
+// Stappen: ontgrendelen met YubiKey Bio (SQ-10, §12.6.2)
+BusinessProcess bp_vinger "Vinger op de YubiKey Bio"
+BusinessProcess bp_kopie_vrijgeven "Server verifieert assertion en geeft verzegelde kopie vrij"
+BusinessProcess bp_kopie_openen "Kopie openen (AAD-controle) en KDBX ontsleutelen"
+
+// Stappen: noodsleutel (SQ-11, §12.6.6-7)
+BusinessProcess bp_vrijgave "Vrijgave noodsleutel aanvragen"
+BusinessProcess bp_melding "Mail + audit; 24 uur wachttijd loopt"
+BusinessProcess bp_nood_ontgrendelen "Ontgrendelen met noodsleutel + PIN van 63 tekens binnen het venster"
+BusinessProcess bp_nood_verbruikt "Noodsleutel gebruikt: status consumed, mail"
+BusinessProcess bp_blokkeren "Noodsleutel blokkeren (altijd, zonder step-up)"
+BusinessProcess bp_deblokkeren "Blokkade opheffen na Bio-step-up"
+
+// Stappen: rekey (SQ-12, §12.6.5)
+BusinessProcess bp_pins_controleren "Ontvangende sleutels tonen en pins in de KDBX controleren"
+BusinessProcess bp_rekey "Nieuwe blob + alle verzegelde kopieën in één atomaire stap"
+
+// ================= Logisch =================
+ApplicationComponent ac_webui "HorseSafe-webclient (vanilla HTML/JS, geen build-step)" {
+    -attr trace = "module:frontend"
+    -description "Pagina's login, mfa, vault, settings, shares, import, export, backup-codes en admin; statisch geserveerd door nginx."
+}
+ApplicationComponent ac_browsercrypto "Crypto-engine in de browser (kdbxweb, per-entry TOTP, delen)" {
+    -attr trace = "module:frontend/js"
+    -description "crypto.js, totp.js, sharing.js, import-export.js: alle KDBX4-crypto client-side (P-CRYPT-05)."
+}
+ApplicationComponent ac_hwkeys_web "HwKeys-client (WebAuthn PRF, Seal_v2, step-up-dialoog)" {
+    -attr trace = "module:frontend/js"
+    -description "hwkeys.js, hwkeys-ui.js, stepup.js, vault-ui.js: fail-closed checkSupport, verzegelen, credentialsFromHashes, sleutelbeheer."
+}
+ApplicationInterface ai_api "REST-API /HorseSafe/api (JWT-cookie + MFA)" {
+    -attr trace = "module:backend, module:backend/routes, route:GET /health, dep:pip:fastapi, dep:pip:python-multipart"
+    -description "FastAPI-app (backend/app.py) met routers /auth, /vault, /webauthn, /admin en delen; /health toont versie en test_attestation."
+}
+ApplicationComponent ac_auth "Account en MFA (/auth)" {
+    -attr trace = "route:POST /register, route:POST /login, route:POST /logout, route:GET /me, route:POST /password, route:POST /totp/*, route:* /magic-link*, route:POST /backup-codes/*, dep:pip:pyotp, dep:pip:argon2-cffi, dep:pip:passlib, dep:pip:pyjwt, dep:pip:bcrypt, dep:pip:email-validator, config:HORSESAFE_BCRYPT_ROUNDS"
+    -description "Argon2id-wachtwoord, TOTP RFC 6238, magic-link alleen als tweede stap (R14), bcrypt-backup-codes, JWT in HttpOnly-cookie."
+}
+ApplicationComponent ac_stepup "Step-up (/auth/stepup)" {
+    -attr trace = "route:POST /stepup"
+    -description "Verse Bio-assertion of TOTP-code; zet stepup_until/stepup_method als JWT-claim (300 s); TOTP-afkoeltijd 24 uur (R6)."
+}
+ApplicationComponent ac_vault "Kluisopslag (/vault, blob-CRUD met If-Match)" {
+    -attr trace = "route:GET /{vault_id}, route:PUT /{vault_id}, route:DELETE /{vault_id}, route:POST /{vault_id}/audit-export, route:POST /{vault_id}/audit-import"
+    -description "Bewaart alleen ciphertext; 412 bij ETag-mismatch; audit-export/-import vóór plaintext-export. GET/POST /vault (leeg pad) staat in de code maar wordt niet gemeten."
+}
+ApplicationComponent ac_webauthn "WebAuthn-opties en -verificatie" {
+    -attr trace = "route:POST /options, dep:pip:webauthn, dep:pip:cryptography"
+    -description "Challenges voor register/unlock/stepup; py_webauthn plus eigen controles op UV, BE, AAGUID-allowlist en signCount."
+}
+ApplicationComponent ac_vertrouwensanker "Vertrouwensanker-bouwscripts (Yubico-roots, AAGUID-allowlist)" {
+    -attr trace = "module:backend/tools"
+    -description "build_yubico_roots.py en build_aaguids.py maken backend/data/yubico_fido_roots.pem en aaguids.json (gevendord publiek materiaal)."
+}
+ApplicationComponent ac_vaultkeys "Hardware-sleutels per kluis (/vault/{vid}/keys, rekey)" {
+    -attr trace = "route:GET /{vault_id}/keys, route:POST /{vault_id}/keys, route:POST /{vault_id}/keys/{key_id}/unlock, route:PUT /{vault_id}/keys/sealed, route:PUT /{vault_id}/rekey, route:DELETE /{vault_id}/keys/{key_id}"
+    -description "Koppelen, ontgrendelen (kopie pas na geverifieerde assertion), opnieuw verzegelen, rekey en verwijderen (§12.6)."
+}
+ApplicationComponent ac_nood "Noodsleutel-statusmachine (release, block)" {
+    -attr trace = "route:* /{vault_id}/keys/{key_id}/release, route:* /{vault_id}/keys/{key_id}/block"
+    -description "idle → waiting (24 u) → released (24 u) → consumed/expired; blocked tot opheffen met Bio-step-up (§12.7)."
+}
+ApplicationComponent ac_services "Servicelaag (auth, MFA, opslag, sleutels, audit)" {
+    -attr trace = "module:backend/services"
+    -description "auth/jwt/mfa/magic_link/backup_codes/stepup/webauthn/vault_key/storage/share/audit/admin-services."
+}
+ApplicationComponent ac_mailer "Mailer (SMTP 587 STARTTLS, Gmail-fallback)" {
+    -attr trace = "module:backend/services"
+    -description "mail_service.py: magic-links en beveiligingsmeldingen; From = SMTP-gebruiker; send_async via asyncio.to_thread."
+}
+ApplicationComponent ac_middleware "Middleware: rate-limit en CSP-headers" {
+    -attr trace = "module:backend/middlewares"
+}
+ApplicationComponent ac_models "Pydantic-modellen (API-contract)" {
+    -attr trace = "module:backend/models, dep:pip:pydantic"
+}
+ApplicationComponent ac_db "Opslaglaag SQLite (schema, migraties, promote_admin)" {
+    -attr trace = "module:backend/db, dep:pip:aiosqlite, table:schema_version"
+    -description "schema.sql + migraties tot schemaversie 5 (005_vault_keys); promote_admin maakt de eerste beheerder."
+}
+ApplicationComponent ac_shares "Delen (ECDH-P256, per entry)" {
+    -attr trace = "route:* /keypair*, route:* /shares*, route:GET /users/by-email/{email}/pubkey"
+    -description "Server kent alleen publieke sleutels en ondoorzichtige ciphertexts (v0.0.6-Adleman)."
+}
+ApplicationComponent ac_admin "Beheer (/admin)" {
+    -attr trace = "route:GET /users, route:DELETE /users/{user_id}, route:POST /users/{user_id}/*, route:GET /stats, route:GET /audit, route:GET /audit/export"
+    -description "Gebruikers, MFA uitzetten, magic-link sturen, opslagstatistiek, audit-log en CSV-export; geen vault-toegang."
+}
+ApplicationComponent ac_testvectors "Seal_v2-testvectoren (JS = Python, later Kotlin)" {
+    -attr trace = "module:specs/testvectors"
+}
+ApplicationInterface ai_webauthn "WebAuthn + PRF in Chrome/Edge (navigator.credentials)" {
+    -attr status = "extern"
+}
+
+DataObject do_user "Account (e-mail, argon2id-hash, TOTP-secret, publieke deelsleutel)" {
+    -attr trace = "table:users"
+}
+DataObject do_vault "Kluis-metadata + ETag (blob op disk)" {
+    -attr trace = "table:vaults"
+}
+DataObject do_vaultkey "Hardware-sleutel: pk_c + verzegelde kopie + recovery-status" {
+    -attr trace = "table:vault_keys"
+}
+DataObject do_challenge "WebAuthn-challenge (eenmalig)" {
+    -attr trace = "table:webauthn_challenges"
+}
+DataObject do_audit "Auditregel (append-only)" {
+    -attr trace = "table:audit_log"
+}
+DataObject do_magiclink "Magic-link-token (10 min, eenmalig)" {
+    -attr trace = "table:magic_links"
+}
+DataObject do_failed "Mislukte login (throttle)" {
+    -attr trace = "table:failed_logins"
+}
+DataObject do_backupcode "Backup-code (bcrypt, eenmalig)" {
+    -attr trace = "table:users_backup_codes"
+}
+DataObject do_share "Gedeelde entry (ciphertext per ontvanger)" {
+    -attr trace = "table:shares"
+}
+DataObject do_devices "Toestel (tabel bestaat, leeg tot Miller)" {
+    -attr trace = "table:devices"
+}
+DataObject do_ck "Ontgrendelmateriaal {ph,kh} (alleen browser-RAM)" {
+    -attr trace = "module:frontend/js"
+    -description "Directe invoer van de KDBX4-composite-key; kdbxweb.ProtectedValue, nooit naar de server behalve verzegeld (P-CRYPT-09)."
+}
+
+// ---- Gepland (ROADMAP + HARDWARE_KEYS, besluiten 10-10-2026) ----
+ApplicationComponent ac_android "HorseSafe Android-app (v0.3.0-Miller, gepland)" {
+    -attr trace = "module:android*"
+    -description "android/ in deze repo: YubiKey inrichten, telefoon koppelen (QR + SAS), telefoon-credential BIOMETRIC_STRONG, noodsleutel blokkeren, update via HorseAPK (§7)."
+}
+ApplicationInterface ai_deviceapi "Device-API: koppelen, status, sealed, recovery-block, app-update (v0.3.0-Miller, gepland)" {
+    -attr trace = "route:* *pairings*, route:* *device/v1/*, route:* *app/latest"
+    -description "§6 fase M: /devices/pairings…, /devices, /device/v1/*, /app/latest, /app/download; device-handtekening K_dev."
+}
+DataObject do_pairings "Koppelingen + device-nonces (migratie 006, gepland)" {
+    -attr trace = "table:pairings, table:device_nonces"
+}
+ApplicationComponent ac_approve "Goedkeuring laptop via telefoon-QR + vinger (v0.4.0-Montgomery, gepland)" {
+    -attr trace = "route:* *approvals*"
+    -description "§5: server alleen doorgifte; Seal_v2 purpose relay naar tijdelijke laptopsleutel; WebView-ontgrendelen in de app."
+}
+DataObject do_approvals "Goedkeuringen + ingetrokken sessies (migratie 007, gepland)" {
+    -attr trace = "table:approvals, table:revoked_sessions"
+}
+ApplicationComponent ac_native "Native read-only kluis in de app (v0.5.0-Lange, gepland, niet bouwen vóór veldtest v0.4)" {
+    -attr status = "gepland"
+}
+
+// ================= Fysiek =================
+Node nd_hc55 "HC55 157.180.29.184 (icthorsecloud.nl)" {
+    -attr status = "extern"
+}
+SystemSoftware ss_uvicorn "uvicorn 127.0.0.1:3997 (horsesafe.service, gebruiker horsesafe)" {
+    -attr trace = "unit:horsesafe.service, dep:pip:uvicorn"
+}
+TechnologyInterface ti_nginx_web "nginx /HorseSafe/ (statische frontend /opt/horsesafe/web)" {
+    -attr trace = "nginx:/HorseSafe, nginx:/HorseSafe/"
+}
+TechnologyInterface ti_nginx_api "nginx /HorseSafe/api/ → 127.0.0.1:3997" {
+    -attr trace = "nginx:/HorseSafe/api/"
+    -description "auth_basic off: eigen JWT + MFA; TLS via Let's Encrypt van HC55."
+}
+SystemSoftware ss_sqlite "SQLite /opt/horsesafe/db/horsesafe.db (600)" {
+    -attr trace = "dep:pip:aiosqlite, table:*"
+}
+Artifact ar_vaults "Vaults-dir /opt/horsesafe/vaults/<user>/<vault>.kdbx (600)" {
+    -attr trace = "module:backend/services"
+    -description "storage_service.py schrijft de ciphertext-blobs; rekey vervangt atomair."
+}
+Artifact ar_env "Instellingen /opt/horsesafe/.env (HORSESAFE_*, 600)" {
+    -attr trace = "config:HORSESAFE_*, dep:pip:pydantic-settings"
+    -description "pydantic-settings met env_prefix HORSESAFE_ (backend/config.py); o.a. HORSESAFE_SMTP_*, HORSESAFE_TEST_ATTESTATION."
+}
+Artifact ar_trustdata "Vertrouwensanker backend/data (Yubico-roots, aaguids.json)" {
+    -attr trace = "module:backend/tools"
+}
+Artifact ar_devtools "Test- en lintgereedschap (pytest, httpx, mypy, ruff, black)" {
+    -attr trace = "dep:pip:pytest*, dep:pip:httpx, dep:pip:mypy, dep:pip:ruff, dep:pip:black"
+}
+TechnologyService ts_smtp "SMTP Hostinger 587 STARTTLS (From = info@icthorse.nl)" {
+    -attr status = "extern"
+}
+TechnologyService ts_gmail "Gmail SMTP_SSL 465 (fallback; poort 465 dicht op HC55)" {
+    -attr status = "extern"
+}
+TechnologyService ts_storagebox "Hetzner Storagebox (nachtelijke backup)" {
+    -attr status = "extern"
+}
+Device dv_bio "YubiKey Bio (vinger, PRF, PIN van 63 tekens)" {
+    -attr status = "extern"
+}
+Device dv_nood "Noodsleutel (YubiKey 5 of Bio, alleen PIN van 63 tekens)" {
+    -attr status = "extern"
+}
+Device dv_laptop "Laptop met Chrome/Edge" {
+    -attr status = "extern"
+}
+SystemSoftware ss_keepassxc "KeePassXC-desktop (noodroute)" {
+    -attr status = "extern"
+}
+Device dv_phone "Telefoon Z Fold6 (Keystore BIOMETRIC_STRONG, v0.3.0-Miller)" {
+    -attr status = "gepland"
+}
+
+// ================= Relaties =================
+dr_zk -> go_kluis : influence "drijft aan"
+dr_kdbx -> go_dr : influence "drijft aan"
+dr_vinger -> go_hw : influence "drijft aan"
+go_kluis -> rq_browsercrypto : influence "vereist"
+go_kluis -> rq_twolayers : influence "vereist"
+go_kluis -> rq_mfa : influence "vereist"
+go_hw -> rq_seal : influence "vereist"
+go_hw -> rq_devicebound : influence "vereist"
+go_hw -> rq_stepup : influence "vereist"
+go_dr -> rq_optlock : influence "vereist"
+go_kluis -> rq_export : influence "vereist"
+go_kluis -> rq_audit : influence "vereist"
+go_kluis -> rq_throttle : influence "vereist"
+cn_noescrow -> go_kluis : influence "begrenst"
+cn_meldkanaal -> ac_nood : influence "begrenst"
+cn_unblock -> bp_deblokkeren : influence "begrenst"
+cn_wachttijd -> ac_nood : influence "begrenst"
+cn_sharedinfra -> ti_nginx_api : influence "begrenst"
+cn_secrets -> ar_env : influence "begrenst"
+rq_browsercrypto -> ac_browsercrypto : realization
+rq_seal -> ac_hwkeys_web : realization
+rq_devicebound -> ac_webauthn : realization
+rq_stepup -> ac_stepup : realization
+rq_optlock -> ac_vault : realization
+rq_throttle -> ac_middleware : realization
+
+ba_gebruiker -> bs_kluis : association "gebruikt"
+ba_gebruiker -> bs_account : association "gebruikt"
+ba_gebruiker -> bs_hwsleutel : association "gebruikt"
+ba_gebruiker -> bs_nood : association "gebruikt"
+ba_gebruiker -> bs_importexport : association "gebruikt"
+ba_gebruiker -> bs_delen : association "gebruikt"
+ba_admin -> bs_beheer : association "gebruikt"
+ac_browsercrypto -> bs_kluis : realization
+ac_auth -> bs_account : realization
+ac_hwkeys_web -> bs_hwsleutel : realization
+ac_nood -> bs_nood : realization
+ac_browsercrypto -> bs_importexport : realization
+ac_shares -> bs_delen : realization
+ac_admin -> bs_beheer : realization
+
+// Logische samenhang
+ac_webui -> ac_browsercrypto : composition
+ac_webui -> ac_hwkeys_web : composition
+ac_webui -> ai_api : serving "fetch met JWT-cookie"
+ac_hwkeys_web -> ai_webauthn : serving "credentials.create/get + PRF"
+ai_webauthn -> dv_bio : association "vinger + PRF"
+ai_webauthn -> dv_nood : association "PIN + PRF"
+ai_api -> ac_auth : composition
+ai_api -> ac_stepup : composition
+ai_api -> ac_vault : composition
+ai_api -> ac_webauthn : composition
+ai_api -> ac_vaultkeys : composition
+ai_api -> ac_nood : composition
+ai_api -> ac_shares : composition
+ai_api -> ac_admin : composition
+ai_api -> ac_middleware : composition
+ai_api -> ac_models : association "valideert met"
+ac_auth -> ac_services : serving
+ac_vault -> ac_services : serving
+ac_vaultkeys -> ac_services : serving
+ac_stepup -> ac_webauthn : serving "Bio-assertion"
+ac_vaultkeys -> ac_webauthn : serving "attestation + assertion"
+ac_nood -> ac_mailer : serving "melding vrijgave/gebruik/blokkade"
+ac_auth -> ac_mailer : serving "magic-link"
+ac_vertrouwensanker -> ac_webauthn : serving "Yubico-roots + AAGUID-allowlist"
+ac_testvectors -> ac_hwkeys_web : association "bewijst Seal_v2"
+ac_services -> ac_db : serving
+ac_auth -> do_user : access "schrijft"
+ac_auth -> do_magiclink : access "schrijft"
+ac_auth -> do_backupcode : access "schrijft"
+ac_auth -> do_failed : access "schrijft"
+ac_vault -> do_vault : access "schrijft"
+ac_vaultkeys -> do_vaultkey : access "schrijft"
+ac_nood -> do_vaultkey : access "recovery-status"
+ac_webauthn -> do_challenge : access "schrijft en verbruikt"
+ac_services -> do_audit : access "schrijft"
+ac_admin -> do_audit : access "leest"
+ac_admin -> do_user : access "beheert"
+ac_shares -> do_share : access "schrijft"
+ac_db -> do_devices : composition
+ac_hwkeys_web -> do_ck : access "verzegelt"
+ac_browsercrypto -> do_ck : access "leidt af"
+
+// Gepland
+ac_android -> ai_deviceapi : serving "device-handtekening"
+ai_deviceapi -> do_pairings : access
+ai_deviceapi -> do_devices : access
+ac_approve -> do_approvals : access
+ac_android -> ac_approve : serving "goedkeuren met vinger"
+ac_android -> ac_native : composition
+ac_android -> dv_phone : association "draait op"
+
+// Fysiek
+nd_hc55 -> ss_uvicorn : assignment "host"
+nd_hc55 -> ti_nginx_web : assignment "host"
+nd_hc55 -> ss_sqlite : assignment "host"
+nd_hc55 -> ar_vaults : assignment "host"
+ti_nginx_web -> ac_webui : serving "levert statische bestanden"
+ti_nginx_api -> ss_uvicorn : serving "proxy"
+ss_uvicorn -> ai_api : realization
+ss_sqlite -> ac_db : serving
+ar_vaults -> do_vault : realization "blob"
+ar_env -> ss_uvicorn : association "configureert"
+ar_trustdata -> ac_webauthn : association "laadt"
+ac_mailer -> ts_smtp : serving "587 STARTTLS"
+ac_mailer -> ts_gmail : serving "fallback"
+ar_vaults -> ts_storagebox : flow "nachtelijke backup"
+ss_sqlite -> ts_storagebox : flow "nachtelijke backup"
+dv_laptop -> ac_webui : association "draait"
+ac_browsercrypto -> ss_keepassxc : flow "KDBX4-export"
+
+// Klantreis-ondersteuning
+ac_auth -> bp_registreren : serving
+ac_auth -> bp_inloggen : serving
+ac_auth -> bp_totp_instellen : serving
+ac_auth -> bp_mfa : serving
+ac_mailer -> bp_mfa : serving
+ac_auth -> bp_backupcodes : serving
+ac_webui -> bp_registreren : serving
+ac_vault -> bp_blob_ophalen : serving
+ac_browsercrypto -> bp_ontsleutelen_pw : serving
+ac_vault -> bp_opslaan : serving
+ac_browsercrypto -> bp_opslaan : serving
+ac_stepup -> bp_stepup : serving
+dv_bio -> bp_stepup : serving
+ac_hwkeys_web -> bp_registreer_sleutel : serving
+ac_webauthn -> bp_registreer_sleutel : serving
+dv_bio -> bp_registreer_sleutel : serving
+ac_hwkeys_web -> bp_verzegelen : serving
+ac_vaultkeys -> bp_server_verifieert : serving
+ac_webauthn -> bp_server_verifieert : serving
+dv_bio -> bp_vinger : serving
+ac_hwkeys_web -> bp_vinger : serving
+ac_vaultkeys -> bp_kopie_vrijgeven : serving
+ac_hwkeys_web -> bp_kopie_openen : serving
+ac_browsercrypto -> bp_kopie_openen : serving
+ac_nood -> bp_vrijgave : serving
+ac_mailer -> bp_melding : serving
+ac_nood -> bp_melding : serving
+dv_nood -> bp_nood_ontgrendelen : serving
+ac_vaultkeys -> bp_nood_ontgrendelen : serving
+ac_nood -> bp_nood_verbruikt : serving
+ac_mailer -> bp_nood_verbruikt : serving
+ac_nood -> bp_blokkeren : serving
+ac_nood -> bp_deblokkeren : serving
+ac_hwkeys_web -> bp_pins_controleren : serving
+ac_vaultkeys -> bp_rekey : serving
+ac_hwkeys_web -> bp_rekey : serving
+
+bp_registreren -> bs_account : realization
+bp_ontsleutelen_pw -> bs_kluis : realization
+bp_kopie_openen -> bs_hwsleutel : realization
+bp_nood_ontgrendelen -> bs_nood : realization
+
+// ================= Klantreizen =================
+Viewpoint reis_registreren "Klantreis: registreren en MFA instellen" {
+    -attr journey = "true"
+    -attr actor = "ba_gebruiker"
+    -attr steps = "bp_registreren bp_inloggen bp_totp_instellen bp_mfa bp_backupcodes"
+    -description "Account aanmaken met akkoord op dataverlies, inloggen, TOTP instellen, tweede stap bevestigen, backup-codes aanmaken (SQ-1, SQ-2, R14)."
+}
+Viewpoint reis_openen_pw "Klantreis: kluis openen met wachtwoord en/of keyfile" {
+    -attr journey = "true"
+    -attr actor = "ba_gebruiker"
+    -attr steps = "bp_inloggen bp_mfa bp_blob_ophalen bp_ontsleutelen_pw bp_opslaan"
+    -description "Login + MFA, ciphertext ophalen, ontsleutelen in de browser, wijzigen en opslaan met If-Match (SQ-4, SQ-5)."
+}
+Viewpoint reis_koppelen "Klantreis: YubiKey Bio koppelen" {
+    -attr journey = "true"
+    -attr actor = "ba_gebruiker"
+    -attr steps = "bp_ontsleutelen_pw bp_stepup bp_registreer_sleutel bp_verzegelen bp_server_verifieert"
+    -description "Kluis open met pw/keyfile, step-up als er al een sleutel is, registreren met vinger + PRF, verzegelen en vastpinnen, server verifieert (SQ-9, §12.6.1)."
+}
+Viewpoint reis_bio "Klantreis: ontgrendelen met YubiKey Bio" {
+    -attr journey = "true"
+    -attr actor = "ba_gebruiker"
+    -attr steps = "bp_inloggen bp_mfa bp_vinger bp_kopie_vrijgeven bp_kopie_openen"
+    -description "Eén vinger op de Bio; de server geeft de verzegelde kopie pas na een geverifieerde assertion vrij (SQ-10, §12.6.2)."
+}
+Viewpoint reis_noodsleutel "Klantreis: noodsleutel-vrijgave (24 uur)" {
+    -attr journey = "true"
+    -attr actor = "ba_gebruiker"
+    -attr steps = "bp_vrijgave bp_melding bp_nood_ontgrendelen bp_nood_verbruikt"
+    -description "Vrijgave aanvragen (geweigerd zonder meldkanaal), 24 uur wachten met mail, binnen het venster ontgrendelen met noodsleutel + PIN, daarna consumed (SQ-11)."
+}
+Viewpoint reis_blokkade "Klantreis: noodsleutel blokkeren en opheffen met step-up" {
+    -attr journey = "true"
+    -attr actor = "ba_gebruiker"
+    -attr steps = "bp_blokkeren bp_melding bp_stepup bp_deblokkeren"
+    -description "Blokkeren kan altijd; opheffen alleen na Bio-step-up met een Bio die al vóór de blokkade gekoppeld was (besluit 3, §12.6.7)."
+}
+Viewpoint reis_rekey "Klantreis: wachtwoord/keyfile wijzigen (rekey)" {
+    -attr journey = "true"
+    -attr actor = "ba_gebruiker"
+    -attr steps = "bp_ontsleutelen_pw bp_stepup bp_pins_controleren bp_rekey"
+    -description "Step-up, ontvangende sleutels controleren tegen de pins in de KDBX, dan blob en alle kopieën atomair vervangen (SQ-12, §12.6.5)."
+}

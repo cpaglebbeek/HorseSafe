@@ -1,0 +1,123 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Klantreis: ontgrendelen met YubiKey Bio"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "Eén vinger op de Bio; de server geeft de verzegelde kopie pas na een geverifieerde assertion vrij (SQ-10, §12.6.2)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_business "Business" {
+    -width 1220
+    -height 310
+}
+BusinessActor ba_gebruiker "Eindgebruiker (Christian)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_inloggen "Inloggen met accountwachtwoord" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_mfa "Tweede stap: TOTP-code, magic-link of backup-code" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_vinger "Vinger op de YubiKey Bio" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_kopie_vrijgeven "Server verifieert assertion en geeft verzegelde kopie vrij" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_kopie_openen "Kopie openen (AAD-controle) en KDBX ontsleutelen" in laag_business {
+    -step 5
+    -attr status = "ontwerp"
+}
+BusinessService bs_hwsleutel "Ontgrendelen met hardware-sleutel (YubiKey Bio)" in laag_business {
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 1020
+    -height 180
+}
+ApplicationComponent ac_auth "Account en MFA (/auth)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:POST /register, route:POST /login, route:POST /logout, route:GET /me, route:POST /password, route:POST /totp/*, route:* /magic-link*, route:POST /backup-codes/*, dep:pip:pyotp, dep:pip:argon2-cffi, dep:pip:passlib, dep:pip:pyjwt, dep:pip:bcrypt, dep:pip:email-validator, config:HORSESAFE_BCRYPT_ROUNDS"
+    -description "Argon2id-wachtwoord, TOTP RFC 6238, magic-link alleen als tweede stap (R14), bcrypt-backup-codes, JWT in HttpOnly-cookie."
+}
+ApplicationComponent ac_mailer "Mailer (SMTP 587 STARTTLS, Gmail-fallback)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/services"
+    -description "mail_service.py: magic-links en beveiligingsmeldingen; From = SMTP-gebruiker; send_async via asyncio.to_thread."
+}
+ApplicationComponent ac_hwkeys_web "HwKeys-client (WebAuthn PRF, Seal_v2, step-up-dialoog)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend/js"
+    -description "hwkeys.js, hwkeys-ui.js, stepup.js, vault-ui.js: fail-closed checkSupport, verzegelen, credentialsFromHashes, sleutelbeheer."
+}
+ApplicationComponent ac_vaultkeys "Hardware-sleutels per kluis (/vault/(vid)/keys, rekey)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:GET /(vault_id)/keys, route:POST /(vault_id)/keys, route:POST /(vault_id)/keys/(key_id)/unlock, route:PUT /(vault_id)/keys/sealed, route:PUT /(vault_id)/rekey, route:DELETE /(vault_id)/keys/(key_id)"
+    -description "Koppelen, ontgrendelen (kopie pas na geverifieerde assertion), opnieuw verzegelen, rekey en verwijderen (§12.6)."
+}
+ApplicationComponent ac_browsercrypto "Crypto-engine in de browser (kdbxweb, per-entry TOTP, delen)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend/js"
+    -description "crypto.js, totp.js, sharing.js, import-export.js: alle KDBX4-crypto client-side (P-CRYPT-05)."
+}
+
+Group laag_technology "Technologie" {
+    -width 400
+    -height 180
+}
+Device dv_bio "YubiKey Bio (vinger, PRF, PIN van 63 tekens)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_business 40, 40
+pos ba_gebruiker 60, 90
+pos bp_inloggen 260, 90
+pos bp_mfa 460, 90
+pos bp_vinger 660, 90
+pos bp_kopie_vrijgeven 860, 90
+pos bp_kopie_openen 1060, 90
+pos bs_hwsleutel 60, 220
+pos laag_application 40, 390
+pos ac_auth 60, 440
+pos ac_mailer 260, 440
+pos ac_hwkeys_web 460, 440
+pos ac_vaultkeys 660, 440
+pos ac_browsercrypto 860, 440
+pos laag_technology 40, 610
+pos dv_bio 60, 660
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ba_gebruiker associates bs_hwsleutel "gebruikt"
+ac_hwkeys_web realizes bs_hwsleutel
+ac_auth serves ac_mailer "magic-link"
+ac_auth serves bp_inloggen
+ac_auth serves bp_mfa
+ac_mailer serves bp_mfa
+dv_bio serves bp_vinger
+ac_hwkeys_web serves bp_vinger
+ac_vaultkeys serves bp_kopie_vrijgeven
+ac_hwkeys_web serves bp_kopie_openen
+ac_browsercrypto serves bp_kopie_openen
+bp_kopie_openen realizes bs_hwsleutel
+bp_inloggen -> bp_mfa
+bp_mfa -> bp_vinger
+bp_vinger -> bp_kopie_vrijgeven
+bp_kopie_vrijgeven -> bp_kopie_openen
+ba_gebruiker -> bp_inloggen "start"

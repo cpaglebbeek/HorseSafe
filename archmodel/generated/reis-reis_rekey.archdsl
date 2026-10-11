@@ -1,0 +1,107 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Klantreis: wachtwoord/keyfile wijzigen (rekey)"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "Step-up, ontvangende sleutels controleren tegen de pins in de KDBX, dan blob en alle kopieën atomair vervangen (SQ-12, §12.6.5)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_business "Business" {
+    -width 1220
+    -height 180
+}
+BusinessActor ba_gebruiker "Eindgebruiker (Christian)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_ontsleutelen_pw "Ontsleutelen met wachtwoord en/of keyfile in de browser" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_stepup "Step-up met Bio (of TOTP zolang er geen Bio is)" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_pins_controleren "Ontvangende sleutels tonen en pins in de KDBX controleren" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_rekey "Nieuwe blob + alle verzegelde kopieën in één atomaire stap" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+BusinessService bs_kluis "Zero-knowledge wachtwoordkluis" in laag_business {
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 820
+    -height 180
+}
+ApplicationComponent ac_stepup "Step-up (/auth/stepup)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:POST /stepup"
+    -description "Verse Bio-assertion of TOTP-code; zet stepup_until/stepup_method als JWT-claim (300 s); TOTP-afkoeltijd 24 uur (R6)."
+}
+ApplicationComponent ac_browsercrypto "Crypto-engine in de browser (kdbxweb, per-entry TOTP, delen)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend/js"
+    -description "crypto.js, totp.js, sharing.js, import-export.js: alle KDBX4-crypto client-side (P-CRYPT-05)."
+}
+ApplicationComponent ac_hwkeys_web "HwKeys-client (WebAuthn PRF, Seal_v2, step-up-dialoog)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:frontend/js"
+    -description "hwkeys.js, hwkeys-ui.js, stepup.js, vault-ui.js: fail-closed checkSupport, verzegelen, credentialsFromHashes, sleutelbeheer."
+}
+ApplicationComponent ac_vaultkeys "Hardware-sleutels per kluis (/vault/(vid)/keys, rekey)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:GET /(vault_id)/keys, route:POST /(vault_id)/keys, route:POST /(vault_id)/keys/(key_id)/unlock, route:PUT /(vault_id)/keys/sealed, route:PUT /(vault_id)/rekey, route:DELETE /(vault_id)/keys/(key_id)"
+    -description "Koppelen, ontgrendelen (kopie pas na geverifieerde assertion), opnieuw verzegelen, rekey en verwijderen (§12.6)."
+}
+
+Group laag_technology "Technologie" {
+    -width 400
+    -height 180
+}
+Device dv_bio "YubiKey Bio (vinger, PRF, PIN van 63 tekens)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_business 40, 40
+pos ba_gebruiker 60, 90
+pos bp_ontsleutelen_pw 260, 90
+pos bp_stepup 460, 90
+pos bp_pins_controleren 660, 90
+pos bp_rekey 860, 90
+pos bs_kluis 1060, 90
+pos laag_application 40, 260
+pos ac_stepup 60, 310
+pos ac_browsercrypto 260, 310
+pos ac_hwkeys_web 460, 310
+pos ac_vaultkeys 660, 310
+pos laag_technology 40, 480
+pos dv_bio 60, 530
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ba_gebruiker associates bs_kluis "gebruikt"
+ac_browsercrypto realizes bs_kluis
+ac_browsercrypto serves bp_ontsleutelen_pw
+ac_stepup serves bp_stepup
+dv_bio serves bp_stepup
+ac_hwkeys_web serves bp_pins_controleren
+ac_vaultkeys serves bp_rekey
+ac_hwkeys_web serves bp_rekey
+bp_ontsleutelen_pw realizes bs_kluis
+bp_ontsleutelen_pw -> bp_stepup
+bp_stepup -> bp_pins_controleren
+bp_pins_controleren -> bp_rekey
+ba_gebruiker -> bp_ontsleutelen_pw "start"

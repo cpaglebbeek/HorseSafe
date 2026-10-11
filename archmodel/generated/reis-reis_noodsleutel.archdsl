@@ -1,0 +1,102 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Klantreis: noodsleutel-vrijgave (24 uur)"
+set subtitle "Klantreis (stappen genummerd, afspeelbaar in het portaal)"
+set purpose "Vrijgave aanvragen (geweigerd zonder meldkanaal), 24 uur wachten met mail, binnen het venster ontgrendelen met noodsleutel + PIN, daarna consumed (SQ-11)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_business "Business" {
+    -width 1220
+    -height 180
+}
+BusinessActor ba_gebruiker "Eindgebruiker (Christian)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_vrijgave "Vrijgave noodsleutel aanvragen" in laag_business {
+    -step 1
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_melding "Mail + audit; 24 uur wachttijd loopt" in laag_business {
+    -step 2
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_nood_ontgrendelen "Ontgrendelen met noodsleutel + PIN van 63 tekens binnen het venster" in laag_business {
+    -step 3
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_nood_verbruikt "Noodsleutel gebruikt: status consumed, mail" in laag_business {
+    -step 4
+    -attr status = "ontwerp"
+}
+BusinessService bs_nood "Noodtoegang met noodsleutel" in laag_business {
+    -attr status = "ontwerp"
+}
+
+Group laag_application "Applicatie" {
+    -width 620
+    -height 180
+}
+ApplicationComponent ac_vaultkeys "Hardware-sleutels per kluis (/vault/(vid)/keys, rekey)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:GET /(vault_id)/keys, route:POST /(vault_id)/keys, route:POST /(vault_id)/keys/(key_id)/unlock, route:PUT /(vault_id)/keys/sealed, route:PUT /(vault_id)/rekey, route:DELETE /(vault_id)/keys/(key_id)"
+    -description "Koppelen, ontgrendelen (kopie pas na geverifieerde assertion), opnieuw verzegelen, rekey en verwijderen (§12.6)."
+}
+ApplicationComponent ac_nood "Noodsleutel-statusmachine (release, block)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "route:* /(vault_id)/keys/(key_id)/release, route:* /(vault_id)/keys/(key_id)/block"
+    -description "idle → waiting (24 u) → released (24 u) → consumed/expired; blocked tot opheffen met Bio-step-up (§12.7)."
+}
+ApplicationComponent ac_mailer "Mailer (SMTP 587 STARTTLS, Gmail-fallback)" in laag_application {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "module:backend/services"
+    -description "mail_service.py: magic-links en beveiligingsmeldingen; From = SMTP-gebruiker; send_async via asyncio.to_thread."
+}
+
+Group laag_technology "Technologie" {
+    -width 400
+    -height 180
+}
+Device dv_nood "Noodsleutel (YubiKey 5 of Bio, alleen PIN van 63 tekens)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_business 40, 40
+pos ba_gebruiker 60, 90
+pos bp_vrijgave 260, 90
+pos bp_melding 460, 90
+pos bp_nood_ontgrendelen 660, 90
+pos bp_nood_verbruikt 860, 90
+pos bs_nood 1060, 90
+pos laag_application 40, 260
+pos ac_vaultkeys 60, 310
+pos ac_nood 260, 310
+pos ac_mailer 460, 310
+pos laag_technology 40, 480
+pos dv_nood 60, 530
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+ba_gebruiker associates bs_nood "gebruikt"
+ac_nood realizes bs_nood
+ac_nood serves ac_mailer "melding vrijgave/gebruik/blokkade"
+ac_nood serves bp_vrijgave
+ac_mailer serves bp_melding
+ac_nood serves bp_melding
+dv_nood serves bp_nood_ontgrendelen
+ac_vaultkeys serves bp_nood_ontgrendelen
+ac_nood serves bp_nood_verbruikt
+ac_mailer serves bp_nood_verbruikt
+bp_nood_ontgrendelen realizes bs_nood
+bp_vrijgave -> bp_melding
+bp_melding -> bp_nood_ontgrendelen
+bp_nood_ontgrendelen -> bp_nood_verbruikt
+ba_gebruiker -> bp_vrijgave "start"

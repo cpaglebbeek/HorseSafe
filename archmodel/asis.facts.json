@@ -1,0 +1,836 @@
+{
+  "schema": 1,
+  "extractor": "ModelArchDSL/extract",
+  "facts": [
+    {
+      "id": "config:HORSESAFE_BCRYPT_ROUNDS",
+      "kind": "config",
+      "label": "HORSESAFE_BCRYPT_ROUNDS",
+      "sources": [
+        "backend/services/backup_codes_service.py:17"
+      ]
+    },
+    {
+      "id": "dep:pip:aiosqlite",
+      "kind": "dep",
+      "label": "aiosqlite",
+      "sources": [
+        "backend/requirements.txt:9"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:argon2-cffi",
+      "kind": "dep",
+      "label": "argon2-cffi",
+      "sources": [
+        "backend/requirements.txt:6"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:bcrypt",
+      "kind": "dep",
+      "label": "bcrypt",
+      "sources": [
+        "backend/requirements.txt:7"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:black",
+      "kind": "dep",
+      "label": "black",
+      "sources": [
+        "backend/requirements.txt:23"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:cryptography",
+      "kind": "dep",
+      "label": "cryptography",
+      "sources": [
+        "backend/requirements.txt:13"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:email-validator",
+      "kind": "dep",
+      "label": "email-validator",
+      "sources": [
+        "backend/requirements.txt:11"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:fastapi",
+      "kind": "dep",
+      "label": "fastapi",
+      "sources": [
+        "backend/requirements.txt:1"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:httpx",
+      "kind": "dep",
+      "label": "httpx",
+      "sources": [
+        "backend/requirements.txt:21"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:mypy",
+      "kind": "dep",
+      "label": "mypy",
+      "sources": [
+        "backend/requirements.txt:24"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:passlib",
+      "kind": "dep",
+      "label": "passlib",
+      "sources": [
+        "backend/requirements.txt:5"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:pydantic",
+      "kind": "dep",
+      "label": "pydantic",
+      "sources": [
+        "backend/requirements.txt:2"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:pydantic-settings",
+      "kind": "dep",
+      "label": "pydantic-settings",
+      "sources": [
+        "backend/requirements.txt:3"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:pyjwt",
+      "kind": "dep",
+      "label": "pyjwt",
+      "sources": [
+        "backend/requirements.txt:8"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:pyotp",
+      "kind": "dep",
+      "label": "pyotp",
+      "sources": [
+        "backend/requirements.txt:12"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:pytest",
+      "kind": "dep",
+      "label": "pytest",
+      "sources": [
+        "backend/requirements.txt:18"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:pytest-asyncio",
+      "kind": "dep",
+      "label": "pytest-asyncio",
+      "sources": [
+        "backend/requirements.txt:19"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:pytest-cov",
+      "kind": "dep",
+      "label": "pytest-cov",
+      "sources": [
+        "backend/requirements.txt:20"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:python-multipart",
+      "kind": "dep",
+      "label": "python-multipart",
+      "sources": [
+        "backend/requirements.txt:10"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:ruff",
+      "kind": "dep",
+      "label": "ruff",
+      "sources": [
+        "backend/requirements.txt:22"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:uvicorn",
+      "kind": "dep",
+      "label": "uvicorn",
+      "sources": [
+        "backend/requirements.txt:4"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "dep:pip:webauthn",
+      "kind": "dep",
+      "label": "webauthn",
+      "sources": [
+        "backend/requirements.txt:15"
+      ],
+      "eco": "pip"
+    },
+    {
+      "id": "module:backend",
+      "kind": "module",
+      "label": "backend",
+      "sources": [
+        "backend/app.py"
+      ],
+      "files": 2
+    },
+    {
+      "id": "module:backend/db",
+      "kind": "module",
+      "label": "backend/db",
+      "sources": [
+        "backend/db/__init__.py"
+      ],
+      "files": 5
+    },
+    {
+      "id": "module:backend/middlewares",
+      "kind": "module",
+      "label": "backend/middlewares",
+      "sources": [
+        "backend/middlewares/__init__.py"
+      ],
+      "files": 3
+    },
+    {
+      "id": "module:backend/models",
+      "kind": "module",
+      "label": "backend/models",
+      "sources": [
+        "backend/models/__init__.py"
+      ],
+      "files": 9
+    },
+    {
+      "id": "module:backend/routes",
+      "kind": "module",
+      "label": "backend/routes",
+      "sources": [
+        "backend/routes/__init__.py"
+      ],
+      "files": 8
+    },
+    {
+      "id": "module:backend/services",
+      "kind": "module",
+      "label": "backend/services",
+      "sources": [
+        "backend/services/__init__.py"
+      ],
+      "files": 15
+    },
+    {
+      "id": "module:backend/tools",
+      "kind": "module",
+      "label": "backend/tools",
+      "sources": [
+        "backend/tools/build_aaguids.py"
+      ],
+      "files": 2
+    },
+    {
+      "id": "module:frontend",
+      "kind": "module",
+      "label": "frontend",
+      "sources": [
+        "frontend/devserver.py"
+      ],
+      "files": 2
+    },
+    {
+      "id": "module:frontend/js",
+      "kind": "module",
+      "label": "frontend/js",
+      "sources": [
+        "frontend/js/admin.js"
+      ],
+      "files": 20
+    },
+    {
+      "id": "module:specs/testvectors",
+      "kind": "module",
+      "label": "specs/testvectors",
+      "sources": [
+        "specs/testvectors/gen_seal_v2.py"
+      ],
+      "files": 1
+    },
+    {
+      "id": "nginx:/HorseSafe",
+      "kind": "nginx",
+      "label": "location /HorseSafe",
+      "sources": [
+        "scripts/nginx_snippet.conf:9"
+      ]
+    },
+    {
+      "id": "nginx:/HorseSafe/",
+      "kind": "nginx",
+      "label": "location /HorseSafe/",
+      "sources": [
+        "scripts/nginx_snippet.conf:27"
+      ]
+    },
+    {
+      "id": "nginx:/HorseSafe/api/",
+      "kind": "nginx",
+      "label": "location /HorseSafe/api/",
+      "sources": [
+        "scripts/nginx_snippet.conf:13"
+      ]
+    },
+    {
+      "id": "route:DELETE /users/{user_id}",
+      "kind": "route",
+      "label": "DELETE /users/{user_id}",
+      "sources": [
+        "backend/routes/admin.py:42"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:DELETE /{vault_id}",
+      "kind": "route",
+      "label": "DELETE /{vault_id}",
+      "sources": [
+        "backend/routes/vault.py:150"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:DELETE /{vault_id}/keys/{key_id}",
+      "kind": "route",
+      "label": "DELETE /{vault_id}/keys/{key_id}",
+      "sources": [
+        "backend/routes/vault_keys.py:727"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:DELETE /{vault_id}/keys/{key_id}/block",
+      "kind": "route",
+      "label": "DELETE /{vault_id}/keys/{key_id}/block",
+      "sources": [
+        "backend/routes/vault_keys.py:667"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:DELETE /{vault_id}/keys/{key_id}/release",
+      "kind": "route",
+      "label": "DELETE /{vault_id}/keys/{key_id}/release",
+      "sources": [
+        "backend/routes/vault_keys.py:592"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /audit",
+      "kind": "route",
+      "label": "GET /audit",
+      "sources": [
+        "backend/routes/admin.py:126"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /audit/export",
+      "kind": "route",
+      "label": "GET /audit/export",
+      "sources": [
+        "backend/routes/admin.py:160"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /health",
+      "kind": "route",
+      "label": "GET /health",
+      "sources": [
+        "backend/routes/health.py:12"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /keypair",
+      "kind": "route",
+      "label": "GET /keypair",
+      "sources": [
+        "backend/routes/shares.py:59"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /magic-link/redeem",
+      "kind": "route",
+      "label": "GET /magic-link/redeem",
+      "sources": [
+        "backend/routes/auth.py:300"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /me",
+      "kind": "route",
+      "label": "GET /me",
+      "sources": [
+        "backend/routes/auth.py:364"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /shares/inbox",
+      "kind": "route",
+      "label": "GET /shares/inbox",
+      "sources": [
+        "backend/routes/shares.py:123"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /shares/sent",
+      "kind": "route",
+      "label": "GET /shares/sent",
+      "sources": [
+        "backend/routes/shares.py:132"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /stats",
+      "kind": "route",
+      "label": "GET /stats",
+      "sources": [
+        "backend/routes/admin.py:111"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /users",
+      "kind": "route",
+      "label": "GET /users",
+      "sources": [
+        "backend/routes/admin.py:34"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /users/by-email/{email}/pubkey",
+      "kind": "route",
+      "label": "GET /users/by-email/{email}/pubkey",
+      "sources": [
+        "backend/routes/shares.py:72"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /{vault_id}",
+      "kind": "route",
+      "label": "GET /{vault_id}",
+      "sources": [
+        "backend/routes/vault.py:73"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:GET /{vault_id}/keys",
+      "kind": "route",
+      "label": "GET /{vault_id}/keys",
+      "sources": [
+        "backend/routes/vault_keys.py:143"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /backup-codes/generate",
+      "kind": "route",
+      "label": "POST /backup-codes/generate",
+      "sources": [
+        "backend/routes/auth.py:395"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /backup-codes/verify",
+      "kind": "route",
+      "label": "POST /backup-codes/verify",
+      "sources": [
+        "backend/routes/auth.py:418"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /keypair",
+      "kind": "route",
+      "label": "POST /keypair",
+      "sources": [
+        "backend/routes/shares.py:33"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /keypair/rewrap",
+      "kind": "route",
+      "label": "POST /keypair/rewrap",
+      "sources": [
+        "backend/routes/shares.py:49"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /login",
+      "kind": "route",
+      "label": "POST /login",
+      "sources": [
+        "backend/routes/auth.py:63"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /logout",
+      "kind": "route",
+      "label": "POST /logout",
+      "sources": [
+        "backend/routes/auth.py:112"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /magic-link",
+      "kind": "route",
+      "label": "POST /magic-link",
+      "sources": [
+        "backend/routes/auth.py:275"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /magic-link/redeem",
+      "kind": "route",
+      "label": "POST /magic-link/redeem",
+      "sources": [
+        "backend/routes/auth.py:313"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /options",
+      "kind": "route",
+      "label": "POST /options",
+      "sources": [
+        "backend/routes/webauthn.py:28"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /password",
+      "kind": "route",
+      "label": "POST /password",
+      "sources": [
+        "backend/routes/auth.py:456"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /register",
+      "kind": "route",
+      "label": "POST /register",
+      "sources": [
+        "backend/routes/auth.py:31"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /shares",
+      "kind": "route",
+      "label": "POST /shares",
+      "sources": [
+        "backend/routes/shares.py:91"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /shares/{share_id}/accept",
+      "kind": "route",
+      "label": "POST /shares/{share_id}/accept",
+      "sources": [
+        "backend/routes/shares.py:140"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /shares/{share_id}/decline",
+      "kind": "route",
+      "label": "POST /shares/{share_id}/decline",
+      "sources": [
+        "backend/routes/shares.py:158"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /stepup",
+      "kind": "route",
+      "label": "POST /stepup",
+      "sources": [
+        "backend/routes/auth.py:491"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /totp/disable",
+      "kind": "route",
+      "label": "POST /totp/disable",
+      "sources": [
+        "backend/routes/auth.py:244"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /totp/setup",
+      "kind": "route",
+      "label": "POST /totp/setup",
+      "sources": [
+        "backend/routes/auth.py:130"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /totp/verify",
+      "kind": "route",
+      "label": "POST /totp/verify",
+      "sources": [
+        "backend/routes/auth.py:148"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /users/{user_id}/disable-mfa",
+      "kind": "route",
+      "label": "POST /users/{user_id}/disable-mfa",
+      "sources": [
+        "backend/routes/admin.py:62"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /users/{user_id}/send-magic-link",
+      "kind": "route",
+      "label": "POST /users/{user_id}/send-magic-link",
+      "sources": [
+        "backend/routes/admin.py:86"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /{vault_id}/audit-export",
+      "kind": "route",
+      "label": "POST /{vault_id}/audit-export",
+      "sources": [
+        "backend/routes/vault.py:250"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /{vault_id}/audit-import",
+      "kind": "route",
+      "label": "POST /{vault_id}/audit-import",
+      "sources": [
+        "backend/routes/vault.py:228"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /{vault_id}/keys",
+      "kind": "route",
+      "label": "POST /{vault_id}/keys",
+      "sources": [
+        "backend/routes/vault_keys.py:235"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /{vault_id}/keys/{key_id}/block",
+      "kind": "route",
+      "label": "POST /{vault_id}/keys/{key_id}/block",
+      "sources": [
+        "backend/routes/vault_keys.py:626"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /{vault_id}/keys/{key_id}/release",
+      "kind": "route",
+      "label": "POST /{vault_id}/keys/{key_id}/release",
+      "sources": [
+        "backend/routes/vault_keys.py:536"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:POST /{vault_id}/keys/{key_id}/unlock",
+      "kind": "route",
+      "label": "POST /{vault_id}/keys/{key_id}/unlock",
+      "sources": [
+        "backend/routes/vault_keys.py:291"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:PUT /{vault_id}",
+      "kind": "route",
+      "label": "PUT /{vault_id}",
+      "sources": [
+        "backend/routes/vault.py:96"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:PUT /{vault_id}/keys/sealed",
+      "kind": "route",
+      "label": "PUT /{vault_id}/keys/sealed",
+      "sources": [
+        "backend/routes/vault_keys.py:399"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "route:PUT /{vault_id}/rekey",
+      "kind": "route",
+      "label": "PUT /{vault_id}/rekey",
+      "sources": [
+        "backend/routes/vault_keys.py:422"
+      ],
+      "module": "module:backend/routes"
+    },
+    {
+      "id": "table:audit_log",
+      "kind": "table",
+      "label": "audit_log",
+      "sources": [
+        "backend/db/schema.sql:43"
+      ]
+    },
+    {
+      "id": "table:devices",
+      "kind": "table",
+      "label": "devices",
+      "sources": [
+        "backend/db/schema.sql:98"
+      ]
+    },
+    {
+      "id": "table:failed_logins",
+      "kind": "table",
+      "label": "failed_logins",
+      "sources": [
+        "backend/db/schema.sql:65"
+      ]
+    },
+    {
+      "id": "table:magic_links",
+      "kind": "table",
+      "label": "magic_links",
+      "sources": [
+        "backend/db/schema.sql:56"
+      ]
+    },
+    {
+      "id": "table:schema_version",
+      "kind": "table",
+      "label": "schema_version",
+      "sources": [
+        "backend/db/schema.sql:10"
+      ]
+    },
+    {
+      "id": "table:shares",
+      "kind": "table",
+      "label": "shares",
+      "sources": [
+        "backend/db/schema.sql:74"
+      ]
+    },
+    {
+      "id": "table:users",
+      "kind": "table",
+      "label": "users",
+      "sources": [
+        "backend/db/schema.sql:15"
+      ]
+    },
+    {
+      "id": "table:users_backup_codes",
+      "kind": "table",
+      "label": "users_backup_codes",
+      "sources": [
+        "backend/db/schema.sql:88"
+      ]
+    },
+    {
+      "id": "table:vault_keys",
+      "kind": "table",
+      "label": "vault_keys",
+      "sources": [
+        "backend/db/schema.sql:115"
+      ]
+    },
+    {
+      "id": "table:vaults",
+      "kind": "table",
+      "label": "vaults",
+      "sources": [
+        "backend/db/schema.sql:30"
+      ]
+    },
+    {
+      "id": "table:webauthn_challenges",
+      "kind": "table",
+      "label": "webauthn_challenges",
+      "sources": [
+        "backend/db/schema.sql:147"
+      ]
+    },
+    {
+      "id": "unit:horsesafe.service",
+      "kind": "unit",
+      "label": "horsesafe.service",
+      "sources": [
+        "scripts/horsesafe.service"
+      ]
+    }
+  ]
+}

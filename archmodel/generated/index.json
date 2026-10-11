@@ -1,0 +1,2795 @@
+{
+  "plates": [
+    {
+      "file": "conceptueel.archdsl",
+      "kind": "niveau",
+      "level": "conceptueel",
+      "label": "Conceptueel",
+      "elements": 54,
+      "relations": 26,
+      "sha256": "c6c9661112add346b5ac0aeba192ab4440923ebecee721c7a51f5ed72731a15f"
+    },
+    {
+      "file": "logisch.archdsl",
+      "kind": "niveau",
+      "level": "logisch",
+      "label": "Logisch",
+      "elements": 41,
+      "relations": 47,
+      "sha256": "18b9224332a7119d6c5863f13e31bf36688ebe2731c9ab1d484f7413157cac74"
+    },
+    {
+      "file": "fysiek.archdsl",
+      "kind": "niveau",
+      "level": "fysiek",
+      "label": "Fysiek",
+      "elements": 13,
+      "relations": 5,
+      "sha256": "ade77b3098c64d6d56c7e130e41f5f113d6ca398c1e4efd798262ddbd949f4d3"
+    },
+    {
+      "file": "reis-reis_registreren.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_registreren",
+      "label": "Klantreis: registreren en MFA instellen",
+      "steps": [
+        "bp_registreren",
+        "bp_inloggen",
+        "bp_totp_instellen",
+        "bp_mfa",
+        "bp_backupcodes"
+      ],
+      "actor": "ba_gebruiker",
+      "elements": 10,
+      "relations": 16,
+      "sha256": "9eb3cfbf355867789641186d845f0ffc594105496efca56724cfd008ae31b3cd"
+    },
+    {
+      "file": "reis-reis_openen_pw.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_openen_pw",
+      "label": "Klantreis: kluis openen met wachtwoord en/of keyfile",
+      "steps": [
+        "bp_inloggen",
+        "bp_mfa",
+        "bp_blob_ophalen",
+        "bp_ontsleutelen_pw",
+        "bp_opslaan"
+      ],
+      "actor": "ba_gebruiker",
+      "elements": 11,
+      "relations": 16,
+      "sha256": "327197e531df3b7fb5fb0d445d5bd3f2efa806f228fb681e286f3ff46516913c"
+    },
+    {
+      "file": "reis-reis_koppelen.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_koppelen",
+      "label": "Klantreis: YubiKey Bio koppelen",
+      "steps": [
+        "bp_ontsleutelen_pw",
+        "bp_stepup",
+        "bp_registreer_sleutel",
+        "bp_verzegelen",
+        "bp_server_verifieert"
+      ],
+      "actor": "ba_gebruiker",
+      "elements": 13,
+      "relations": 19,
+      "sha256": "4c4d5e825bd5bb9795b7fe8108cf1d7f71f38bf966cdf36193053dc3f04032ef"
+    },
+    {
+      "file": "reis-reis_bio.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_bio",
+      "label": "Klantreis: ontgrendelen met YubiKey Bio",
+      "steps": [
+        "bp_inloggen",
+        "bp_mfa",
+        "bp_vinger",
+        "bp_kopie_vrijgeven",
+        "bp_kopie_openen"
+      ],
+      "actor": "ba_gebruiker",
+      "elements": 13,
+      "relations": 17,
+      "sha256": "e95bc0f555743b39c31219094d6e08d635abac102a78b107d0c9649112ebd7b3"
+    },
+    {
+      "file": "reis-reis_noodsleutel.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_noodsleutel",
+      "label": "Klantreis: noodsleutel-vrijgave (24 uur)",
+      "steps": [
+        "bp_vrijgave",
+        "bp_melding",
+        "bp_nood_ontgrendelen",
+        "bp_nood_verbruikt"
+      ],
+      "actor": "ba_gebruiker",
+      "elements": 10,
+      "relations": 15,
+      "sha256": "f92074fbd4527bef9fe30f9ba2f1b79b3fd3176d06ee44d0e70fc5a53885584d"
+    },
+    {
+      "file": "reis-reis_blokkade.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_blokkade",
+      "label": "Klantreis: noodsleutel blokkeren en opheffen met step-up",
+      "steps": [
+        "bp_blokkeren",
+        "bp_melding",
+        "bp_stepup",
+        "bp_deblokkeren"
+      ],
+      "actor": "ba_gebruiker",
+      "elements": 10,
+      "relations": 12,
+      "sha256": "70119c6eb4f7df62ebbb26f01c356ee875e2fc05efa5d89f54b897c2d20361de"
+    },
+    {
+      "file": "reis-reis_rekey.archdsl",
+      "kind": "klantreis",
+      "journey": "reis_rekey",
+      "label": "Klantreis: wachtwoord/keyfile wijzigen (rekey)",
+      "steps": [
+        "bp_ontsleutelen_pw",
+        "bp_stepup",
+        "bp_pins_controleren",
+        "bp_rekey"
+      ],
+      "actor": "ba_gebruiker",
+      "elements": 11,
+      "relations": 13,
+      "sha256": "815c6882d93086b02de714a83b342a1c7afec46198e22bb6c3dacb70a840f883"
+    }
+  ],
+  "repo": "HorseSafe",
+  "title": "HorseSafe",
+  "purpose": "Browser-based wachtwoordkluis op HC55 waarin de server alleen ciphertext ziet (KDBX4, KeePassXC-compatibel), met MFA op de accountlaag en ontgrendelen met een YubiKey Bio (v0.2.0-Koblitz).",
+  "tool": {
+    "name": "ModelArchDSL",
+    "version": "0.1.0",
+    "engineSha256": "0bdabb3b46febb6190ec1e1698d285c5b140e15f4c7f07e7c22a85f2105dacae"
+  },
+  "status": {
+    "gebouwd": {
+      "label": "Gebouwd",
+      "stroke": "#16a34a"
+    },
+    "deels": {
+      "label": "Deels gebouwd",
+      "stroke": "#ca8a04",
+      "fill": "#fefce8"
+    },
+    "gepland": {
+      "label": "Gepland (to-be)",
+      "stroke": "#ea580c",
+      "fill": "#fff7ed",
+      "state": "target"
+    },
+    "alleen_code": {
+      "label": "Alleen in code",
+      "stroke": "#7c3aed",
+      "fill": "#f5f3ff",
+      "state": "current"
+    },
+    "ongetraceerd": {
+      "label": "Niet traceerbaar",
+      "stroke": "#64748b"
+    },
+    "extern": {
+      "label": "Extern (andere repo)",
+      "stroke": "#0284c7",
+      "fill": "#f0f9ff"
+    },
+    "ontwerp": {
+      "label": "Ontwerp",
+      "stroke": ""
+    }
+  },
+  "counts": {
+    "gebouwd": 38,
+    "deels": 0,
+    "gepland": 7,
+    "alleen_code": 0,
+    "ongetraceerd": 0,
+    "extern": 9,
+    "ontwerp": 54
+  },
+  "facts": 94,
+  "unclaimedFacts": 0,
+  "warnings": [],
+  "elements": [
+    {
+      "id": "ac_admin",
+      "type": "ApplicationComponent",
+      "label": "Beheer (/admin)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:GET /users",
+        "route:DELETE /users/{user_id}",
+        "route:POST /users/{user_id}/*",
+        "route:GET /stats",
+        "route:GET /audit",
+        "route:GET /audit/export"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "route:DELETE /users/{user_id}",
+          "sources": [
+            "backend/routes/admin.py:42"
+          ]
+        },
+        {
+          "id": "route:GET /audit",
+          "sources": [
+            "backend/routes/admin.py:126"
+          ]
+        },
+        {
+          "id": "route:GET /audit/export",
+          "sources": [
+            "backend/routes/admin.py:160"
+          ]
+        },
+        {
+          "id": "route:GET /stats",
+          "sources": [
+            "backend/routes/admin.py:111"
+          ]
+        },
+        {
+          "id": "route:GET /users",
+          "sources": [
+            "backend/routes/admin.py:34"
+          ]
+        },
+        {
+          "id": "route:POST /users/{user_id}/disable-mfa",
+          "sources": [
+            "backend/routes/admin.py:62"
+          ]
+        },
+        {
+          "id": "route:POST /users/{user_id}/send-magic-link",
+          "sources": [
+            "backend/routes/admin.py:86"
+          ]
+        }
+      ],
+      "factCount": 7,
+      "description": "Gebruikers, MFA uitzetten, magic-link sturen, opslagstatistiek, audit-log en CSV-export; geen vault-toegang."
+    },
+    {
+      "id": "ac_auth",
+      "type": "ApplicationComponent",
+      "label": "Account en MFA (/auth)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:POST /register",
+        "route:POST /login",
+        "route:POST /logout",
+        "route:GET /me",
+        "route:POST /password",
+        "route:POST /totp/*",
+        "route:* /magic-link*",
+        "route:POST /backup-codes/*",
+        "dep:pip:pyotp",
+        "dep:pip:argon2-cffi",
+        "dep:pip:passlib",
+        "dep:pip:pyjwt",
+        "dep:pip:bcrypt",
+        "dep:pip:email-validator",
+        "config:HORSESAFE_BCRYPT_ROUNDS"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "config:HORSESAFE_BCRYPT_ROUNDS",
+          "sources": [
+            "backend/services/backup_codes_service.py:17"
+          ]
+        },
+        {
+          "id": "dep:pip:argon2-cffi",
+          "sources": [
+            "backend/requirements.txt:6"
+          ]
+        },
+        {
+          "id": "dep:pip:bcrypt",
+          "sources": [
+            "backend/requirements.txt:7"
+          ]
+        },
+        {
+          "id": "dep:pip:email-validator",
+          "sources": [
+            "backend/requirements.txt:11"
+          ]
+        },
+        {
+          "id": "dep:pip:passlib",
+          "sources": [
+            "backend/requirements.txt:5"
+          ]
+        },
+        {
+          "id": "dep:pip:pyjwt",
+          "sources": [
+            "backend/requirements.txt:8"
+          ]
+        },
+        {
+          "id": "dep:pip:pyotp",
+          "sources": [
+            "backend/requirements.txt:12"
+          ]
+        },
+        {
+          "id": "route:GET /magic-link/redeem",
+          "sources": [
+            "backend/routes/auth.py:300"
+          ]
+        },
+        {
+          "id": "route:GET /me",
+          "sources": [
+            "backend/routes/auth.py:364"
+          ]
+        },
+        {
+          "id": "route:POST /backup-codes/generate",
+          "sources": [
+            "backend/routes/auth.py:395"
+          ]
+        },
+        {
+          "id": "route:POST /backup-codes/verify",
+          "sources": [
+            "backend/routes/auth.py:418"
+          ]
+        },
+        {
+          "id": "route:POST /login",
+          "sources": [
+            "backend/routes/auth.py:63"
+          ]
+        },
+        {
+          "id": "route:POST /logout",
+          "sources": [
+            "backend/routes/auth.py:112"
+          ]
+        },
+        {
+          "id": "route:POST /magic-link",
+          "sources": [
+            "backend/routes/auth.py:275"
+          ]
+        },
+        {
+          "id": "route:POST /magic-link/redeem",
+          "sources": [
+            "backend/routes/auth.py:313"
+          ]
+        },
+        {
+          "id": "route:POST /password",
+          "sources": [
+            "backend/routes/auth.py:456"
+          ]
+        },
+        {
+          "id": "route:POST /register",
+          "sources": [
+            "backend/routes/auth.py:31"
+          ]
+        },
+        {
+          "id": "route:POST /totp/disable",
+          "sources": [
+            "backend/routes/auth.py:244"
+          ]
+        },
+        {
+          "id": "route:POST /totp/setup",
+          "sources": [
+            "backend/routes/auth.py:130"
+          ]
+        },
+        {
+          "id": "route:POST /totp/verify",
+          "sources": [
+            "backend/routes/auth.py:148"
+          ]
+        }
+      ],
+      "factCount": 20,
+      "description": "Argon2id-wachtwoord, TOTP RFC 6238, magic-link alleen als tweede stap (R14), bcrypt-backup-codes, JWT in HttpOnly-cookie."
+    },
+    {
+      "id": "ac_browsercrypto",
+      "type": "ApplicationComponent",
+      "label": "Crypto-engine in de browser (kdbxweb, per-entry TOTP, delen)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:frontend/js"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:frontend/js",
+          "sources": [
+            "frontend/js/admin.js"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "crypto.js, totp.js, sharing.js, import-export.js: alle KDBX4-crypto client-side (P-CRYPT-05)."
+    },
+    {
+      "id": "ac_db",
+      "type": "ApplicationComponent",
+      "label": "Opslaglaag SQLite (schema, migraties, promote_admin)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/db",
+        "dep:pip:aiosqlite",
+        "table:schema_version"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:pip:aiosqlite",
+          "sources": [
+            "backend/requirements.txt:9"
+          ]
+        },
+        {
+          "id": "module:backend/db",
+          "sources": [
+            "backend/db/__init__.py"
+          ]
+        },
+        {
+          "id": "table:schema_version",
+          "sources": [
+            "backend/db/schema.sql:10"
+          ]
+        }
+      ],
+      "factCount": 3,
+      "description": "schema.sql + migraties tot schemaversie 5 (005_vault_keys); promote_admin maakt de eerste beheerder."
+    },
+    {
+      "id": "ac_hwkeys_web",
+      "type": "ApplicationComponent",
+      "label": "HwKeys-client (WebAuthn PRF, Seal_v2, step-up-dialoog)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:frontend/js"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:frontend/js",
+          "sources": [
+            "frontend/js/admin.js"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "hwkeys.js, hwkeys-ui.js, stepup.js, vault-ui.js: fail-closed checkSupport, verzegelen, credentialsFromHashes, sleutelbeheer."
+    },
+    {
+      "id": "ac_mailer",
+      "type": "ApplicationComponent",
+      "label": "Mailer (SMTP 587 STARTTLS, Gmail-fallback)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/services"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:backend/services",
+          "sources": [
+            "backend/services/__init__.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "mail_service.py: magic-links en beveiligingsmeldingen; From = SMTP-gebruiker; send_async via asyncio.to_thread."
+    },
+    {
+      "id": "ac_middleware",
+      "type": "ApplicationComponent",
+      "label": "Middleware: rate-limit en CSP-headers",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/middlewares"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:backend/middlewares",
+          "sources": [
+            "backend/middlewares/__init__.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_models",
+      "type": "ApplicationComponent",
+      "label": "Pydantic-modellen (API-contract)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/models",
+        "dep:pip:pydantic"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:pip:pydantic",
+          "sources": [
+            "backend/requirements.txt:2"
+          ]
+        },
+        {
+          "id": "module:backend/models",
+          "sources": [
+            "backend/models/__init__.py"
+          ]
+        }
+      ],
+      "factCount": 2,
+      "description": ""
+    },
+    {
+      "id": "ac_nood",
+      "type": "ApplicationComponent",
+      "label": "Noodsleutel-statusmachine (release, block)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:* /{vault_id}/keys/{key_id}/release",
+        "route:* /{vault_id}/keys/{key_id}/block"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "route:DELETE /{vault_id}/keys/{key_id}/block",
+          "sources": [
+            "backend/routes/vault_keys.py:667"
+          ]
+        },
+        {
+          "id": "route:DELETE /{vault_id}/keys/{key_id}/release",
+          "sources": [
+            "backend/routes/vault_keys.py:592"
+          ]
+        },
+        {
+          "id": "route:POST /{vault_id}/keys/{key_id}/block",
+          "sources": [
+            "backend/routes/vault_keys.py:626"
+          ]
+        },
+        {
+          "id": "route:POST /{vault_id}/keys/{key_id}/release",
+          "sources": [
+            "backend/routes/vault_keys.py:536"
+          ]
+        }
+      ],
+      "factCount": 4,
+      "description": "idle → waiting (24 u) → released (24 u) → consumed/expired; blocked tot opheffen met Bio-step-up (§12.7)."
+    },
+    {
+      "id": "ac_services",
+      "type": "ApplicationComponent",
+      "label": "Servicelaag (auth, MFA, opslag, sleutels, audit)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/services"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:backend/services",
+          "sources": [
+            "backend/services/__init__.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "auth/jwt/mfa/magic_link/backup_codes/stepup/webauthn/vault_key/storage/share/audit/admin-services."
+    },
+    {
+      "id": "ac_shares",
+      "type": "ApplicationComponent",
+      "label": "Delen (ECDH-P256, per entry)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:* /keypair*",
+        "route:* /shares*",
+        "route:GET /users/by-email/{email}/pubkey"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "route:GET /keypair",
+          "sources": [
+            "backend/routes/shares.py:59"
+          ]
+        },
+        {
+          "id": "route:GET /shares/inbox",
+          "sources": [
+            "backend/routes/shares.py:123"
+          ]
+        },
+        {
+          "id": "route:GET /shares/sent",
+          "sources": [
+            "backend/routes/shares.py:132"
+          ]
+        },
+        {
+          "id": "route:GET /users/by-email/{email}/pubkey",
+          "sources": [
+            "backend/routes/shares.py:72"
+          ]
+        },
+        {
+          "id": "route:POST /keypair",
+          "sources": [
+            "backend/routes/shares.py:33"
+          ]
+        },
+        {
+          "id": "route:POST /keypair/rewrap",
+          "sources": [
+            "backend/routes/shares.py:49"
+          ]
+        },
+        {
+          "id": "route:POST /shares",
+          "sources": [
+            "backend/routes/shares.py:91"
+          ]
+        },
+        {
+          "id": "route:POST /shares/{share_id}/accept",
+          "sources": [
+            "backend/routes/shares.py:140"
+          ]
+        },
+        {
+          "id": "route:POST /shares/{share_id}/decline",
+          "sources": [
+            "backend/routes/shares.py:158"
+          ]
+        }
+      ],
+      "factCount": 9,
+      "description": "Server kent alleen publieke sleutels en ondoorzichtige ciphertexts (v0.0.6-Adleman)."
+    },
+    {
+      "id": "ac_stepup",
+      "type": "ApplicationComponent",
+      "label": "Step-up (/auth/stepup)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:POST /stepup"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "route:POST /stepup",
+          "sources": [
+            "backend/routes/auth.py:491"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "Verse Bio-assertion of TOTP-code; zet stepup_until/stepup_method als JWT-claim (300 s); TOTP-afkoeltijd 24 uur (R6)."
+    },
+    {
+      "id": "ac_testvectors",
+      "type": "ApplicationComponent",
+      "label": "Seal_v2-testvectoren (JS = Python, later Kotlin)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:specs/testvectors"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:specs/testvectors",
+          "sources": [
+            "specs/testvectors/gen_seal_v2.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ac_vault",
+      "type": "ApplicationComponent",
+      "label": "Kluisopslag (/vault, blob-CRUD met If-Match)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:GET /{vault_id}",
+        "route:PUT /{vault_id}",
+        "route:DELETE /{vault_id}",
+        "route:POST /{vault_id}/audit-export",
+        "route:POST /{vault_id}/audit-import"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "route:DELETE /{vault_id}",
+          "sources": [
+            "backend/routes/vault.py:150"
+          ]
+        },
+        {
+          "id": "route:GET /{vault_id}",
+          "sources": [
+            "backend/routes/vault.py:73"
+          ]
+        },
+        {
+          "id": "route:POST /{vault_id}/audit-export",
+          "sources": [
+            "backend/routes/vault.py:250"
+          ]
+        },
+        {
+          "id": "route:POST /{vault_id}/audit-import",
+          "sources": [
+            "backend/routes/vault.py:228"
+          ]
+        },
+        {
+          "id": "route:PUT /{vault_id}",
+          "sources": [
+            "backend/routes/vault.py:96"
+          ]
+        }
+      ],
+      "factCount": 5,
+      "description": "Bewaart alleen ciphertext; 412 bij ETag-mismatch; audit-export/-import vóór plaintext-export. GET/POST /vault (leeg pad) staat in de code maar wordt niet gemeten."
+    },
+    {
+      "id": "ac_vaultkeys",
+      "type": "ApplicationComponent",
+      "label": "Hardware-sleutels per kluis (/vault/{vid}/keys, rekey)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:GET /{vault_id}/keys",
+        "route:POST /{vault_id}/keys",
+        "route:POST /{vault_id}/keys/{key_id}/unlock",
+        "route:PUT /{vault_id}/keys/sealed",
+        "route:PUT /{vault_id}/rekey",
+        "route:DELETE /{vault_id}/keys/{key_id}"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "route:DELETE /{vault_id}/keys/{key_id}",
+          "sources": [
+            "backend/routes/vault_keys.py:727"
+          ]
+        },
+        {
+          "id": "route:GET /{vault_id}/keys",
+          "sources": [
+            "backend/routes/vault_keys.py:143"
+          ]
+        },
+        {
+          "id": "route:POST /{vault_id}/keys",
+          "sources": [
+            "backend/routes/vault_keys.py:235"
+          ]
+        },
+        {
+          "id": "route:POST /{vault_id}/keys/{key_id}/unlock",
+          "sources": [
+            "backend/routes/vault_keys.py:291"
+          ]
+        },
+        {
+          "id": "route:PUT /{vault_id}/keys/sealed",
+          "sources": [
+            "backend/routes/vault_keys.py:399"
+          ]
+        },
+        {
+          "id": "route:PUT /{vault_id}/rekey",
+          "sources": [
+            "backend/routes/vault_keys.py:422"
+          ]
+        }
+      ],
+      "factCount": 6,
+      "description": "Koppelen, ontgrendelen (kopie pas na geverifieerde assertion), opnieuw verzegelen, rekey en verwijderen (§12.6)."
+    },
+    {
+      "id": "ac_vertrouwensanker",
+      "type": "ApplicationComponent",
+      "label": "Vertrouwensanker-bouwscripts (Yubico-roots, AAGUID-allowlist)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/tools"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:backend/tools",
+          "sources": [
+            "backend/tools/build_aaguids.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "build_yubico_roots.py en build_aaguids.py maken backend/data/yubico_fido_roots.pem en aaguids.json (gevendord publiek materiaal)."
+    },
+    {
+      "id": "ac_webauthn",
+      "type": "ApplicationComponent",
+      "label": "WebAuthn-opties en -verificatie",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "route:POST /options",
+        "dep:pip:webauthn",
+        "dep:pip:cryptography"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:pip:cryptography",
+          "sources": [
+            "backend/requirements.txt:13"
+          ]
+        },
+        {
+          "id": "dep:pip:webauthn",
+          "sources": [
+            "backend/requirements.txt:15"
+          ]
+        },
+        {
+          "id": "route:POST /options",
+          "sources": [
+            "backend/routes/webauthn.py:28"
+          ]
+        }
+      ],
+      "factCount": 3,
+      "description": "Challenges voor register/unlock/stepup; py_webauthn plus eigen controles op UV, BE, AAGUID-allowlist en signCount."
+    },
+    {
+      "id": "ac_webui",
+      "type": "ApplicationComponent",
+      "label": "HorseSafe-webclient (vanilla HTML/JS, geen build-step)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:frontend"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:frontend",
+          "sources": [
+            "frontend/devserver.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "Pagina's login, mfa, vault, settings, shares, import, export, backup-codes en admin; statisch geserveerd door nginx."
+    },
+    {
+      "id": "ai_api",
+      "type": "ApplicationInterface",
+      "label": "REST-API /HorseSafe/api (JWT-cookie + MFA)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend",
+        "module:backend/routes",
+        "route:GET /health",
+        "dep:pip:fastapi",
+        "dep:pip:python-multipart"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:pip:fastapi",
+          "sources": [
+            "backend/requirements.txt:1"
+          ]
+        },
+        {
+          "id": "dep:pip:python-multipart",
+          "sources": [
+            "backend/requirements.txt:10"
+          ]
+        },
+        {
+          "id": "module:backend",
+          "sources": [
+            "backend/app.py"
+          ]
+        },
+        {
+          "id": "module:backend/routes",
+          "sources": [
+            "backend/routes/__init__.py"
+          ]
+        },
+        {
+          "id": "route:GET /health",
+          "sources": [
+            "backend/routes/health.py:12"
+          ]
+        }
+      ],
+      "factCount": 5,
+      "description": "FastAPI-app (backend/app.py) met routers /auth, /vault, /webauthn, /admin en delen; /health toont versie en test_attestation."
+    },
+    {
+      "id": "ar_devtools",
+      "type": "Artifact",
+      "label": "Test- en lintgereedschap (pytest, httpx, mypy, ruff, black)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "dep:pip:pytest*",
+        "dep:pip:httpx",
+        "dep:pip:mypy",
+        "dep:pip:ruff",
+        "dep:pip:black"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:pip:black",
+          "sources": [
+            "backend/requirements.txt:23"
+          ]
+        },
+        {
+          "id": "dep:pip:httpx",
+          "sources": [
+            "backend/requirements.txt:21"
+          ]
+        },
+        {
+          "id": "dep:pip:mypy",
+          "sources": [
+            "backend/requirements.txt:24"
+          ]
+        },
+        {
+          "id": "dep:pip:pytest",
+          "sources": [
+            "backend/requirements.txt:18"
+          ]
+        },
+        {
+          "id": "dep:pip:pytest-asyncio",
+          "sources": [
+            "backend/requirements.txt:19"
+          ]
+        },
+        {
+          "id": "dep:pip:pytest-cov",
+          "sources": [
+            "backend/requirements.txt:20"
+          ]
+        },
+        {
+          "id": "dep:pip:ruff",
+          "sources": [
+            "backend/requirements.txt:22"
+          ]
+        }
+      ],
+      "factCount": 7,
+      "description": ""
+    },
+    {
+      "id": "ar_env",
+      "type": "Artifact",
+      "label": "Instellingen /opt/horsesafe/.env (HORSESAFE_*, 600)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "config:HORSESAFE_*",
+        "dep:pip:pydantic-settings"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "config:HORSESAFE_BCRYPT_ROUNDS",
+          "sources": [
+            "backend/services/backup_codes_service.py:17"
+          ]
+        },
+        {
+          "id": "dep:pip:pydantic-settings",
+          "sources": [
+            "backend/requirements.txt:3"
+          ]
+        }
+      ],
+      "factCount": 2,
+      "description": "pydantic-settings met env_prefix HORSESAFE_ (backend/config.py); o.a. HORSESAFE_SMTP_*, HORSESAFE_TEST_ATTESTATION."
+    },
+    {
+      "id": "ar_trustdata",
+      "type": "Artifact",
+      "label": "Vertrouwensanker backend/data (Yubico-roots, aaguids.json)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/tools"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:backend/tools",
+          "sources": [
+            "backend/tools/build_aaguids.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ar_vaults",
+      "type": "Artifact",
+      "label": "Vaults-dir /opt/horsesafe/vaults/<user>/<vault>.kdbx (600)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:backend/services"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:backend/services",
+          "sources": [
+            "backend/services/__init__.py"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "storage_service.py schrijft de ciphertext-blobs; rekey vervangt atomair."
+    },
+    {
+      "id": "do_audit",
+      "type": "DataObject",
+      "label": "Auditregel (append-only)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:audit_log"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:audit_log",
+          "sources": [
+            "backend/db/schema.sql:43"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_backupcode",
+      "type": "DataObject",
+      "label": "Backup-code (bcrypt, eenmalig)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:users_backup_codes"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:users_backup_codes",
+          "sources": [
+            "backend/db/schema.sql:88"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_challenge",
+      "type": "DataObject",
+      "label": "WebAuthn-challenge (eenmalig)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:webauthn_challenges"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:webauthn_challenges",
+          "sources": [
+            "backend/db/schema.sql:147"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_ck",
+      "type": "DataObject",
+      "label": "Ontgrendelmateriaal {ph,kh} (alleen browser-RAM)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "module:frontend/js"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "module:frontend/js",
+          "sources": [
+            "frontend/js/admin.js"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "Directe invoer van de KDBX4-composite-key; kdbxweb.ProtectedValue, nooit naar de server behalve verzegeld (P-CRYPT-09)."
+    },
+    {
+      "id": "do_devices",
+      "type": "DataObject",
+      "label": "Toestel (tabel bestaat, leeg tot Miller)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:devices"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:devices",
+          "sources": [
+            "backend/db/schema.sql:98"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_failed",
+      "type": "DataObject",
+      "label": "Mislukte login (throttle)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:failed_logins"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:failed_logins",
+          "sources": [
+            "backend/db/schema.sql:65"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_magiclink",
+      "type": "DataObject",
+      "label": "Magic-link-token (10 min, eenmalig)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:magic_links"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:magic_links",
+          "sources": [
+            "backend/db/schema.sql:56"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_share",
+      "type": "DataObject",
+      "label": "Gedeelde entry (ciphertext per ontvanger)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:shares"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:shares",
+          "sources": [
+            "backend/db/schema.sql:74"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_user",
+      "type": "DataObject",
+      "label": "Account (e-mail, argon2id-hash, TOTP-secret, publieke deelsleutel)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:users"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:users",
+          "sources": [
+            "backend/db/schema.sql:15"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_vault",
+      "type": "DataObject",
+      "label": "Kluis-metadata + ETag (blob op disk)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:vaults"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:vaults",
+          "sources": [
+            "backend/db/schema.sql:30"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "do_vaultkey",
+      "type": "DataObject",
+      "label": "Hardware-sleutel: pk_c + verzegelde kopie + recovery-status",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "table:vault_keys"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "table:vault_keys",
+          "sources": [
+            "backend/db/schema.sql:115"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": ""
+    },
+    {
+      "id": "ss_sqlite",
+      "type": "SystemSoftware",
+      "label": "SQLite /opt/horsesafe/db/horsesafe.db (600)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "dep:pip:aiosqlite",
+        "table:*"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:pip:aiosqlite",
+          "sources": [
+            "backend/requirements.txt:9"
+          ]
+        },
+        {
+          "id": "table:audit_log",
+          "sources": [
+            "backend/db/schema.sql:43"
+          ]
+        },
+        {
+          "id": "table:devices",
+          "sources": [
+            "backend/db/schema.sql:98"
+          ]
+        },
+        {
+          "id": "table:failed_logins",
+          "sources": [
+            "backend/db/schema.sql:65"
+          ]
+        },
+        {
+          "id": "table:magic_links",
+          "sources": [
+            "backend/db/schema.sql:56"
+          ]
+        },
+        {
+          "id": "table:schema_version",
+          "sources": [
+            "backend/db/schema.sql:10"
+          ]
+        },
+        {
+          "id": "table:shares",
+          "sources": [
+            "backend/db/schema.sql:74"
+          ]
+        },
+        {
+          "id": "table:users",
+          "sources": [
+            "backend/db/schema.sql:15"
+          ]
+        },
+        {
+          "id": "table:users_backup_codes",
+          "sources": [
+            "backend/db/schema.sql:88"
+          ]
+        },
+        {
+          "id": "table:vault_keys",
+          "sources": [
+            "backend/db/schema.sql:115"
+          ]
+        },
+        {
+          "id": "table:vaults",
+          "sources": [
+            "backend/db/schema.sql:30"
+          ]
+        },
+        {
+          "id": "table:webauthn_challenges",
+          "sources": [
+            "backend/db/schema.sql:147"
+          ]
+        }
+      ],
+      "factCount": 12,
+      "description": ""
+    },
+    {
+      "id": "ss_uvicorn",
+      "type": "SystemSoftware",
+      "label": "uvicorn 127.0.0.1:3997 (horsesafe.service, gebruiker horsesafe)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "unit:horsesafe.service",
+        "dep:pip:uvicorn"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "dep:pip:uvicorn",
+          "sources": [
+            "backend/requirements.txt:4"
+          ]
+        },
+        {
+          "id": "unit:horsesafe.service",
+          "sources": [
+            "scripts/horsesafe.service"
+          ]
+        }
+      ],
+      "factCount": 2,
+      "description": ""
+    },
+    {
+      "id": "ti_nginx_api",
+      "type": "TechnologyInterface",
+      "label": "nginx /HorseSafe/api/ → 127.0.0.1:3997",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "nginx:/HorseSafe/api/"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "nginx:/HorseSafe/api/",
+          "sources": [
+            "scripts/nginx_snippet.conf:13"
+          ]
+        }
+      ],
+      "factCount": 1,
+      "description": "auth_basic off: eigen JWT + MFA; TLS via Let's Encrypt van HC55."
+    },
+    {
+      "id": "ti_nginx_web",
+      "type": "TechnologyInterface",
+      "label": "nginx /HorseSafe/ (statische frontend /opt/horsesafe/web)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "gebouwd",
+      "trace": [
+        "nginx:/HorseSafe",
+        "nginx:/HorseSafe/"
+      ],
+      "missing": [],
+      "auto": false,
+      "facts": [
+        {
+          "id": "nginx:/HorseSafe",
+          "sources": [
+            "scripts/nginx_snippet.conf:9"
+          ]
+        },
+        {
+          "id": "nginx:/HorseSafe/",
+          "sources": [
+            "scripts/nginx_snippet.conf:27"
+          ]
+        }
+      ],
+      "factCount": 2,
+      "description": ""
+    },
+    {
+      "id": "ac_android",
+      "type": "ApplicationComponent",
+      "label": "HorseSafe Android-app (v0.3.0-Miller, gepland)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gepland",
+      "trace": [
+        "module:android*"
+      ],
+      "missing": [
+        "module:android*"
+      ],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": "android/ in deze repo: YubiKey inrichten, telefoon koppelen (QR + SAS), telefoon-credential BIOMETRIC_STRONG, noodsleutel blokkeren, update via HorseAPK (§7)."
+    },
+    {
+      "id": "ac_approve",
+      "type": "ApplicationComponent",
+      "label": "Goedkeuring laptop via telefoon-QR + vinger (v0.4.0-Montgomery, gepland)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gepland",
+      "trace": [
+        "route:* *approvals*"
+      ],
+      "missing": [
+        "route:* *approvals*"
+      ],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": "§5: server alleen doorgifte; Seal_v2 purpose relay naar tijdelijke laptopsleutel; WebView-ontgrendelen in de app."
+    },
+    {
+      "id": "ac_native",
+      "type": "ApplicationComponent",
+      "label": "Native read-only kluis in de app (v0.5.0-Lange, gepland, niet bouwen vóór veldtest v0.4)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gepland",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ai_deviceapi",
+      "type": "ApplicationInterface",
+      "label": "Device-API: koppelen, status, sealed, recovery-block, app-update (v0.3.0-Miller, gepland)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gepland",
+      "trace": [
+        "route:* *pairings*",
+        "route:* *device/v1/*",
+        "route:* *app/latest"
+      ],
+      "missing": [
+        "route:* *pairings*",
+        "route:* *device/v1/*",
+        "route:* *app/latest"
+      ],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": "§6 fase M: /devices/pairings…, /devices, /device/v1/*, /app/latest, /app/download; device-handtekening K_dev."
+    },
+    {
+      "id": "do_approvals",
+      "type": "DataObject",
+      "label": "Goedkeuringen + ingetrokken sessies (migratie 007, gepland)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gepland",
+      "trace": [
+        "table:approvals",
+        "table:revoked_sessions"
+      ],
+      "missing": [
+        "table:approvals",
+        "table:revoked_sessions"
+      ],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "do_pairings",
+      "type": "DataObject",
+      "label": "Koppelingen + device-nonces (migratie 006, gepland)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "gepland",
+      "trace": [
+        "table:pairings",
+        "table:device_nonces"
+      ],
+      "missing": [
+        "table:pairings",
+        "table:device_nonces"
+      ],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dv_phone",
+      "type": "Device",
+      "label": "Telefoon Z Fold6 (Keystore BIOMETRIC_STRONG, v0.3.0-Miller)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "gepland",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ai_webauthn",
+      "type": "ApplicationInterface",
+      "label": "WebAuthn + PRF in Chrome/Edge (navigator.credentials)",
+      "layer": "application",
+      "levels": [
+        "logisch"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dv_bio",
+      "type": "Device",
+      "label": "YubiKey Bio (vinger, PRF, PIN van 63 tekens)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dv_laptop",
+      "type": "Device",
+      "label": "Laptop met Chrome/Edge",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dv_nood",
+      "type": "Device",
+      "label": "Noodsleutel (YubiKey 5 of Bio, alleen PIN van 63 tekens)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "nd_hc55",
+      "type": "Node",
+      "label": "HC55 157.180.29.184 (icthorsecloud.nl)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ss_keepassxc",
+      "type": "SystemSoftware",
+      "label": "KeePassXC-desktop (noodroute)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ts_gmail",
+      "type": "TechnologyService",
+      "label": "Gmail SMTP_SSL 465 (fallback; poort 465 dicht op HC55)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ts_smtp",
+      "type": "TechnologyService",
+      "label": "SMTP Hostinger 587 STARTTLS (From = info@icthorse.nl)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ts_storagebox",
+      "type": "TechnologyService",
+      "label": "Hetzner Storagebox (nachtelijke backup)",
+      "layer": "technology",
+      "levels": [
+        "fysiek"
+      ],
+      "status": "extern",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ba_admin",
+      "type": "BusinessActor",
+      "label": "Administrator (ziet geen vault-inhoud)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "ba_gebruiker",
+      "type": "BusinessActor",
+      "label": "Eindgebruiker (Christian)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_backupcodes",
+      "type": "BusinessProcess",
+      "label": "Backup-codes aanmaken (alleen met MFA-sessie)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_blob_ophalen",
+      "type": "BusinessProcess",
+      "label": "Versleutelde KDBX4-blob + ETag ophalen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_blokkeren",
+      "type": "BusinessProcess",
+      "label": "Noodsleutel blokkeren (altijd, zonder step-up)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_deblokkeren",
+      "type": "BusinessProcess",
+      "label": "Blokkade opheffen na Bio-step-up",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_inloggen",
+      "type": "BusinessProcess",
+      "label": "Inloggen met accountwachtwoord",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_kopie_openen",
+      "type": "BusinessProcess",
+      "label": "Kopie openen (AAD-controle) en KDBX ontsleutelen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_kopie_vrijgeven",
+      "type": "BusinessProcess",
+      "label": "Server verifieert assertion en geeft verzegelde kopie vrij",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_melding",
+      "type": "BusinessProcess",
+      "label": "Mail + audit; 24 uur wachttijd loopt",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_mfa",
+      "type": "BusinessProcess",
+      "label": "Tweede stap: TOTP-code, magic-link of backup-code",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_nood_ontgrendelen",
+      "type": "BusinessProcess",
+      "label": "Ontgrendelen met noodsleutel + PIN van 63 tekens binnen het venster",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_nood_verbruikt",
+      "type": "BusinessProcess",
+      "label": "Noodsleutel gebruikt: status consumed, mail",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_ontsleutelen_pw",
+      "type": "BusinessProcess",
+      "label": "Ontsleutelen met wachtwoord en/of keyfile in de browser",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_opslaan",
+      "type": "BusinessProcess",
+      "label": "Bewerken en opslaan met If-Match",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_pins_controleren",
+      "type": "BusinessProcess",
+      "label": "Ontvangende sleutels tonen en pins in de KDBX controleren",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_registreer_sleutel",
+      "type": "BusinessProcess",
+      "label": "Sleutel registreren met vinger (credentials.create + PRF)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_registreren",
+      "type": "BusinessProcess",
+      "label": "Registreren met akkoord op permanent dataverlies",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_rekey",
+      "type": "BusinessProcess",
+      "label": "Nieuwe blob + alle verzegelde kopieën in één atomaire stap",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_server_verifieert",
+      "type": "BusinessProcess",
+      "label": "Server verifieert attestation, UV, BE, AAGUID en sealed-vorm",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_stepup",
+      "type": "BusinessProcess",
+      "label": "Step-up met Bio (of TOTP zolang er geen Bio is)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_totp_instellen",
+      "type": "BusinessProcess",
+      "label": "TOTP instellen (QR) en bevestigen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_verzegelen",
+      "type": "BusinessProcess",
+      "label": "Ontgrendelmateriaal verzegelen en sleutel vastpinnen in de KDBX",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_vinger",
+      "type": "BusinessProcess",
+      "label": "Vinger op de YubiKey Bio",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bp_vrijgave",
+      "type": "BusinessProcess",
+      "label": "Vrijgave noodsleutel aanvragen",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_account",
+      "type": "BusinessService",
+      "label": "Account met MFA",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_beheer",
+      "type": "BusinessService",
+      "label": "Accountbeheer en statistiek (admin)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_delen",
+      "type": "BusinessService",
+      "label": "Entries delen met andere gebruikers",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_hwsleutel",
+      "type": "BusinessService",
+      "label": "Ontgrendelen met hardware-sleutel (YubiKey Bio)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_importexport",
+      "type": "BusinessService",
+      "label": "Import en export (KDBX3/4, Bitwarden JSON, CSV, XLSX)",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_kluis",
+      "type": "BusinessService",
+      "label": "Zero-knowledge wachtwoordkluis",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "bs_nood",
+      "type": "BusinessService",
+      "label": "Noodtoegang met noodsleutel",
+      "layer": "business",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_meldkanaal",
+      "type": "Constraint",
+      "label": "Geen noodsleutel-vrijgave zonder meldkanaal; mislukte melding draait de vrijgave terug (P-OPS-07)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_noescrow",
+      "type": "Constraint",
+      "label": "Geen key-escrow en geen herstel via de server: verlies van pw + keyfile = data weg (P-CRYPT-06)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_secrets",
+      "type": "Constraint",
+      "label": "SMTP-gegevens alleen in /opt/horsesafe/.env, nooit in code, docs of logs (P-OPS-07, P-DEV-06)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_sharedinfra",
+      "type": "Constraint",
+      "label": "Gedeelde server: poort 3997 gereserveerd, nginx alleen na SHARED_INFRASTRUCTURE.md (P-OPS-01)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_unblock",
+      "type": "Constraint",
+      "label": "Noodsleutel-blokkade alleen opheffen met Bio-step-up, nooit met alleen wachtwoord of TOTP (besluit 3)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "cn_wachttijd",
+      "type": "Constraint",
+      "label": "Noodsleutel pas bruikbaar na 24 uur wachttijd, venster van 24 uur, één keer (E7)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dr_kdbx",
+      "type": "Driver",
+      "label": "KDBX4-compat: KeePassXC-desktop blijft de noodroute (P-CRYPT-02)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dr_vinger",
+      "type": "Driver",
+      "label": "Keyfile op USB-stick vervangen door iets dat alleen met de vinger werkt (HARDWARE_KEYS §1)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "dr_zk",
+      "type": "Driver",
+      "label": "Zero-knowledge: de server ziet nooit wachtwoord, keyfile of afgeleide sleutel (P-CRYPT-01)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "go_dr",
+      "type": "Goal",
+      "label": "Disaster-recovery: kluis altijd als KDBX4 te downloaden en in KeePassXC te openen (P-UX-04)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "go_hw",
+      "type": "Goal",
+      "label": "Ontgrendelen met hardware-afgedwongen biometrie (E1)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "go_kluis",
+      "type": "Goal",
+      "label": "Eigen wachtwoordkluis als SaaS op HC55, ook bij volledige servercompromittering onleesbaar",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_audit",
+      "type": "Requirement",
+      "label": "Append-only audit; nooit sealed, ph, kh, PRF-uitvoer of assertions in een auditregel (P-DATA-04, §12.10)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_browsercrypto",
+      "type": "Requirement",
+      "label": "Alle vault-crypto in de browser via kdbxweb, geen server-fallback (P-CRYPT-05)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_devicebound",
+      "type": "Requirement",
+      "label": "Alleen device-bound hardware-sleutels: UV=1, BE=0, Yubico-attestation + AAGUID-allowlist (P-AUTH-08)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_export",
+      "type": "Requirement",
+      "label": "Plaintext-export alleen met reden, bevestiging en audit (P-UX-03)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_mfa",
+      "type": "Requirement",
+      "label": "MFA verplicht voor vault-toegang: wachtwoord + TOTP, magic-link of backup-code (P-AUTH-02, R14)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_optlock",
+      "type": "Requirement",
+      "label": "Optimistic locking: PUT van een kluis vereist If-Match (P-DATA-03)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_seal",
+      "type": "Requirement",
+      "label": "Verzegelde ontgrendelkopie {ph,kh} alleen naar gebruikershardware, Seal_v2 (P-CRYPT-09)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_stepup",
+      "type": "Requirement",
+      "label": "Step-up (300 s) voor uitbreidende sleutelacties; defensieve acties zonder step-up maar gemeld (P-AUTH-07)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_throttle",
+      "type": "Requirement",
+      "label": "Failed-login throttle: max 5 per 15 min per IP en per account (P-AUTH-05)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    },
+    {
+      "id": "rq_twolayers",
+      "type": "Requirement",
+      "label": "Twee onafhankelijke lagen: account (server kent) en vault (alleen client kent) (P-AUTH-01)",
+      "layer": "motivation",
+      "levels": [
+        "conceptueel"
+      ],
+      "status": "ontwerp",
+      "trace": [],
+      "missing": [],
+      "auto": false,
+      "facts": [],
+      "factCount": 0,
+      "description": ""
+    }
+  ]
+}

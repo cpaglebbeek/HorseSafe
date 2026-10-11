@@ -1,0 +1,268 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Conceptueel"
+set subtitle "Architectuurplaat conceptueel niveau (ArchiMate/Dragon1)"
+set purpose "Browser-based wachtwoordkluis op HC55 waarin de server alleen ciphertext ziet (KDBX4, KeePassXC-compatibel), met MFA op de accountlaag en ontgrendelen met een YubiKey Bio (v0.2.0-Koblitz)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_motivation "Motivatie" {
+    -width 1220
+    -height 570
+}
+Driver dr_zk "Zero-knowledge: de server ziet nooit wachtwoord, keyfile of afgeleide sleutel (P-CRYPT-01)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Driver dr_kdbx "KDBX4-compat: KeePassXC-desktop blijft de noodroute (P-CRYPT-02)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Driver dr_vinger "Keyfile op USB-stick vervangen door iets dat alleen met de vinger werkt (HARDWARE_KEYS §1)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Goal go_kluis "Eigen wachtwoordkluis als SaaS op HC55, ook bij volledige servercompromittering onleesbaar" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Goal go_hw "Ontgrendelen met hardware-afgedwongen biometrie (E1)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Goal go_dr "Disaster-recovery: kluis altijd als KDBX4 te downloaden en in KeePassXC te openen (P-UX-04)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_mfa "MFA verplicht voor vault-toegang: wachtwoord + TOTP, magic-link of backup-code (P-AUTH-02, R14)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_browsercrypto "Alle vault-crypto in de browser via kdbxweb, geen server-fallback (P-CRYPT-05)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_twolayers "Twee onafhankelijke lagen: account (server kent) en vault (alleen client kent) (P-AUTH-01)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_seal "Verzegelde ontgrendelkopie (ph,kh) alleen naar gebruikershardware, Seal_v2 (P-CRYPT-09)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_devicebound "Alleen device-bound hardware-sleutels: UV=1, BE=0, Yubico-attestation + AAGUID-allowlist (P-AUTH-08)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_stepup "Step-up (300 s) voor uitbreidende sleutelacties; defensieve acties zonder step-up maar gemeld (P-AUTH-07)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_optlock "Optimistic locking: PUT van een kluis vereist If-Match (P-DATA-03)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_export "Plaintext-export alleen met reden, bevestiging en audit (P-UX-03)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_audit "Append-only audit; nooit sealed, ph, kh, PRF-uitvoer of assertions in een auditregel (P-DATA-04, §12.10)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Requirement rq_throttle "Failed-login throttle: max 5 per 15 min per IP en per account (P-AUTH-05)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_noescrow "Geen key-escrow en geen herstel via de server: verlies van pw + keyfile = data weg (P-CRYPT-06)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_meldkanaal "Geen noodsleutel-vrijgave zonder meldkanaal; mislukte melding draait de vrijgave terug (P-OPS-07)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_unblock "Noodsleutel-blokkade alleen opheffen met Bio-step-up, nooit met alleen wachtwoord of TOTP (besluit 3)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_wachttijd "Noodsleutel pas bruikbaar na 24 uur wachttijd, venster van 24 uur, één keer (E7)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_sharedinfra "Gedeelde server: poort 3997 gereserveerd, nginx alleen na SHARED_INFRASTRUCTURE.md (P-OPS-01)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+Constraint cn_secrets "SMTP-gegevens alleen in /opt/horsesafe/.env, nooit in code, docs of logs (P-OPS-07, P-DEV-06)" in laag_motivation {
+    -attr status = "ontwerp"
+}
+
+Group laag_business "Business" {
+    -width 1220
+    -height 830
+}
+BusinessProcess bp_deblokkeren "Blokkade opheffen na Bio-step-up" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessActor ba_gebruiker "Eindgebruiker (Christian)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessActor ba_admin "Administrator (ziet geen vault-inhoud)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_kluis "Zero-knowledge wachtwoordkluis" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_account "Account met MFA" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_hwsleutel "Ontgrendelen met hardware-sleutel (YubiKey Bio)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_nood "Noodtoegang met noodsleutel" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_importexport "Import en export (KDBX3/4, Bitwarden JSON, CSV, XLSX)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_delen "Entries delen met andere gebruikers" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessService bs_beheer "Accountbeheer en statistiek (admin)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_registreren "Registreren met akkoord op permanent dataverlies" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_inloggen "Inloggen met accountwachtwoord" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_totp_instellen "TOTP instellen (QR) en bevestigen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_mfa "Tweede stap: TOTP-code, magic-link of backup-code" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_backupcodes "Backup-codes aanmaken (alleen met MFA-sessie)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_blob_ophalen "Versleutelde KDBX4-blob + ETag ophalen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_ontsleutelen_pw "Ontsleutelen met wachtwoord en/of keyfile in de browser" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_opslaan "Bewerken en opslaan met If-Match" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_stepup "Step-up met Bio (of TOTP zolang er geen Bio is)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_registreer_sleutel "Sleutel registreren met vinger (credentials.create + PRF)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_verzegelen "Ontgrendelmateriaal verzegelen en sleutel vastpinnen in de KDBX" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_server_verifieert "Server verifieert attestation, UV, BE, AAGUID en sealed-vorm" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_vinger "Vinger op de YubiKey Bio" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_kopie_vrijgeven "Server verifieert assertion en geeft verzegelde kopie vrij" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_kopie_openen "Kopie openen (AAD-controle) en KDBX ontsleutelen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_vrijgave "Vrijgave noodsleutel aanvragen" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_melding "Mail + audit; 24 uur wachttijd loopt" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_nood_ontgrendelen "Ontgrendelen met noodsleutel + PIN van 63 tekens binnen het venster" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_nood_verbruikt "Noodsleutel gebruikt: status consumed, mail" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_blokkeren "Noodsleutel blokkeren (altijd, zonder step-up)" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_pins_controleren "Ontvangende sleutels tonen en pins in de KDBX controleren" in laag_business {
+    -attr status = "ontwerp"
+}
+BusinessProcess bp_rekey "Nieuwe blob + alle verzegelde kopieën in één atomaire stap" in laag_business {
+    -attr status = "ontwerp"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_motivation 40, 40
+pos dr_zk 60, 90
+pos dr_kdbx 260, 90
+pos dr_vinger 460, 90
+pos go_kluis 660, 90
+pos go_hw 860, 90
+pos go_dr 1060, 90
+pos rq_mfa 60, 220
+pos rq_browsercrypto 260, 220
+pos rq_twolayers 460, 220
+pos rq_seal 660, 220
+pos rq_devicebound 860, 220
+pos rq_stepup 1060, 220
+pos rq_optlock 60, 350
+pos rq_export 260, 350
+pos rq_audit 460, 350
+pos rq_throttle 660, 350
+pos cn_noescrow 860, 350
+pos cn_meldkanaal 1060, 350
+pos cn_unblock 60, 480
+pos cn_wachttijd 260, 480
+pos cn_sharedinfra 460, 480
+pos cn_secrets 660, 480
+pos laag_business 40, 650
+pos bp_deblokkeren 60, 700
+pos ba_gebruiker 260, 700
+pos ba_admin 460, 700
+pos bs_kluis 660, 700
+pos bs_account 860, 700
+pos bs_hwsleutel 1060, 700
+pos bs_nood 60, 830
+pos bs_importexport 260, 830
+pos bs_delen 460, 830
+pos bs_beheer 660, 830
+pos bp_registreren 860, 830
+pos bp_inloggen 1060, 830
+pos bp_totp_instellen 60, 960
+pos bp_mfa 260, 960
+pos bp_backupcodes 460, 960
+pos bp_blob_ophalen 660, 960
+pos bp_ontsleutelen_pw 860, 960
+pos bp_opslaan 1060, 960
+pos bp_stepup 60, 1090
+pos bp_registreer_sleutel 260, 1090
+pos bp_verzegelen 460, 1090
+pos bp_server_verifieert 660, 1090
+pos bp_vinger 860, 1090
+pos bp_kopie_vrijgeven 1060, 1090
+pos bp_kopie_openen 60, 1220
+pos bp_vrijgave 260, 1220
+pos bp_melding 460, 1220
+pos bp_nood_ontgrendelen 660, 1220
+pos bp_nood_verbruikt 860, 1220
+pos bp_blokkeren 1060, 1220
+pos bp_pins_controleren 60, 1350
+pos bp_rekey 260, 1350
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+dr_zk influences go_kluis "drijft aan"
+dr_kdbx influences go_dr "drijft aan"
+dr_vinger influences go_hw "drijft aan"
+go_kluis influences rq_browsercrypto "vereist"
+go_kluis influences rq_twolayers "vereist"
+go_kluis influences rq_mfa "vereist"
+go_hw influences rq_seal "vereist"
+go_hw influences rq_devicebound "vereist"
+go_hw influences rq_stepup "vereist"
+go_dr influences rq_optlock "vereist"
+go_kluis influences rq_export "vereist"
+go_kluis influences rq_audit "vereist"
+go_kluis influences rq_throttle "vereist"
+cn_noescrow influences go_kluis "begrenst"
+cn_unblock influences bp_deblokkeren "begrenst"
+ba_gebruiker associates bs_kluis "gebruikt"
+ba_gebruiker associates bs_account "gebruikt"
+ba_gebruiker associates bs_hwsleutel "gebruikt"
+ba_gebruiker associates bs_nood "gebruikt"
+ba_gebruiker associates bs_importexport "gebruikt"
+ba_gebruiker associates bs_delen "gebruikt"
+ba_admin associates bs_beheer "gebruikt"
+bp_registreren realizes bs_account
+bp_ontsleutelen_pw realizes bs_kluis
+bp_kopie_openen realizes bs_hwsleutel
+bp_nood_ontgrendelen realizes bs_nood

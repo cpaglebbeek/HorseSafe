@@ -1,0 +1,105 @@
+// GEGENEREERD door ModelArchDSL — niet met de hand bewerken.
+// Bron: archmodel/tobe.archdsl (ontwerp) + archmodel/asis.facts.json (code).
+set language archimate
+set title "HorseSafe — Fysiek"
+set subtitle "Architectuurplaat fysiek niveau (ArchiMate/Dragon1)"
+set purpose "Browser-based wachtwoordkluis op HC55 waarin de server alleen ciphertext ziet (KDBX4, KeePassXC-compatibel), met MFA op de accountlaag en ontgrendelen met een YubiKey Bio (v0.2.0-Koblitz)."
+show legend true
+switch badges on
+set current state "As-is (code)"
+set target state "To-be (ontwerp)"
+
+Group laag_technology "Technologie" {
+    -width 1220
+    -height 440
+}
+Node nd_hc55 "HC55 157.180.29.184 (icthorsecloud.nl)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+SystemSoftware ss_uvicorn "uvicorn 127.0.0.1:3997 (horsesafe.service, gebruiker horsesafe)" in laag_technology {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "unit:horsesafe.service, dep:pip:uvicorn"
+}
+TechnologyInterface ti_nginx_web "nginx /HorseSafe/ (statische frontend /opt/horsesafe/web)" in laag_technology {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "nginx:/HorseSafe, nginx:/HorseSafe/"
+}
+TechnologyInterface ti_nginx_api "nginx /HorseSafe/api/ → 127.0.0.1:3997" in laag_technology {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "nginx:/HorseSafe/api/"
+    -description "auth_basic off: eigen JWT + MFA; TLS via Let's Encrypt van HC55."
+}
+SystemSoftware ss_sqlite "SQLite /opt/horsesafe/db/horsesafe.db (600)" in laag_technology {
+    -stroke "#16a34a"
+    -attr status = "gebouwd"
+    -attr trace = "dep:pip:aiosqlite, table:*"
+}
+TechnologyService ts_smtp "SMTP Hostinger 587 STARTTLS (From = info@icthorse.nl)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+TechnologyService ts_gmail "Gmail SMTP_SSL 465 (fallback; poort 465 dicht op HC55)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+TechnologyService ts_storagebox "Hetzner Storagebox (nachtelijke backup)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Device dv_bio "YubiKey Bio (vinger, PRF, PIN van 63 tekens)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Device dv_nood "Noodsleutel (YubiKey 5 of Bio, alleen PIN van 63 tekens)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Device dv_laptop "Laptop met Chrome/Edge" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+SystemSoftware ss_keepassxc "KeePassXC-desktop (noodroute)" in laag_technology {
+    -fill "#f0f9ff"
+    -stroke "#0284c7"
+    -attr status = "extern"
+}
+Device dv_phone "Telefoon Z Fold6 (Keystore BIOMETRIC_STRONG, v0.3.0-Miller)" in laag_technology {
+    -fill "#fff7ed"
+    -stroke "#ea580c"
+    -state target
+    -attr status = "gepland"
+}
+
+// Posities (deterministische raster-layout per ArchiMate-laag)
+pos laag_technology 40, 40
+pos nd_hc55 60, 90
+pos ss_uvicorn 260, 90
+pos ti_nginx_web 460, 90
+pos ti_nginx_api 660, 90
+pos ss_sqlite 860, 90
+pos ts_smtp 1060, 90
+pos ts_gmail 60, 220
+pos ts_storagebox 260, 220
+pos dv_bio 460, 220
+pos dv_nood 660, 220
+pos dv_laptop 860, 220
+pos ss_keepassxc 1060, 220
+pos dv_phone 60, 350
+
+// Relaties — Dragon1-compatibel: werkwoordvorm, of ongetypeerd waar Dragon1 het type afleidt
+nd_hc55 -> ss_uvicorn "host"
+nd_hc55 -> ti_nginx_web "host"
+nd_hc55 -> ss_sqlite "host"
+ti_nginx_api serves ss_uvicorn "proxy"
+ss_sqlite -> ts_storagebox "nachtelijke backup"
