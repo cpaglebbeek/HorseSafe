@@ -26,8 +26,8 @@
     "0.5.0": "Lange — native kluis in de app (gepland na veldtest v0.4, niet bouwen)",
     "daarna": "Schneier (browserextensie) en verdere ROADMAP-items schuiven door"
   },
-  "phase": "Phase 10 — Koblitz (in bouw): hardware-sleutels per vault via WebAuthn PRF + Seal_v2 (P-CRYPT-09), noodsleutel met 24 uur wachttijd en blokkade, step-up, rekey, generieke SMTP-mailer. Ontwerp: docs/HARDWARE_KEYS.md. Nog niet gedeployed; LIVE draait 0.1.0-Massey.",
-  "released": "te bepalen (nog niet gedeployed)",
+  "phase": "Phase 10 — Koblitz LIVE (2026-10-11): hardware-sleutels per vault via WebAuthn PRF + Seal_v2 (P-CRYPT-09), noodsleutel met 24 uur wachttijd en blokkade, step-up, rekey, generieke SMTP-mailer. Ontwerp: docs/HARDWARE_KEYS.md. Veldtest met echte YubiKey Bio nog open.",
+  "released": "2026-10-11",
   "previous_release": {
     "version": "0.1.0",
     "codename": "Massey",
@@ -54,8 +54,9 @@
     "frontend_e2e_playwright": "10/10 groen (2026-10-11; admin/mfa/smoke tegen geïsoleerde backend)",
     "frontend_e2e_hwkeys_virtual_authenticator": "hwkeys 2/2 + magiclink 3/3 (CDP virtual authenticator)",
     "kdbx_oracle_ci": "te meten",
-    "smtp_587_starttls_vanaf_hc55": "te meten",
-    "live_smoke_test": "te meten (na deploy: /api/health = 0.2.0-Koblitz, test_attestation:false)"
+    "smtp_587_starttls_vanaf_hc55": "250 + afgeleverd in info@icthorse.nl-inbox (2026-10-11 00:32 UTC)",
+    "live_smoke_test": "groen 2026-10-11: /api/health 0.2.0-Koblitz, test_attestation:false, schema 5, post_deploy_smoke.sh groen",
+    "hardware_veldtest_yubikey_bio": "open — eerste echte koppeling door Christian"
   },
   "schema_version": 5,
   "design_doc": "docs/HARDWARE_KEYS.md",
