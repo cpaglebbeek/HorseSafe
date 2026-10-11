@@ -1,0 +1,57 @@
+// HorseSafe — architectuurontwerp (to-be) in ArchDSL.
+// Dit bestand is de bron van het ONTWERP. De platen in generated/ worden hieruit
+// plus de gemeten code (asis.facts.json) gegenereerd met /ModelArchDSL update.
+//
+// Conventies (ArchPortal/docs/DSL_CONVENTIES.md):
+//   -view conceptueel|logisch|fysiek   niveau (standaard: afgeleid van de ArchiMate-laag)
+//   -attr trace = "route:* /api/*, module:server"   koppeling met code (globs op feit-id's)
+//   -attr status = "gepland"           expliciet gepland element zonder trace
+//   Viewpoint reis_x "Klantreis: ..." { -attr journey = "true"  -attr steps = "a b c"  -attr actor = "klant" }
+//
+// SKELET: automatisch voorgesteld uit de modules in de code. Vul conceptueel niveau,
+// klantreizen en relaties aan; verwijder wat niet klopt.
+
+set title "HorseSafe"
+set purpose "TODO: doel van het systeem in één zin"
+
+// ---- Conceptueel ----
+BusinessActor gebruiker "Gebruiker"
+
+// ---- Logisch (voorstel uit modules) ----
+ApplicationComponent comp_backend "backend" {
+    -attr trace = "module:backend"
+}
+ApplicationComponent comp_backend_db "backend/db" {
+    -attr trace = "module:backend/db"
+}
+ApplicationComponent comp_backend_middlewares "backend/middlewares" {
+    -attr trace = "module:backend/middlewares"
+}
+ApplicationComponent comp_backend_models "backend/models" {
+    -attr trace = "module:backend/models"
+}
+ApplicationComponent comp_backend_routes "backend/routes" {
+    -attr trace = "module:backend/routes"
+}
+ApplicationComponent comp_backend_services "backend/services" {
+    -attr trace = "module:backend/services"
+}
+ApplicationComponent comp_backend_tools "backend/tools" {
+    -attr trace = "module:backend/tools"
+}
+ApplicationComponent comp_frontend "frontend" {
+    -attr trace = "module:frontend"
+}
+ApplicationComponent comp_frontend_js "frontend/js" {
+    -attr trace = "module:frontend/js"
+}
+ApplicationComponent comp_specs_testvectors "specs/testvectors" {
+    -attr trace = "module:specs/testvectors"
+}
+
+// ---- Klantreizen ----
+// Viewpoint reis_voorbeeld "Klantreis: voorbeeld" {
+//     -attr journey = "true"
+//     -attr actor = "gebruiker"
+//     -attr steps = "stap_1 stap_2"
+// }
