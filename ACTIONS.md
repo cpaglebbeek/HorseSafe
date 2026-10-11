@@ -25,7 +25,7 @@ Ontwerp + bindend contract: `docs/HARDWARE_KEYS.md` (§12). Besluiten Christian 
 - [x] ~~**Testvectoren Seal_v2** — `specs/testvectors/seal_v2.json` + `gen_seal_v2.py`~~ ✅ 2026-10-10 (reviewronde 2; pytest + `node --test` zonder skips)
 - [x] ~~**LIVE v0.1.0-Massey kwetsbaar voor HS-BUG-008 punt 1 en 5**~~ ✅ 2026-10-11 vervallen: Koblitz (met fix) is live
 - [x] ~~**Tests meten en in `version.json` zetten**~~ ✅ 2026-10-11 — pytest 196/196, `node --test` 59/59, Playwright 10/10; kdbx-oracle-CI nog te meten
-- [x] ~~**CI-jobs** — `node --test` en Playwright-WebAuthn toevoegen aan `.github/workflows/ci.yml`~~ ✅ 2026-10-11 (v0.2.1)
+- [ ] **CI-jobs** — `node --test` en Playwright-WebAuthn in `.github/workflows/ci.yml`: wijziging klaar (lokaal, niet gecommit), push vereist `gh auth refresh -s workflow` door Christian
 - [ ] **HS-BUG-007 sluiten** zodra de tests in §12.14 groen zijn
 - [x] ~~**SMTP-gegevens in `/opt/horsesafe/.env`** — `HORSESAFE_SMTP_HOST/PORT/USER/PASSWORD/FROM` uit ClaudeSecrets (Christian); daarna aantoonbaar mail afgeleverd vanaf HC55 via 587/STARTTLS (acceptatie 5)~~ ✅ 2026-10-11 — Hostinger 587, 250 + afgeleverd in inbox
 - [x] ~~**Deploy HC55** — rsync met `--exclude tests/ --exclude 'package*.json' --exclude node_modules/`, migratie 005, restart; live `/api/health` = `0.2.0-Koblitz` met `test_attestation:false` (acceptatie 6)~~ ✅ 2026-10-11 00:32 UTC — DB/vaults/.env-backup in `/opt/horsesafe/backups-predeploy/`, schema 5, post_deploy_smoke groen
