@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import time
+from urllib.parse import quote
+
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import RedirectResponse
 
 from ..config import get_settings
 from ..db.connection import connect
 from ..models.admin import BackupCodeVerify, MeResponse
-from ..models.auth import MagicLinkRequest
+from ..models.auth import MagicLinkRedeem, MagicLinkRequest
 from ..models.user import UserLogin, UserRegister
+from ..models.webauthn import StepupBio, StepupRequest
 from ..services import (
     audit_service,
     auth_service,
@@ -16,7 +20,10 @@ from ..services import (
     magic_link_service,
     mfa_service,
     pw_service,
+    stepup_service,
 )
+from ..services import vault_key_service as vk_svc
+from ..services import webauthn_service as wa
 
 router = APIRouter()
 
@@ -154,6 +161,7 @@ async def totp_verify(
     secret_arg = body.get("secret")
     ip = request.client.host if request.client else "unknown"
 
+    notify: str | None = None
     async with connect(settings.db_path) as conn:
         # Throttle op MFA-failed-pogingen (hergebruik failed_logins-tabel via event)
         if await auth_service.is_throttled(conn, ip, None):
@@ -163,7 +171,14 @@ async def totp_verify(
             )
 
         if secret_arg:
-            # Setup-flow
+            # Setup-flow. Een bestaand secret vervangen kan niet (eerst /totp/disable met de
+            # huidige code); met hardware-sleutels alleen vanuit een sessie die MFA al heeft —
+            # anders zou het accountwachtwoord alleen genoeg zijn voor S en TOTP-step-up.
+            if await mfa_service.user_has_totp(conn, user_id):
+                raise HTTPException(status_code=409, detail={"error": "totp_already_configured"})
+            had_keys = await vk_svc.user_has_keys(conn, user_id)
+            if had_keys and not bool(payload.get("mfa", False)):
+                raise HTTPException(status_code=403, detail={"error": "mfa_required"})
             ok = mfa_service.verify_code(secret_arg, code)
             if not ok:
                 await auth_service.record_failed_login(conn, ip, None)
@@ -172,7 +187,15 @@ async def totp_verify(
                 )
                 raise HTTPException(status_code=400, detail={"error": "invalid_code"})
             await mfa_service.set_user_totp(conn, user_id, secret_arg)
-            await audit_service.log(conn, user_id=user_id, event="mfa_setup_totp", ip=ip)
+            await audit_service.log(
+                conn,
+                user_id=user_id,
+                event="mfa_setup_totp",
+                ip=ip,
+                user_agent=request.headers.get("user-agent"),
+                detail={"action": "enabled", "had_keys": had_keys},
+            )
+            notify = await vk_svc.user_email(conn, user_id)
         else:
             # Challenge-flow
             stored = await mfa_service.get_user_totp(conn, user_id)
@@ -187,9 +210,35 @@ async def totp_verify(
                 raise HTTPException(status_code=400, detail={"error": "invalid_code"})
             await audit_service.log(conn, user_id=user_id, event="mfa_pass_totp", ip=ip)
 
+    if notify:
+        await _totp_changed_mail(request, user_id, notify, enabled=True)
     # Upgrade JWT met mfa=true
     jwt_service.reissue_with_mfa(response, payload)
     return {"ok": True, "mfa_passed": True}
+
+
+async def _totp_changed_mail(request: Request, user_id: str, email: str, *, enabled: bool) -> None:
+    """Melding bij elke TOTP-wijziging (v0.2.0-Koblitz), na het sluiten van de DB-verbinding."""
+    ip = request.client.host if request.client else None
+    text = (
+        "Er is een authenticator-app (TOTP) aan je account gekoppeld."
+        if enabled
+        else "De authenticator-app (TOTP) is van je account verwijderd."
+    )
+    await vk_svc.notify_user(
+        email,
+        "HorseSafe: authenticator-app " + ("ingesteld" if enabled else "verwijderd"),
+        vk_svc.notify_body(
+            text,
+            label=None,
+            ip=ip,
+            advice="Log direct in, controleer je account en je sleutels, en wijzig je wachtwoord.",
+        ),
+        user_id=user_id,
+        event="mfa_setup_totp",
+        ip=ip,
+        user_agent=request.headers.get("user-agent"),
+    )
 
 
 @router.post("/totp/disable")
@@ -207,8 +256,16 @@ async def totp_disable(body: dict[str, str], request: Request) -> dict[str, bool
             raise HTTPException(status_code=400, detail={"error": "invalid_code"})
         await mfa_service.remove_user_totp(conn, user_id)
         await audit_service.log(
-            conn, user_id=user_id, event="mfa_setup_totp", ip=None, detail={"action": "disabled"}
+            conn,
+            user_id=user_id,
+            event="mfa_setup_totp",
+            ip=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+            detail={"action": "disabled"},
         )
+        email = await vk_svc.user_email(conn, user_id)
+    if email:
+        await _totp_changed_mail(request, user_id, email, enabled=False)
     return {"ok": True}
 
 
@@ -220,12 +277,13 @@ async def magic_link_request(body: MagicLinkRequest, request: Request) -> dict[s
     """Vraag magic-link aan. Stuurt e-mail. Geeft GEEN onthullende informatie over
     of het e-mailadres bestaat (info-leak-resistant)."""
     settings = get_settings()
+    mail_body: str | None = None
     async with connect(settings.db_path) as conn:
         cursor = await conn.execute("SELECT id FROM users WHERE email = ?", (body.email.lower(),))
         row = await cursor.fetchone()
         if row:
             user_id = str(row["id"])
-            await magic_link_service.issue_magic_link(conn, user_id, body.email)
+            _token, mail_body = await magic_link_service.create_magic_link(conn, user_id)
             await audit_service.log(
                 conn,
                 user_id=user_id,
@@ -233,25 +291,62 @@ async def magic_link_request(body: MagicLinkRequest, request: Request) -> dict[s
                 ip=request.client.host if request.client else None,
                 detail={"step": "issued"},
             )
+    # Mail pas na het sluiten van de DB-verbinding, buiten de event-loop (v0.2.0-Koblitz).
+    if mail_body is not None:
+        await magic_link_service.send_magic_link(body.email, mail_body)
     return {"ok": True}
 
 
 @router.get("/magic-link/redeem")
-async def magic_link_redeem(t: str, request: Request) -> RedirectResponse:
-    """Verzilver magic-link → set JWT-cookie met mfa=true → redirect frontend."""
+async def magic_link_redeem_redirect(t: str) -> RedirectResponse:
+    """Compat voor links uit oudere mails: stuur zonder bijwerkingen door naar ``mfa.html#ml=…``.
+
+    Reviewronde 3: het sessie-cookie is SameSite=Strict en gaat dus niet mee bij een klik vanuit
+    webmail (cross-site navigatie). Daarom verzilvert deze GET niets en kijkt hij niet naar het
+    cookie; de pagina ``mfa.html`` doet een same-site ``POST /auth/magic-link/redeem`` waarbij het
+    cookie wel meegaat. Het token staat in het fragment (``#``), dus niet in logs of Referer.
+    """
+    base = get_settings().public_url.rstrip("/")
+    return RedirectResponse(url=f"{base}/mfa.html#ml={quote(t, safe='')}", status_code=302)
+
+
+@router.post("/magic-link/redeem")
+async def magic_link_redeem(
+    body: MagicLinkRedeem, request: Request, response: Response
+) -> dict[str, bool]:
+    """Verzilver magic-link als TWEEDE stap: upgrade een bestaande wachtwoordsessie naar mfa=true.
+
+    v0.2.0-Koblitz (reviewronde 2): de link geeft nooit zelf een sessie. Zonder geldig sessie-cookie
+    van dezelfde gebruiker (dus na een wachtwoord-login in deze browser) wordt de link geweigerd en
+    NIET verbruikt; toegang tot de mailbox alleen is zo geen S (zie THREAT_MODEL, HARDWARE_KEYS §9).
+    Reviewronde 3: verzilveren gaat via deze POST vanaf ``mfa.html`` (same-site, dus het
+    SameSite=Strict-cookie gaat mee), niet meer via de GET uit de mail.
+    """
     settings = get_settings()
+    t = body.t
+    try:
+        payload: dict[str, object] | None = jwt_service.require_auth(request)
+    except HTTPException:
+        payload = None
     async with connect(settings.db_path) as conn:
-        user_id = await magic_link_service.consume_magic_link(conn, t)
-        if not user_id:
-            # Redirect naar login met error-param
-            return RedirectResponse(
-                url=f"{settings.public_url.rstrip('/')}/login.html?error=invalid_link",
-                status_code=302,
+        owner = await magic_link_service.peek_magic_link(conn, t)
+        if owner is None:
+            raise HTTPException(status_code=400, detail={"error": "invalid_link"})
+        if payload is None or str(payload.get("sub")) != owner:
+            await audit_service.log(
+                conn,
+                user_id=owner,
+                event="mfa_fail",
+                ip=request.client.host if request.client else None,
+                detail={"flow": "magic_link", "reason": "no_password_session"},
             )
-        cursor = await conn.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,))
-        row = await cursor.fetchone()
-        is_admin = bool(row and row["is_admin"])
-        token = jwt_service.issue(user_id, is_admin, mfa_passed=True)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={"error": "magic_link_login_first"},
+            )
+        user_id = await magic_link_service.consume_magic_link(conn, t)
+        if user_id != owner:
+            raise HTTPException(status_code=400, detail={"error": "invalid_link"})
         await audit_service.log(
             conn,
             user_id=user_id,
@@ -259,20 +354,8 @@ async def magic_link_redeem(t: str, request: Request) -> RedirectResponse:
             ip=request.client.host if request.client else None,
             detail={"step": "redeemed"},
         )
-    redirect = RedirectResponse(
-        url=f"{settings.public_url.rstrip('/')}/vault.html",
-        status_code=302,
-    )
-    redirect.set_cookie(
-        key=settings.cookie_name,
-        value=token,
-        httponly=True,
-        secure=settings.cookie_secure,
-        samesite=settings.cookie_samesite,
-        max_age=settings.jwt_ttl_minutes * 60,
-        path="/",
-    )
-    return redirect
+    jwt_service.reissue_with_mfa(response, payload)
+    return {"ok": True}
 
 
 # ─────────────── /auth/me ───────────────
@@ -311,8 +394,13 @@ async def me(request: Request) -> MeResponse:
 
 @router.post("/backup-codes/generate")
 async def backup_codes_generate(request: Request) -> dict[str, list[str]]:
-    """Genereer 10 nieuwe codes (returnt plaintext — show-once aan client)."""
-    payload = jwt_service.require_auth(request)
+    """Genereer 10 nieuwe codes (returnt plaintext — show-once aan client).
+
+    Alleen vanuit een sessie met MFA (S, v0.2.0-Koblitz reviewronde 2): anders maakt het
+    accountwachtwoord alleen via generate + /backup-codes/verify een mfa=true-sessie, en
+    zouden bestaande codes zonder tweede factor ongeldig gemaakt kunnen worden.
+    """
+    payload = stepup_service.session(request)
     user_id = str(payload["sub"])
     settings = get_settings()
     async with connect(settings.db_path) as conn:
@@ -392,3 +480,131 @@ async def change_password(body: dict[str, str], request: Request) -> dict[str, b
             ip=request.client.host if request.client else None,
         )
     return {"ok": True}
+
+
+# ─────────────── Step-up (v0.2.0-Koblitz, docs/HARDWARE_KEYS.md §12.8) ───────────────
+
+STEPUP_FAIL_MAX = 5
+STEPUP_FAIL_WINDOW_SECONDS = 15 * 60
+
+
+@router.post("/stepup")
+async def stepup(body: StepupRequest, request: Request, response: Response) -> dict[str, object]:
+    """Korte bevestiging bovenop de sessie: YubiKey Bio, of TOTP als er geen actieve Bio is."""
+    payload = stepup_service.session(request)
+    user_id = str(payload["sub"])
+    settings = get_settings()
+    ip = request.client.host if request.client else None
+    ua = request.headers.get("user-agent")
+    clone: tuple[str, str] | None = None
+    stepup_key: str | None = None
+    async with connect(settings.db_path) as conn:
+        if isinstance(body, StepupBio):
+            try:
+                row = await wa.consume_challenge(conn, body.challenge_id, user_id)
+                if row["purpose"] != "stepup":
+                    raise wa.WebAuthnError("invalid_challenge")
+                key = next(
+                    (
+                        k
+                        for k in await vk_svc.user_bio_keys(conn, user_id)
+                        if k["credential_id"] == body.credential_id
+                    ),
+                    None,
+                )
+                if key is None:
+                    raise wa.WebAuthnError("credential_mismatch")
+                new_count = wa.verify_assertion(
+                    credential_id=body.credential_id,
+                    client_data_json=body.client_data_json,
+                    authenticator_data=body.authenticator_data,
+                    signature=body.signature,
+                    user_handle=body.user_handle,
+                    challenge_row=row,
+                    cose_public_key=key["cose_public_key"],
+                    stored_sign_count=int(key["sign_count"]),
+                )
+            except wa.WebAuthnError as e:
+                if e.code == "sign_count_regression":
+                    await audit_service.log(
+                        conn,
+                        user_id=user_id,
+                        event="vault_key_clone_suspect",
+                        ip=ip,
+                        user_agent=ua,
+                        detail={"vault_id": key["vault_id"], "key_id": key["id"], "kind": "bio"},
+                    )
+                    clone = (await vk_svc.user_email(conn, user_id) or "", str(key["label"]))
+                    err = HTTPException(status_code=e.status, detail={"error": e.code})
+                else:
+                    raise HTTPException(status_code=e.status, detail={"error": e.code}) from e
+            else:
+                err = None
+                stepup_key = str(key["id"])
+                await vk_svc.update_key(
+                    conn, key["id"], sign_count=new_count, last_used_at=vk_svc.now()
+                )
+        else:
+            err = None
+            if await vk_svc.user_bio_keys(conn, user_id):
+                raise HTTPException(status_code=403, detail={"error": "stepup_method_not_allowed"})
+            secret = await mfa_service.get_user_totp(conn, user_id)
+            if not secret:
+                raise HTTPException(status_code=409, detail={"error": "stepup_unavailable"})
+            retry_at = await stepup_service.totp_cooldown_until(conn, user_id)
+            if retry_at is not None:
+                raise HTTPException(
+                    status_code=403, detail={"error": "stepup_cooldown", "retry_at": retry_at}
+                )
+            cur = await conn.execute(
+                "SELECT COUNT(*) AS n FROM audit_log WHERE user_id = ? AND event = 'stepup_fail' "
+                "AND ts > ?",
+                (user_id, int(time.time()) - STEPUP_FAIL_WINDOW_SECONDS),
+            )
+            fails = await cur.fetchone()
+            if fails and int(fails["n"]) >= STEPUP_FAIL_MAX:
+                raise HTTPException(status_code=429, detail={"error": "too_many_attempts"})
+            if not mfa_service.verify_code(secret, body.code):
+                await audit_service.log(
+                    conn,
+                    user_id=user_id,
+                    event="stepup_fail",
+                    ip=ip,
+                    user_agent=ua,
+                    detail={"method": "totp"},
+                )
+                raise HTTPException(status_code=401, detail={"error": "invalid_code"})
+        if err is None:
+            until = vk_svc.now() + settings.stepup_ttl_seconds
+            await audit_service.log(
+                conn,
+                user_id=user_id,
+                event="stepup",
+                ip=ip,
+                user_agent=ua,
+                detail={"method": body.method},
+            )
+    if err is not None:
+        if clone is not None:
+            await vk_svc.notify_user(
+                clone[0],
+                vk_svc.CLONE_SUBJECT,
+                vk_svc.notify_body(
+                    vk_svc.CLONE_TEXT, label=clone[1], ip=ip, advice=vk_svc.CLONE_ADVICE
+                ),
+                user_id=user_id,
+                event="vault_key_clone_suspect",
+                ip=ip,
+                user_agent=ua,
+            )
+        raise err
+    token = jwt_service.issue(
+        user_id,
+        bool(payload.get("admin", False)),
+        mfa_passed=True,
+        stepup_until=until,
+        stepup_method=body.method,
+        stepup_key=stepup_key,
+    )
+    jwt_service.set_cookie(response, token)
+    return {"ok": True, "method": body.method, "stepup_until": until}

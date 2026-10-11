@@ -19,7 +19,9 @@
 In scope:
 - HorseSafe backend (`/opt/horsesafe/backend/`)
 - HorseSafe frontend (`/opt/horsesafe/web/`)
-- HorseSafe browser-extensie (v0.2.0+)
+- Hardware-sleutels, step-up en noodsleutel (v0.2.0-Koblitz+; contract `docs/HARDWARE_KEYS.md`)
+- Android-app `android/` (vanaf v0.3.0-Miller)
+- HorseSafe browser-extensie (Schneier, gepland)
 
 Buiten scope:
 - HC55-server-config zelf (zie `cloudinfra`)
@@ -45,6 +47,13 @@ Zie `THREAT_MODEL.md` § "Bekende beperkingen v0.0.x" en § "Dreigingen waar Hor
 | Random | `secrets.token_urlsafe(32)` voor tokens; `os.urandom` server-side; `crypto.getRandomValues` browser |
 | Session-binding | UA+IP optioneel (v0.1) |
 | Logging | nooit body-content, alleen metadata |
+| WebAuthn (v0.2.0) | rpId `icthorsecloud.nl`, origin `https://icthorsecloud.nl`, `userVerification: required`, `authenticatorAttachment: cross-platform`, `hints: ["security-key"]`, `attestation: direct` |
+| Toegestane authenticators | Alleen YubiKey Bio (dagelijks) en YubiKey 5/Bio (noodsleutel): `packed`-attestation tot de gevendorde Yubico-roots + AAGUID-allowlist uit FIDO MDS3; BE=0/BS=0 (geen gesynchroniseerde passkeys) |
+| WebAuthn-challenge | 32 random bytes, 300 s, eenmalig, alleen SHA-256-hash opgeslagen |
+| Step-up | 300 s (`HORSESAFE_STEPUP_TTL_SECONDS`); Bio, of TOTP zolang er geen actieve Bio is |
+| Noodsleutel | 24 u wachttijd + 24 u venster, één keer bruikbaar; blokkade alleen op te heffen met Bio-step-up |
+| Testvlag | `HORSESAFE_TEST_ATTESTATION=false`; de app weigert te starten met de vlag aan en de productie-rpId |
+| Mail | SMTP 587 + STARTTLS (`ssl.create_default_context()`), From = SMTP-gebruiker |
 
 ## Crypto-keuzes (samenvatting)
 
@@ -62,6 +71,9 @@ Zie `ARCHITECTURE.md`, `PRINCIPLES.md`, `CLAUDE.md`.
 | TOTP-secret at-rest | AES-GCM-encrypted met `HORSESAFE_TOTP_ENCRYPTION_KEY` in env |
 | Cookie-signature | server-secret 32 bytes |
 | ETag | SHA-256 van blob |
+| Verzegelde ontgrendelkopie (v0.2.0, P-CRYPT-09) | Seal_v2: X25519 (ECDH, eenmalige sleutel) + HKDF-SHA256 + AES-256-GCM; AAD = `HSv2`‖purpose‖vault_id‖key_id |
+| Sleutel uit YubiKey | WebAuthn PRF (hmac-secret) → HKDF-SHA256 (`info="HorseSafe v2 X25519"`) → X25519-privésleutel, alleen in browser-RAM |
+| WebAuthn-handtekeningen | EdDSA (-8) of ES256 (-7), geverifieerd met py_webauthn |
 
 ## Secrets-management
 
@@ -69,12 +81,18 @@ Zie `ARCHITECTURE.md`, `PRINCIPLES.md`, `CLAUDE.md`.
 - `HORSESAFE_JWT_SECRET` — 32 hex bytes
 - `HORSESAFE_TOTP_ENCRYPTION_KEY` — 32 hex bytes
 - `HORSESAFE_MAGIC_LINK_BRIDGE_URL` — endpoint iCt_Horse magic-link bridge
-- `HORSESAFE_GMAIL_APP_PASSWORD` — fallback bij directe Gmail SMTP
+- `HORSESAFE_SMTP_HOST`, `HORSESAFE_SMTP_PORT` (587), `HORSESAFE_SMTP_USER`, `HORSESAFE_SMTP_PASSWORD`, `HORSESAFE_SMTP_FROM` — generieke mailer (v0.2.0-Koblitz); From = SMTP-gebruiker
+- `HORSESAFE_GMAIL_USER`, `HORSESAFE_GMAIL_APP_PASSWORD` — alleen fallback (SMTP_SSL 465 werkt niet op HC55)
+
+De waarden komen uit ClaudeSecrets en staan alleen in `/opt/horsesafe/.env`; in deze repo staan uitsluitend variabelenamen (`backend/.env.example`). Nooit in code, docs, tests, logs of audit.
+
+**Geen secrets, wel vertrouwensanker:** `backend/data/yubico_fido_roots.pem` (Yubico FIDO-attestation-roots) en `backend/data/aaguids.json` (allowlist uit FIDO MDS3) zijn publiek materiaal, gevendord en reproduceerbaar via `backend/tools/build_yubico_roots.py` en `build_aaguids.py`. Een wijziging daarin is een beveiligingswijziging en hoort in review.
 
 **Rotatie:**
 - JWT-secret: bij compromittering rotate → alle sessies invalid
 - TOTP-key: bij compromittering rotate → users moeten TOTP opnieuw inrichten
 - Magic-link: alleen secret bij bridge, niet hier
+- SMTP-wachtwoord: bij compromittering roteren bij de mailprovider en `.env` bijwerken; zolang de mailer niet werkt is noodsleutel-vrijgave uitgeschakeld
 
 ## CSP-policy (productie)
 
@@ -122,3 +140,14 @@ Interne go-live-checklist tegen de LIVE-omgeving (`icthorsecloud.nl/HorseSafe/`)
 **Openstaand (server-side niet los te probren, client-side by-design):**
 - Vault-blob-HMAC-tampering + TOTP-replay: zero-knowledge → server ziet plaintext niet; integriteit is client-side (kdbxweb HMAC-SHA-256). Getest via cross-runtime roundtrip in v0.0.9.
 - Side-channel timing login: Argon2id constante-tijd-verificatie via passlib; niet gemeten, laag risico.
+
+## Te testen vóór deploy v0.2.0-Koblitz
+
+Acceptatiecriteria: `docs/HARDWARE_KEYS.md` §10 en de minimale tests in §12.14. Beveiligingsrelevant in het bijzonder:
+
+- Gesynchroniseerde passkey (BE=1), UV=0, `fmt=none`, verkeerde origin en niet-Bio-AAGUID als `bio` worden geweigerd.
+- Hergebruikte of verlopen challenge → 400 `invalid_challenge`; signCount-daling → 409.
+- Noodsleutel: vóór 24 u 423 `recovery_waiting`; daarna één keer bruikbaar; geblokkeerd → 423; opheffen met TOTP → 403 `stepup_bio_required`.
+- Release zonder mailer → 503 `notify_unavailable`; mailer faalt → 503 `notify_failed` en state blijft `idle`.
+- Een verzegelde kopie met afwijkende vault_id, key_id of purpose opent niet.
+- Live: `/api/health` geeft `test_attestation:false`; een Windows Hello-passkey wordt geweigerd.

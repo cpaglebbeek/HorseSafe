@@ -1,6 +1,52 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-07-21
+> Laatst bijgewerkt: 2026-10-10
+
+## 🆕 2026-10-10 — v0.2.0-Koblitz (hardware-sleutels in het web, server-geverifieerd)
+
+Ontwerp + bindend contract: `docs/HARDWARE_KEYS.md` (§12). Besluiten Christian 10-10-2026: §11 (bindend).
+
+**Gedaan**
+- [x] ~~**WIP veiliggesteld** — onafgemaakt werk van sessie 42d3ff7c ongewijzigd gecommit (`9000044`)~~ ✅ 2026-10-10
+- [x] ~~**Verkenning WIP** — zes bevindingen vastgelegd als HS-BUG-007 (fail-open, audit vóór verificatie, blokkerende SMTP, migratiepatroon)~~ ✅ 2026-10-10
+- [x] ~~**Ontwerp + besluiten** — `docs/HARDWARE_KEYS.md` met Koblitz API-contract; besluiten 1-7 vastgesteld~~ ✅ 2026-10-10
+- [x] ~~**P-CRYPT-09** in `PRINCIPLES.md` (+ P-AUTH-07 step-up, P-AUTH-08 device-bound, P-OPS-07 meldkanaal) en `CLAUDE.md:53` geherformuleerd (besluit 1)~~ ✅ 2026-10-10
+- [x] ~~**ROADMAP herschikt** — Koblitz, Miller, Montgomery, Lange; Schneier e.v. doorgeschoven (besluit 2)~~ ✅ 2026-10-10
+- [x] ~~**Documentenset bijgewerkt** — README, API, DATA_MODEL, THREAT_MODEL, SECURITY, DPIA (herbeoordeling §9), ARCHITECTURE, SEQUENCE_DIAGRAMS (SQ-9..12), COMPONENT_DIAGRAM, CHANGELOG, BUGS, version.json (0.2.0-Koblitz, schema 5)~~ ✅ 2026-10-10
+- [x] ~~**Vertrouwensanker gevendord** — `backend/data/yubico_fido_roots.pem` + `aaguids.json` met bouwscripts in `backend/tools/`~~ ✅ 2026-10-10
+- [x] ~~**Versie-bump** — `config.py` `app_version` = `0.2.0-Koblitz`; `version.json` 0.2.0 Koblitz~~ ✅ 2026-10-10
+
+**Open (Koblitz)**
+- [ ] **Bouw afronden volgens §12** — backend (migratie 005 herschreven, py_webauthn, step-up, rekey, recovery block/unblock, mailer) en frontend (`hwkeys.js`, `hwkeys-ui.js`, `stepup.js`, ontgrendelscherm, rekey-flow); per onderdeel tegen §12.14 afvinken
+- [x] ~~**Testvectoren Seal_v2** — `specs/testvectors/seal_v2.json` + `gen_seal_v2.py`~~ ✅ 2026-10-10 (reviewronde 2; pytest + `node --test` zonder skips)
+- [ ] **LIVE v0.1.0-Massey kwetsbaar voor HS-BUG-008 punt 1 en 5** (backup-codes zonder MFA; tweede save 422) — fix zit in Koblitz; beslissen: hotfix op Massey of wachten op de Koblitz-deploy (Christian)
+- [ ] **Tests meten en in `version.json` zetten** — pytest (coverage ≥ 80%), `node --test`, Playwright met CDP virtual authenticator, kdbx-oracle (acceptatie 1-4)
+- [ ] **CI-jobs** — `node --test` en Playwright-WebAuthn toevoegen aan `.github/workflows/ci.yml`
+- [ ] **HS-BUG-007 sluiten** zodra de tests in §12.14 groen zijn
+- [ ] **SMTP-gegevens in `/opt/horsesafe/.env`** — `HORSESAFE_SMTP_HOST/PORT/USER/PASSWORD/FROM` uit ClaudeSecrets (Christian); daarna aantoonbaar mail afgeleverd vanaf HC55 via 587/STARTTLS (acceptatie 5)
+- [ ] **Deploy HC55** (pas na akkoord) — rsync met `--exclude tests/ --exclude 'package*.json' --exclude node_modules/`, migratie 005, restart; live `/api/health` = `0.2.0-Koblitz` met `test_attestation:false` (acceptatie 6)
+- [ ] **YubiKeys inrichten** (tot Miller via Yubico Authenticator / `ykman`) — Bio: PIN van 63 tekens, minimale PIN-lengte 63, always-uv, 2-3 vingers; noodsleutel: PIN van 63 tekens, PIN op papier apart van de sleutel
+- [ ] **Veldtest** — Bio in Chrome op de laptop koppelen en ontgrendelen; Windows Hello-passkey wordt geweigerd (acceptatie 7)
+- [ ] **GDPR_COMPLIANCE.md / PRIVACY_STATEMENT.md** — SMTP-provider als (sub)verwerker en sleutelmetadata opnemen (volgt uit DPIA §9; buiten de Koblitz-docsscope van 10-10)
+- [ ] **UI_DESIGN.md + docs/screens/** — ontgrendelscherm YubiKey/Keyfile, sleutelbeheer, step-up-dialoog documenteren
+
+## 📋 Gepland — v0.3.0-Miller (Android-app) — NIET in deze fase
+
+- [ ] `android/` in deze repo met README (sjabloon HorseAPK/android; `nl.icthorse.horsesafe`, debug-keystore) — `docs/HARDWARE_KEYS.md` §7
+- [ ] YubiKey inrichten vanuit de app (getInfo, PIN 63, setMinPinLength, always-uv, vingers inschrijven)
+- [ ] Telefoon koppelen (QR + SAS), `kind='phone'` met Keystore `BIOMETRIC_STRONG`, nooit `DEVICE_CREDENTIAL`
+- [ ] Migratie 006 (`pairings`, `device_nonces`), device-API (`/devices…`, `/device/v1/*`), `/app/latest` + `/app/download`
+- [ ] Noodsleutel blokkeren/deblokkeren vanaf de telefoon (`sig_biosig`, telefoonvinger als tweede step-up-methode)
+- [ ] Meldingen via polling, geen FCM (besluit 6)
+- [ ] Test-emulator `hb-horsesafe` (besluit 5); CI-job `android`; publicatie via `/APKDeploy`
+- [ ] DPIA herbeoordelen (apparaatgegevens, attestation-ketens)
+
+## 📋 Gepland — v0.4.0-Montgomery (laptop ontgrendelen via telefoon-QR + vinger) — NIET in deze fase
+
+- [ ] Goedkeuringsprotocol (`/vault/{vid}/approvals…`, `/device/v1/approvals/{id}`), Seal_v2 purpose `relay` — `docs/HARDWARE_KEYS.md` §5
+- [ ] Migratie 007 (`approvals`, `revoked_sessions`), JWT-claim `sid`
+- [ ] Ontgrendelen in de app via WebView + WebMessageListener
+- [ ] Veldtest Fold6 + laptop-Chrome → go/no-go voor v0.5.0-Lange (native kluis; niet bouwen vóór die veldtest, besluit 7)
 
 ## 🆕 2026-07-21 — v0.1.0-Massey public-go afgerond
 
@@ -21,7 +67,7 @@
 - [x] ~~**Repo PUBLIC + AGPL-3.0** — na scrub (LAUNCH_PREP.md §2)~~ ✅ 2026-07-21
 - [x] ~~**Sitemap** — na public (LAUNCH_PREP.md §3)~~ ✅ 2026-07-21 (LinkedIn-draft blijft open, zie boven)
 - [ ] **Backup Storagebox** — GEBLOKKEERD op Storagebox SSH-credentials (LAUNCH_PREP.md §5)
-- [ ] **Magic-link mail** — GEBLOKKEERD op Gmail App Password (LAUNCH_PREP.md §5)
+- [ ] **Magic-link mail** — ~~GEBLOKKEERD op Gmail App Password~~ vervangen door de generieke SMTP-mailer (v0.2.0-Koblitz, besluit 4); open tot de SMTP-gegevens in `.env` staan (zie Koblitz-sectie)
 - [ ] **Dashboard health-tile** — nieuwe feature in Dashboard-repo, uitgesteld (LAUNCH_PREP.md §6)
 
 ## 🆕 2026-07-20 — v0.0.10-Goldwasser (test-rerun + HS-BUG-006 unlock-foutmelding)
@@ -78,7 +124,7 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 - [x] ~~**Fase 4 — Admin-pagina** — user-CRUD + storage-stats + audit-log-viewer + MFA-backup-codes + admin-rescue~~ ✅ 2026-05-21 — admin.html (S11) + backup-codes.html (S13) + 6 admin-endpoints + 3 auth-endpoints (/me, backup-codes/{generate,verify}) + bcrypt-hashed backup-codes (single-use) + DB-migrate runner + CLI promote-admin; backend 40/40 pytest + frontend 5/5 playwright
 - [x] ~~**Fase 5 — Import/export + KDBX-roundtrip-oracle**~~ ✅ 2026-05-21 — KDBX3/4 + Bitwarden JSON + KeePass-CSV import/export (XLSX uitgesteld v0.0.7+) + admin-CSV-audit-export + account-pw-change + KeePassXC-CLI oracle in CI; backend 54/54 pytest + frontend 5/5 playwright; client-side parse (zero-knowledge intact); BUG-001 definitief deferred naar v1.0-Bernstein
 - [x] ~~**Fase 6 — Vault-sharing**~~ ✅ 2026-05-21 — ECDH-P256 (WebCrypto native) + AES-GCM-wrapped private-key + per-entry share + inbox/decline/accept; backend 67/67 pytest + 4 nieuwe audit-events + DB-migratie 004; frontend shares.html + js/sharing.js + keypair-gen in settings + Deel-knop in vault; zero-knowledge intact (server kent alleen pubkeys + opaque ciphertexts)
-- [ ] **Browser-extensie** (v0.2.0+) — MV3, autocomplete, échte clipboard-wipe (uitgesteld, optioneel)
+- [ ] **Browser-extensie** (Schneier, doorgeschoven na Koblitz-Lange) — MV3, autocomplete, échte clipboard-wipe (uitgesteld, optioneel)
 - [x] ~~**Fase 7 — Productie-deploy HC55**~~ ✅ 2026-05-22 — LIVE op https://icthorsecloud.nl/HorseSafe/ ; systemd + nginx-snippet + backup-cron actief; auth_basic off voor /HorseSafe/-paths (eigen JWT+MFA); live-smoke-test groen (health + register + login + vault + me + logout)
 - [ ] **v0.1.0-Massey** — public launch: icthorse.nl/HorseSafe/ subdomain + externe pen-test + open-source AGPL + Dashboard-tile + LinkedIn-aankondiging
 
@@ -95,8 +141,8 @@ Skeleton + ontwerp-documenten af. Volgende stappen vereisen akkoord:
 
 - [ ] **Shared vaults** (v0.2+) — re-encryptie per ontvanger
 - [ ] **Offline-modus** (v0.1+) — ServiceWorker-cache laatste blob
-- [ ] **FIDO2/WebAuthn** (v0.3+) — hardware-token MFA-laag
-- [ ] **Mobile-app** (v1.0?) — native Android (Kotlin Compose) wrapper
+- [ ] **FIDO2/WebAuthn als account-MFA** (Rogaway) — vault-laag is gedekt door v0.2.0-Koblitz
+- [ ] **Mobile-app** — Android staat nu op de roadmap als v0.3.0-Miller; iOS blijft research
 - [ ] **CLI-tool** — `horsesafe-cli` voor scripts (KeePassXC-cli equivalent)
 - [ ] **Audit-export** — user kan eigen audit-log downloaden
 - [ ] **Vault-templates** — pre-defined categorieën (Email, Banking, Social, Work) voor new-vault-bootstrap

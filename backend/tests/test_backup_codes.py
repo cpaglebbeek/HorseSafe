@@ -111,3 +111,25 @@ async def test_regenerate_invalidates_old(client: AsyncClient) -> None:
     )
     r = await client.post("/auth/backup-codes/verify", json={"code": old_codes[0]})
     assert r.status_code == 400
+
+
+async def test_generate_requires_mfa_session(client: AsyncClient) -> None:
+    """Reviewronde 2: wachtwoord alleen → geen nieuwe codes (anders generate + verify = MFA-bypass)."""
+    await _register_login_totp(client, "bc-bypass@example.com")
+    good = (await client.post("/auth/backup-codes/generate")).json()["codes"]
+    await client.post("/auth/logout")
+    r = await client.post(
+        "/auth/login", json={"email": "bc-bypass@example.com", "password": VALID_PW}
+    )
+    assert r.json()["mfa_required"] is True
+
+    r = await client.post("/auth/backup-codes/generate")
+    assert r.status_code == 403
+    assert r.json()["detail"]["error"] == "mfa_required"
+    me = (await client.get("/auth/me")).json()
+    assert me["mfa_pass"] is False
+    assert me["backup_codes_remaining"] == 10  # bestaande codes niet ongeldig gemaakt
+
+    # De eerder (met MFA) gemaakte codes werken nog
+    r = await client.post("/auth/backup-codes/verify", json={"code": good[0]})
+    assert r.status_code == 200

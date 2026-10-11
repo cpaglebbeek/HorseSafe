@@ -11,7 +11,16 @@
     // Dev: zelfde hostname als de frontend (localhost), poort 3997. Cross-origin
     // cookies tussen 127.0.0.1 en localhost worden door browsers als third-party
     // behandeld en geblokkeerd door SameSite=Strict — vandaar 'localhost' niet '127.0.0.1'.
-    return isDev ? `http://${location.hostname}:3997` : '/HorseSafe/api';
+    // Dev/e2e: andere backendpoort via localStorage 'horsesafe.devApiPort' (alleen in dev; productie
+    // gebruikt altijd het relatieve pad). Nodig omdat 3997 op HC55 de productie-backend is.
+    let devPort = '3997';
+    if (isDev) {
+      try {
+        const p = localStorage.getItem('horsesafe.devApiPort');
+        if (p && /^\d{2,5}$/.test(p)) devPort = p;
+      } catch (_) { /* geen opslag: standaardpoort */ }
+    }
+    return isDev ? `http://${location.hostname}:${devPort}` : '/HorseSafe/api';
   })();
 
   async function jsonReq(method, path, body) {

@@ -26,7 +26,7 @@ backend/
 │   ├── csp_headers.py       # CSP + HSTS + X-Frame-Options + nosniff
 │   └── ratelimit.py         # in-memory sliding-window (Redis vanaf v0.1.0)
 ├── db/
-│   ├── schema.sql           # 5 tabellen (users/vaults/audit_log/magic_links/failed_logins)
+│   ├── schema.sql           # fresh-install-blob = alle migraties (schema-versie 5)
 │   ├── connection.py        # aiosqlite-context-manager
 │   └── init.py              # `python -m backend.db.init`
 └── tests/
@@ -80,7 +80,33 @@ lichte parameters (t=2, m=8MiB) voor snelle testruns.
 Volledige spec: zie `../API.md`. NB: API.md beschrijft MFA-gated endpoints — die
 zijn in Fase 1 niet actief; vault-routes vereisen nu enkel JWT.
 
+## Hardware-sleutels (v0.2.0-Koblitz)
+
+Bindend contract: `../docs/HARDWARE_KEYS.md` §12. Backend-onderdelen:
+
+| Onderdeel | Bestand |
+|---|---|
+| `POST /webauthn/options` (register/unlock/stepup) | `routes/webauthn.py` |
+| `GET/POST /vault/{vid}/keys`, `POST …/{kid}/unlock`, `PUT …/keys/sealed`, `PUT /vault/{vid}/rekey`, `POST/DELETE …/release`, `POST/DELETE …/block`, `DELETE …/{kid}` | `routes/vault_keys.py` |
+| `POST /auth/stepup` (bio of TOTP) | `routes/auth.py` |
+| WebAuthn-verificatie (py_webauthn + eigen vlag-, AAGUID- en signCount-controles) | `services/webauthn_service.py` |
+| Seal_v2-vormcontrole, recovery-state, meldingen | `services/vault_key_service.py` |
+| Step-up-claims in het JWT | `services/stepup_service.py`, `services/jwt_service.py` |
+| Generieke SMTP-mailer (587 STARTTLS; ook magic-link) | `services/mail_service.py` |
+| Yubico-roots + AAGUID-allowlist (publiek, gevendord) | `data/`, gebouwd met `tools/build_*.py` |
+| Migratie (herschreven 005) | `db/migrations/005_vault_keys.sql` + `db/schema.sql` |
+
+Nieuwe dependency: `webauthn` (py_webauthn, trekt `cbor2`, `pyOpenSSL`, `pyasn1` mee).
+Tests gebruiken een in-test softwareauthenticator (`tests/softauth.py`) met een eigen test-root;
+de testvlag `HORSESAFE_TEST_ATTESTATION` staat alleen aan waar een test dat nodig heeft.
+
+De data in `data/` vernieuwen (publiek materiaal, geen secrets):
+
+```bash
+python -I backend/tools/build_yubico_roots.py /tmp/ykpki       # zie docstring voor downloads
+python -I backend/tools/build_aaguids.py /tmp/mds/blob.jwt --root /tmp/mds/root-r3.crt
+```
+
 ## Versie
 
-- Huidig: **v0.0.1-Diffie**
-- Volgende: v0.0.2-Hellman (frontend POC met kdbxweb)
+- Huidig: **v0.2.0-Koblitz** (zie `config.py::app_version`)

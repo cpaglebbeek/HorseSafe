@@ -16,6 +16,7 @@
         method: 'POST', credentials: 'include',
       });
       if (r.status === 401) { window.location.href = 'login.html'; return; }
+      if (r.status === 403) { window.location.href = 'mfa.html'; return; } // mfa_required (v0.2.0)
       if (!r.ok) {
         const data = await r.json().catch(() => ({}));
         alert('Fout: ' + (data?.detail?.error || r.status));

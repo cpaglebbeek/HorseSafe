@@ -96,24 +96,41 @@ async def update_vault_blob(
     new_blob: bytes,
     if_match: str,
 ) -> dict[str, object] | None:
-    """Update vault-blob met optimistic-lock. Returnt nieuwe meta of None bij conflict/not-found."""
+    """Update vault-blob met optimistic-lock. Returnt nieuwe meta of None bij conflict/not-found.
+
+    Reviewronde 3: atomair zoals ``PUT /vault/{id}/rekey``. ``BEGIN IMMEDIATE`` neemt de
+    schrijfvergrendeling vóór de etag-controle, dus een gelijktijdige rekey (of tweede tab) kan
+    niet tussen controle en schrijven komen; anders overschreef een save de gerekeyde blob met
+    een KDBX onder de oude credentials terwijl alle verzegelde kopieën al nieuw waren.
+    Volgorde: etag-controle → meta-UPDATE (``WHERE etag = ?``) → blob schrijven → COMMIT.
+    """
     settings = get_settings()
     if len(new_blob) > settings.vault_max_bytes:
         raise ValueError("blob_too_large")
-    meta = await get_vault_meta(conn, user_id, vault_id)
-    if not meta:
-        return None
-    if str(meta["etag"]) != if_match:
-        return {"_conflict": True, "current_etag": meta["etag"]}
-    blob_path = Path(str(meta["blob_path"]))
-    _atomic_write(blob_path, new_blob)
-    new_etag = _hash_bytes(new_blob)
-    now = int(time.time())
-    await conn.execute(
-        "UPDATE vaults SET size_bytes = ?, etag = ?, updated_at = ? WHERE id = ?",
-        (len(new_blob), new_etag, now, vault_id),
-    )
-    await conn.commit()
+    await conn.execute("BEGIN IMMEDIATE")
+    try:
+        meta = await get_vault_meta(conn, user_id, vault_id)
+        if not meta:
+            await conn.rollback()
+            return None
+        if str(meta["etag"]) != if_match:
+            await conn.rollback()
+            return {"_conflict": True, "current_etag": meta["etag"]}
+        new_etag = _hash_bytes(new_blob)
+        now = int(time.time())
+        cur = await conn.execute(
+            "UPDATE vaults SET size_bytes = ?, etag = ?, updated_at = ? "
+            "WHERE id = ? AND user_id = ? AND etag = ?",
+            (len(new_blob), new_etag, now, vault_id, user_id, if_match),
+        )
+        if cur.rowcount != 1:  # kan onder de vergrendeling niet, maar nooit stil doorschrijven
+            await conn.rollback()
+            return {"_conflict": True, "current_etag": meta["etag"]}
+        _atomic_write(Path(str(meta["blob_path"])), new_blob)
+        await conn.commit()
+    except BaseException:
+        await conn.rollback()
+        raise
     meta["size_bytes"] = len(new_blob)
     meta["etag"] = new_etag
     meta["updated_at"] = now

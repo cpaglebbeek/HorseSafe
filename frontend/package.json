@@ -6,7 +6,9 @@
   "scripts": {
     "test": "playwright test",
     "test:headed": "playwright test --headed",
-    "serve": "python3 -m http.server 8000"
+    "serve": "python3 -m http.server 8000",
+    "test:unit": "node --test tests/unit/",
+    "test:hwkeys": "playwright test tests/hwkeys.spec.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0"

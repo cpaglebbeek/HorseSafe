@@ -67,6 +67,7 @@ async def test_vault_lifecycle(client: AsyncClient) -> None:
     assert r.status_code == 200, r.text
     etag_v2 = r.json()["etag"]
     assert etag_v2 != etag_v1
+    assert r.headers["etag"] == etag_v2  # ook als header (reviewronde 2: tweede save gaf 422)
     assert r.json()["size_bytes"] == len(new_blob)
 
     # 6. Update met stale If-Match → 412
@@ -124,3 +125,55 @@ async def test_duplicate_name_rejected(client: AsyncClient) -> None:
     )
     assert r.status_code == 409
     assert r.json()["detail"]["error"] == "name_in_use"
+
+
+async def test_update_waits_for_concurrent_rekey_and_conflicts(client: AsyncClient) -> None:
+    """Reviewronde 3: een save die tegelijk met een rekey loopt, mag de gerekeyde blob niet
+    overschrijven. Hier houdt een tweede verbinding de schrijfvergrendeling vast zoals /rekey dat
+    doet (BEGIN IMMEDIATE, nieuwe etag + blob, dan COMMIT). De PUT met de oude etag moet daarop
+    wachten, de nieuwe etag zien en 412 geven; de blob blijft die van de rekey."""
+    import asyncio
+    from pathlib import Path
+
+    from backend.config import get_settings
+    from backend.db.connection import connect
+    from backend.services import storage_service
+
+    await client.post(
+        "/auth/register",
+        json={"email": "race@example.com", "password": VALID_PW, "ack_data_loss": True},
+    )
+    await client.post("/auth/login", json={"email": "race@example.com", "password": VALID_PW})
+    r = await client.post(
+        "/vault",
+        data={"name": "default"},
+        files={"blob": ("default.kdbx", FAKE_KDBX_BLOB, "application/octet-stream")},
+    )
+    vid, old_etag = r.json()["id"], r.json()["etag"]
+    rekeyed = FAKE_KDBX_BLOB + b"_rekeyed"
+
+    async with connect(get_settings().db_path) as rk:
+        await rk.execute("BEGIN IMMEDIATE")
+        cur = await rk.execute("SELECT blob_path FROM vaults WHERE id = ?", (vid,))
+        blob_path = Path(str((await cur.fetchone())["blob_path"]))
+        save = asyncio.create_task(
+            client.put(
+                f"/vault/{vid}",
+                headers={"If-Match": old_etag},
+                files={
+                    "blob": ("default.kdbx", FAKE_KDBX_BLOB + b"_oud", "application/octet-stream")
+                },
+            )
+        )
+        await asyncio.sleep(0.3)  # de save staat nu te wachten op de vergrendeling
+        assert not save.done()
+        new_etag = storage_service._hash_bytes(rekeyed)
+        await rk.execute("UPDATE vaults SET etag = ? WHERE id = ?", (new_etag, vid))
+        storage_service._atomic_write(blob_path, rekeyed)
+        await rk.commit()
+    r = await save
+    assert r.status_code == 412, r.text
+    assert r.json()["detail"]["current_etag"] == new_etag
+    assert blob_path.read_bytes() == rekeyed
+    r = await client.get(f"/vault/{vid}")
+    assert r.content == rekeyed and r.headers["etag"] == new_etag

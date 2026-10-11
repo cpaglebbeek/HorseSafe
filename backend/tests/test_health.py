@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from httpx import AsyncClient
 
 
@@ -26,3 +27,21 @@ async def test_openapi_docs_disabled_by_default(client: AsyncClient) -> None:
     for p in ("/openapi.json", "/docs", "/redoc"):
         r = await client.get(p)
         assert r.status_code == 404, f"{p} zou dicht moeten zijn (kreeg {r.status_code})"
+
+
+async def test_health_koblitz(client: AsyncClient) -> None:
+    body = (await client.get("/health")).json()
+    assert body["version"] == "0.2.0-Koblitz"
+    assert body["test_attestation"] is False
+    assert not {"smtp", "mail", "keys"} & set(body)
+
+
+def test_app_refuses_test_attestation_with_production_rp(monkeypatch: pytest.MonkeyPatch) -> None:
+    from backend.app import create_app
+
+    monkeypatch.setenv("HORSESAFE_TEST_ATTESTATION", "1")
+    monkeypatch.delenv("HORSESAFE_WEBAUTHN_RP_ID", raising=False)  # default icthorsecloud.nl
+    with pytest.raises(RuntimeError, match="TEST_ATTESTATION"):
+        create_app()
+    monkeypatch.setenv("HORSESAFE_WEBAUTHN_RP_ID", "localhost")
+    assert create_app() is not None

@@ -3,7 +3,78 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.2.0: shared vaults (re-encryptie per ontvanger) + offline-modus (ServiceWorker-cache)
+- v0.3.0-Miller: Android-app (YubiKey inrichten, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app). Zie `ROADMAP.md`.
+
+## [0.2.0-Koblitz] — 2026-10-10 (in bouw; nog niet gedeployed)
+
+Ontwerp en bindend contract: `docs/HARDWARE_KEYS.md` (§12). Besluiten Christian 10-10-2026: zie §11 daarvan.
+
+### Added — Hardware-sleutels per vault (web + backend)
+
+- **Ontgrendelen met een YubiKey Bio** in Chrome/Edge op de laptop via WebAuthn PRF (hmac-secret). Eén vingerafdruk opent de vault; wachtwoord + keyfile blijven de basis en de KeePassXC-noodroute.
+- **Server-geverifieerde WebAuthn** met py_webauthn: `packed`-attestation tot de gevendorde Yubico FIDO-roots (`backend/data/yubico_fido_roots.pem`), AAGUID-allowlist uit FIDO MDS3 (`backend/data/aaguids.json`, reproduceerbaar via `backend/tools/build_aaguids.py` en `build_yubico_roots.py`), UV=1, BE=0/BS=0 (geen gesynchroniseerde passkeys, geen Windows Hello/Touch ID), origin/rpId-controle, signCount-regressie → 409 + audit `vault_key_clone_suspect`. Challenges eenmalig, gehasht opgeslagen en vóór de controles atomair verbruikt.
+- **Seal_v2** (P-CRYPT-09): verzegelde ontgrendelkopie `{ph,kh}` per sleutel naar een X25519-publieke sleutel die uit de PRF wordt afgeleid (HKDF-SHA256 → X25519 → HKDF → AES-256-GCM; AAD = `HSv2`, purpose, vault_id, key_id). Server controleert alleen de vorm (`validate_sealed`). Testvectoren in `specs/testvectors/seal_v2.json`, gegenereerd door `specs/testvectors/gen_seal_v2.py` (Python-referentie, vaste invoer); pytest en `node --test` controleren ze zonder overslaan.
+- **Noodsleutel** (`kind='recovery'`, reserve-YubiKey met PIN van 63 tekens): vrijgave na 24 uur wachttijd, daarna 24 uur venster, één keer bruikbaar. Annuleren, blokkeren (zonder step-up) en blokkade opheffen (alleen met Bio-step-up, besluit 3). Vrijgave wordt geweigerd zonder meldkanaal (503 `notify_unavailable`) en teruggedraaid als de melding niet afgeleverd kan worden (503 `notify_failed`).
+- **Step-up** `POST /auth/stepup` (Bio, of TOTP zolang er geen actieve Bio-sleutel is), 300 s geldig als JWT-claims `stepup_until`/`stepup_method`. Verplicht voor een tweede sleutel, opnieuw verzegelen, rekey en blokkade opheffen.
+- **Wachtwoord/keyfile wijzigen** `PUT /vault/{vid}/rekey` (multipart, SU + If-Match): blob en alle verzegelde kopieën in één atomaire stap; YubiKeys niet nodig. **Opnieuw verzegelen** `PUT /vault/{vid}/keys/sealed` voor na een wijziging in KeePassXC ("kopie verouderd").
+- **Endpoints:** `POST /webauthn/options`, `GET/POST /vault/{vid}/keys`, `POST /vault/{vid}/keys/{kid}/unlock`, `PUT /vault/{vid}/keys/sealed`, `PUT /vault/{vid}/rekey`, `POST/DELETE …/{kid}/release`, `POST/DELETE …/{kid}/block`, `DELETE /vault/{vid}/keys/{kid}`, `POST /auth/stepup`. Details in `API.md`.
+- **Generieke SMTP-mailer** (`backend/services/mail_service.py`, besluit 4): `HORSESAFE_SMTP_HOST/PORT/USER/PASSWORD/FROM/STARTTLS/TIMEOUT_SECONDS`, poort 587 met STARTTLS, From = SMTP-gebruiker. Meldingen (`asyncio.to_thread`, buiten de DB-verbinding) bij koppelen, verwijderen, vrijgave aanvragen/annuleren/gebruiken, blokkeren/opheffen, rekey en clone-vermoeden. De magic-link loopt nu ook via deze mailer; `gmail_*`-settings blijven als fallback (SMTP_SSL 465 werkt niet op HC55).
+- **Frontend:** `js/hwkeys.js` (WebAuthn + Seal_v2 + fail-closed clientcontroles), `js/hwkeys-ui.js` (sleutelbeheer met statussen in gewone taal), `js/stepup.js` (step-up-dialoog), ontgrendelscherm met keuze YubiKey/Keyfile, wijzig-wachtwoord/keyfile-flow. `state.secret` = `{ph,kh}` als `ProtectedValue`, nooit strings.
+- **Audit-events:** `vault_key_add`, `vault_key_add_rejected`, `vault_key_delete`, `vault_key_unlock`, `vault_key_reseal`, `vault_key_clone_suspect`, `vault_rekey`, `recovery_release_request`, `recovery_release_cancel`, `recovery_key_used`, `recovery_block`, `recovery_unblock`, `recovery_unblock_rejected`, `stepup`, `stepup_fail`, `notify_failed`. Nooit `sealed`, `ph`, `kh`, PRF-uitvoer, challenges, assertions of SMTP-gegevens.
+- **`/health`** toont `"test_attestation": <bool>`; `create_app()` weigert te starten als `HORSESAFE_TEST_ATTESTATION` aan staat met rpId `icthorsecloud.nl`.
+
+### Changed
+
+- **Migratie 005 herschreven** (`vault_keys`, `webauthn_challenges`, lege `devices` voor Miller); schema-versie 5; `schema.sql` = alle migraties. De WIP-005 uit commit `9000044` is nooit gedeployed; dev-DB's die hem al hadden opnieuw aanmaken.
+- **`GET /vault/{vid}/keys`** geeft een object `{keys, notify_available, stepup_until}` in plaats van een kale lijst. `GET …/{kid}/sealed` (WIP) vervalt; vervangen door `POST …/{kid}/unlock` met assertion.
+- **Sealed v1** (`{pw,kf}` als leesbare strings, WIP-concept) vervalt, nooit live geweest.
+- **Principes:** nieuw P-CRYPT-09, P-AUTH-07, P-AUTH-08, P-OPS-07; `CLAUDE.md:53` geherformuleerd (besluit 1).
+- **ROADMAP:** v0.2.0 Koblitz, v0.3.0 Miller, v0.4.0 Montgomery, v0.5.0 Lange (niet bouwen); Schneier en verdere items schuiven door (besluit 2).
+- **Dependency:** `webauthn>=2.2,<3` (py_webauthn; trekt `cbor2`, `pyOpenSSL`, `pyasn1` mee). Getest: 2.7.1 met `cryptography` 45.0.7 binnen de bestaande grens `>=43,<46`.
+
+### Fixed — reviewronde 1 (vóór deploy)
+
+- **TOTP-secret overschrijven met alleen het accountwachtwoord** (sessie met `mfa=false`) gaf S + TOTP-step-up en zo, via een eigen Bio, het opheffen van een blokkade (besluit 3). Nu: bestaand TOTP vervangen → 409 `totp_already_configured`; met hardware-sleutels alleen instellen vanuit een MFA-sessie; mail + audit bij elke TOTP-wijziging.
+- **R6 aangescherpt:** TOTP-step-up 24 u geweigerd (`stepup_cooldown`) na het verwijderen van een Bio of het instellen van TOTP met bestaande sleutels; deblokkeren alleen met een Bio die al gekoppeld was vóór de blokkade (JWT-claim `stepup_key`, 403 `stepup_key_too_new`, audit `recovery_unblock_rejected`).
+- **Rekey/opnieuw verzegelen:** de client toont elke sleutel die het materiaal krijgt (recent gekoppeld gemarkeerd) en vraagt bevestiging, zodat een door een aanvaller gekoppelde sleutel niet stil de echte `{ph,kh}` krijgt.
+- **Rekey verloor stil de keyfile** (of het wachtwoord) als alleen het andere onderdeel werd ingevuld; nu blijft een leeg veld het huidige onderdeel, verwijderen gaat via een expliciet vinkje (`credentialsForRekey`).
+- **Kritiek: keyfile van 32 bytes via rekey** — kdbxweb gebruikt die buffer in place; het wissen ervan in `finally` beschadigde `db.credentials`, waarna de eerstvolgende save de kluis onopenbaar maakte. kdbxweb krijgt nu een kopie en de nieuwe Credentials worden uit gekopieerde hashes opgebouwd.
+- **Step-up-dialoog** viel in Safari/zonder X25519/op een andere host nooit terug op TOTP; nu wel (niet bij opheffen).
+
+### Fixed — reviewronde 2 (vóór deploy, HS-BUG-008)
+
+- **MFA-omweg via backup-codes** (ook in LIVE v0.1.0-Massey): `POST /auth/backup-codes/generate` werkte met alleen het accountwachtwoord; daarna gaf `/backup-codes/verify` een `mfa=true`-sessie, en daarmee S (sleutels verwijderen, vrijgave aanvragen, blokkeren). Nu 403 `mfa_required` zonder MFA; bestaande codes blijven dan geldig.
+- **Magic-link was een volledige login** (mailbox alleen = S; de Koblitz-meldingen gaan naar diezelfde mailbox). Nu uitsluitend een tweede stap: verzilveren vereist een wachtwoordsessie van dezelfde gebruiker in dezelfde browser; anders geweigerd en niet verbruikt (`login.html?error=magic_link_login_first`). Mailtekst, MFA-scherm en loginscherm aangepast. Besluit vastgelegd in THREAT_MODEL en `docs/HARDWARE_KEYS.md` §9 (R14).
+- **Verwisselde publieke sleutel** (DB-schrijver, gemanipuleerde back-up): reseal/rekey verzegelde naar `public_key` zoals de server die gaf. Nu legt de client `{key_id: public_key}` bij het koppelen vast in de versleutelde KDBX (CustomData `HorseSafe.KeyPins.v1`, eerst opslaan, dan koppelen) en verzegelt alleen naar sleutels die daar exact zo staan (`key_pin_mismatch`/`key_not_pinned`, niets verzegeld); het sleutelpaneel waarschuwt (R15).
+- **Rekey met verloren antwoord** (504/netwerk na de COMMIT): de tab zette de oude credentials terug terwijl de server al op het nieuwe wachtwoord stond. Nu: expliciete serverweigering = niets doorgevoerd; onbekende uitkomst → `rekey_unknown` en controle via de etag (SHA-256 van de verstuurde blob); doorgevoerd → nieuwe credentials overnemen; niet vast te stellen → kluis vergrendelen met uitleg. De rekey-meldmail gaat nu ná het antwoord (`BackgroundTask`).
+- **Tweede save op rij gaf 422** (ook in LIVE v0.1.0-Massey): `PUT /vault/{id}` stuurde geen `ETag`-header, de frontend las alleen die en verloor zo de etag. Nu header én body-fallback.
+- **Seal_v2-testvectoren toegevoegd** (`specs/testvectors/gen_seal_v2.py` + `seal_v2.json`: 3 PRF-vectoren, `ph+kh`, `alleen ph`, `alleen kh`, negatief: andere vault_id/key_id/purpose, gewijzigde ct). De vectortests worden niet meer overgeslagen.
+
+### Fixed — reviewronde 3 (vóór deploy, HS-BUG-009)
+
+- **TOTP-afkoelperiode omzeilbaar via kluis verwijderen** (R6): `DELETE /vault/{vid}` liet de sleutels via `ON DELETE CASCADE` stil verdwijnen, zonder `vault_key_delete`-audit en zonder mail. Wie wachtwoord + TOTP had, gooide een bijkluis met de enige Bio weg en kreeg direct een TOTP-step-up. Nu: per sleutel audit `vault_key_delete` `{…, via:"vault_delete"}` (telt mee voor `stepup_cooldown`) en mail "sleutel verwijderd".
+- **Magic-link onbruikbaar vanuit webmail:** het sessie-cookie is `SameSite=Strict` en gaat bij een klik in webmail (cross-site) niet mee, dus de redeem eindigde altijd in `magic_link_login_first`. Nu linkt de mail naar `mfa.html#ml=<token>`; die pagina verzilvert met een same-site `POST /auth/magic-link/redeem` waarbij het cookie wel meegaat. `GET /auth/magic-link/redeem` stuurt oudere links zonder bijwerkingen door. Bijvangst: de oude link (`<public_url>/auth/magic-link/redeem`) viel in productie onder de statische `/HorseSafe/`-locatie en bereikte de API niet.
+- **Save kon een rekey overschrijven:** `PUT /vault/{id}` controleerde de etag buiten een transactie en zette de nieuwe etag zonder `WHERE etag = ?`. Een save tegelijk met `/rekey` kon de gerekeyde blob vervangen door een KDBX onder de oude credentials, terwijl alle verzegelde kopieën al nieuw waren. Nu `BEGIN IMMEDIATE` → etag-controle → `UPDATE … WHERE etag = ?` → blob → `COMMIT`, zoals `/rekey`.
+
+### Fixed — bevindingen uit de verkenning van de WIP (HS-BUG-007)
+
+- Annuleren zonder lopende vrijgave gaf 200; nu 409 `nothing_to_cancel`.
+- Audit `vault_key_add` werd geschreven vóór de verificatie; nu pas na de INSERT (afwijzing: `vault_key_add_rejected`).
+- Blokkerende SMTP-aanroep in de event-loop; nu `asyncio.to_thread`, buiten de DB-verbinding.
+- Client ging fail-open door als `getAuthenticatorData` ontbrak; nu `browser_unsupported`.
+- `find()` zonder null-guard in `hwkeys-ui.js`.
+- Migratie gebruikte `DELETE FROM schema_version`; nu `INSERT OR REPLACE`.
+
+### Tests
+
+- Te meten (pytest met coverage ≥ 80%, `node --test`, Playwright met CDP virtual authenticator, kdbx-oracle). Uitkomsten worden in `version.json` vastgelegd.
+
+### Notes
+
+- **Zero-knowledge:** de server krijgt alleen `pk_c` en een verzegelde kopie die hij aantoonbaar niet kan openen (P-CRYPT-09). Wachtwoord, keyfile en afgeleide sleutel verlaten de browser nog steeds nooit.
+- **Bewust niet in Koblitz:** `kind='phone'`, device-endpoints, pairing, approvals, JWT-claim `sid`, FCM, native kluis (§12.15).
+- **Deploy:** nog niet. SMTP-gegevens komen in `/opt/horsesafe/.env` (alleen variabelenamen in docs).
+
 
 ## [0.1.0-Massey] — 2026-07-20
 

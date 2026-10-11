@@ -12,6 +12,91 @@ Kleurcodes:
 
 ## Open bugs
 
+### HS-BUG-009 — Reviewronde 3 Koblitz: afkoelperiode via kluis verwijderen, magic-link vanuit webmail, save tegen rekey
+
+**Kleur:** 🟡 Geel (punt 1 raakt R6; punt 2 maakt een MFA-factor onbruikbaar; punt 3 kan een kluis onopenbaar voor hardware-sleutels maken)
+**Status:** fix in v0.2.0-Koblitz (werkboom, nog niet gedeployed)
+**Versie ontdekt:** v0.2.0-Koblitz reviewronde 3 (11-10-2026)
+**Versie opgelost:** v0.2.0-Koblitz
+
+**Symptoom:**
+1. `DELETE /vault/{vid}` met de enige Bio erin → direct `POST /auth/stepup {method:totp}` 200 (verwacht 403 `stepup_cooldown`); geen audit `vault_key_delete`, geen mail.
+2. Magic-link aanklikken in webmail → altijd `login.html?error=magic_link_login_first`, ook ingelogd in dezelfde browser.
+3. Save en rekey tegelijk → blob onder de oude credentials, kopieën onder de nieuwe.
+
+**RCA — drie niveaus:**
+- **Functioneel:** "sleutel verwijderd" had één ingang verondersteld; de kluis is een tweede. Het tweede-stap-ontwerp van de magic-link ging uit van een cookie dat de browser bij cross-site navigatie niet stuurt.
+- **Technisch:** cascade-delete zonder audit; `totp_cooldown_until` leest alleen `vault_key_delete`. Redeem als GET-navigatie met `SameSite=Strict`-cookie. `update_vault_blob` deed check-then-write zonder transactie.
+- **Architectonisch:** beveiligingsregels die op de audit-log steunen, moeten elke manier waarop een sleutel verdwijnt zien; tests met httpx zetten cookies direct en zien browser-cookieregels niet; twee schrijvers op dezelfde blob moeten dezelfde vergrendeling gebruiken.
+
+**Fix:** zie CHANGELOG 0.2.0-Koblitz "Fixed — reviewronde 3"; `docs/HARDWARE_KEYS.md` §9 (R6, R14), §12.6.5, §12.6.8, §12.8.
+- Test: `backend/tests/test_stepup.py::test_totp_stepup_cooldown_after_vault_delete_with_bio`, `test_vault_delete_without_keys_no_cooldown_no_mail`; `test_mfa_magic_link.py::test_magic_link_get_is_side_effect_free_redirect` (+ aangepaste POST-tests); `test_vault.py::test_update_waits_for_concurrent_rekey_and_conflicts`; `frontend/tests/magiclink.spec.ts` (klik vanaf een andere site, cookie aantoonbaar niet mee bij de GET en wel bij de POST).
+
+**Preventie:**
+- Elke cascade die beveiligingsrelevante rijen weghaalt, logt die rijen expliciet.
+- Elke flow die op een cookie leunt na een link uit een mail: e2e met een cross-site klik.
+- Schrijvers op dezelfde vault-blob: allemaal `BEGIN IMMEDIATE` met de etag-controle binnen de transactie.
+
+### HS-BUG-008 — Reviewronde 2 Koblitz: MFA-omwegen, verwisselbare ontvanger, rekey met verloren antwoord
+
+**Kleur:** 🔴 Rood (punt 1-3 raken de S-garantie en P-CRYPT-09; punt 1 en 5 zitten ook in LIVE v0.1.0-Massey)
+**Status:** fix in v0.2.0-Koblitz (werkboom, nog niet gedeployed); LIVE-hotfix ter beslissing (ACTIONS)
+**Versie ontdekt:** v0.2.0-Koblitz reviewronde 2 (10-10-2026); punt 1 bestaat sinds v0.0.4-Rivest
+**Versie opgelost:** v0.2.0-Koblitz
+
+**Symptoom:**
+1. `POST /auth/backup-codes/generate` met alleen het accountwachtwoord, daarna `/backup-codes/verify` → `mfa=true`.
+2. Magic-link-redeem gaf zonder wachtwoord een `mfa=true`-sessie (mailbox = S).
+3. Reseal/rekey verzegelde `{ph,kh}` naar de `public_key` uit `GET /keys`, zonder te controleren dat die sinds het koppelen niet veranderd was.
+4. Rekey: bij een 504/netwerkfout ná de COMMIT zette de tab de oude credentials terug (volgende save 412; wie het nieuwe wachtwoord weggooit en geen YubiKey heeft, kan niet meer in de kluis).
+5. Tweede save op rij → 422: `PUT /vault/{id}` gaf geen `ETag`-header.
+6. Seal_v2-testvectoren ontbraken; de kruistest JS == Python werd overgeslagen, terwijl CHANGELOG ze als aanwezig noemde.
+
+**RCA — drie niveaus:**
+- **Functioneel:** "S = wachtwoord + tweede factor" was niet overal waar: twee routes maakten van één factor een MFA-sessie.
+- **Technisch:** `backup_codes_generate` gebruikte `require_auth` i.p.v. de MFA-check; magic-link-redeem gaf een nieuwe sessie i.p.v. een bestaande op te waarderen; de client vertrouwde de servergeleverde publieke sleutel; de rekey-UI kende alleen "gelukt" of "mislukt"; de mail stond vóór het antwoord.
+- **Architectonisch:** de zero-knowledge-argumentatie ging uit van een passieve server; een actieve aanvaller op de sleutellijst en een onzekere netwerkuitkomst waren niet gemodelleerd.
+
+**Fix:** zie CHANGELOG 0.2.0-Koblitz "Fixed — reviewronde 2"; THREAT_MODEL R14/R15; `docs/HARDWARE_KEYS.md` §9, §12.6.5, §12.13.
+- Test: `backend/tests/test_backup_codes.py::test_generate_requires_mfa_session`, `test_mfa_magic_link.py` (zonder/andermans sessie), `test_vault_keys.py::test_rekey_mail_failure_does_not_fail_committed_rekey`, `test_vault.py` (ETag-header), `test_seal_v2.py::test_vectors_match_generator`; `frontend/tests/unit/hwkeys-flow.test.mjs` (pins, `rekey_unknown`, `rekeyLanded`); `frontend/tests/hwkeys.spec.ts` (pins na opslaan+openen, verwisselde `public_key`, rekey met 504).
+
+**Preventie:**
+- Elke route die `mfa=true` uitgeeft of MFA-materiaal wijzigt, moet zelf al MFA vereisen of een bestaande wachtwoordsessie opwaarderen; pytest per route.
+- Wat de client naar een publieke sleutel verzegelt, moet hij zelf vastgelegd hebben (niet de server).
+- Elke mutatie met een niet-idempotente uitkomst heeft een "onbekend"-pad met controle achteraf.
+
+### HS-BUG-007 — WIP-Koblitz (commit `9000044`): fail-open en volgorde-fouten rond hardware-sleutels
+
+**Kleur:** 🟡 Geel (logische architectuur — contract ontbrak; geen productie-impact, nooit gedeployed)
+**Status:** in-progress — fix in v0.2.0-Koblitz volgens `docs/HARDWARE_KEYS.md` §12; resolved zodra de tests in §12.14 groen zijn
+**Versie ontdekt:** v0.2.0-Koblitz (verkenning van de WIP, 10-10-2026)
+**Versie opgelost:** v0.2.0-Koblitz (gepland)
+
+**Symptoom (zes bevindingen in de WIP-code):**
+1. `DELETE …/release` zonder lopende vrijgave gaf 200 → nu 409 `nothing_to_cancel`.
+2. Audit `vault_key_add` werd geschreven vóór de verificatie van de sleutel → nu pas na de INSERT; een afwijzing logt `vault_key_add_rejected`.
+3. Meldingsmail via blokkerende SMTP binnen de async event-loop (en binnen een open DB-verbinding) → nu `mail_service.send_async` (`asyncio.to_thread`) na de DB-actie.
+4. Client ging door als `response.getAuthenticatorData` ontbrak (fail-open) → nu `HwKeyError('browser_unsupported')`.
+5. `find()` zonder null-guard in `hwkeys-ui.js` → TypeError bij een verdwenen sleutel.
+6. Migratie 005 deed `DELETE FROM schema_version` → nu `INSERT OR REPLACE INTO schema_version (version) VALUES (5)`.
+
+Daarnaast bevatte de WIP een sealed-v1-formaat met leesbare `{pw,kf}` en geen server-side WebAuthn-verificatie; beide vervangen door Seal_v2 `{ph,kh}` (P-CRYPT-09) en py_webauthn-controles.
+
+**RCA — drie niveaus:**
+- **Functioneel:** de gebruiker had geen echte garantie dat alleen zijn eigen YubiKey Bio de kopie kon vrijgeven; meldingen konden de server laten haperen; een annulering zonder effect meldde "gelukt".
+- **Technisch:** de WIP-sessie bouwde frontend en backend zonder gedeeld contract; verificatie zat alleen in de client, audit en mail stonden vóór de controles, en SMTP liep synchroon.
+- **Architectonisch:** P-CRYPT-09 bestond nog niet; zonder principe en API-contract was niet vastgelegd wat de server moet verifiëren voordat hij een kopie vrijgeeft.
+
+**Fix:**
+- Contract `docs/HARDWARE_KEYS.md` §12 (volgorde van controles, foutcodes, audit pas na verificatie, mailer buiten de DB-verbinding, fail-closed client).
+- Test: `backend/tests/test_vault_keys.py`, `test_webauthn.py`, `test_stepup.py`, `test_mail_service.py`, `test_schema.py`; `frontend/tests/unit/hwkeys-*.test.mjs`; `frontend/tests/hwkeys.spec.ts`.
+
+**Preventie:**
+- Parallelle bouw alleen tegen een vastgelegd contract met minimale testlijst (§12.14).
+- Een audit-event of mail mag nooit vóór de laatste verificatiestap staan; pytest controleert dat een afgewezen registratie geen `vault_key_add` oplevert.
+
+---
+
 ### HS-BUG-006 — unlock-fout toont rauwe foutcode "InvalidKey" i.p.v. gebruiksvriendelijke melding
 
 **Kleur:** 🟢 Groen (snel herstel — fysiek niveau)

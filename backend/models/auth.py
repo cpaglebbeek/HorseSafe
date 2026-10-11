@@ -14,3 +14,9 @@ class TotpSetupResponse(BaseModel):
 
 class MagicLinkRequest(BaseModel):
     email: EmailStr
+
+
+class MagicLinkRedeem(BaseModel):
+    """Body van ``POST /auth/magic-link/redeem`` (token uit het fragment van ``mfa.html``)."""
+
+    t: str = Field(min_length=16, max_length=128, pattern=r"^[A-Za-z0-9_\-]+$")

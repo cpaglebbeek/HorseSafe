@@ -9,3 +9,4 @@
 - `bitwarden-export-schema.md` — voor import-formaat
 - `keepass-csv-format.md` — kolom-volgorde + escaping
 - `xlsx-schema.md` — eigen schema (header-row + UTF-8)
+- `testvectors/seal_v2.json` — Seal_v2-testvectoren (v0.2.0-Koblitz, `docs/HARDWARE_KEYS.md` §12.5), gegenereerd door `testvectors/gen_seal_v2.py` (vaste invoer, Python-referentie `backend/tests/seal_v2_ref.py`). Opnieuw maken: `python specs/testvectors/gen_seal_v2.py`; controleren: `--check`. Gebruikt door pytest, `node --test` en later de JVM (Miller).

@@ -6,6 +6,44 @@
   function show(id, msg) { const el = $(id); if (msg) el.textContent = msg; el.hidden = false; }
   function hide(id) { $(id).hidden = true; }
 
+  // v0.2.0-Koblitz (reviewronde 3): magic-link uit de mail → mfa.html#ml=<token>.
+  // Het sessie-cookie is SameSite=Strict en gaat niet mee bij een klik vanuit webmail (cross-site).
+  // Deze pagina verzilvert daarom met een same-site POST, waarbij het cookie wel meegaat.
+  const LINK_ERRORS = {
+    invalid_link: 'Deze link is ongeldig, verlopen of al gebruikt. Vraag hieronder een nieuwe aan.',
+  };
+  async function redeemMagicLink() {
+    const m = /(?:^#|&)ml=([A-Za-z0-9_-]+)/.exec(window.location.hash);
+    if (!m) return;
+    // Token direct uit de adresbalk/geschiedenis halen
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    show('magic-redeem', 'Link wordt bevestigd…');
+    try {
+      const r = await fetch(window.HorseSafeAPI.base + '/auth/magic-link/redeem', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: m[1] }),
+      });
+      if (r.ok) {
+        window.location.href = 'vault.html';
+        return;
+      }
+      const data = await r.json().catch(() => null);
+      const err = data?.detail?.error || 'unknown';
+      if (err === 'magic_link_login_first') {
+        window.location.href = 'login.html?error=magic_link_login_first';
+        return;
+      }
+      $('magic-redeem').hidden = true;
+      show('magic-redeem-error', LINK_ERRORS[err] || `Fout: ${err}`);
+    } catch (e) {
+      $('magic-redeem').hidden = true;
+      show('magic-redeem-error', 'Netwerkfout: ' + e.message);
+    }
+  }
+  redeemMagicLink();
+
   // Tab-switch
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {

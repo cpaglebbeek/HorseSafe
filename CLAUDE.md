@@ -50,9 +50,11 @@ Conform globale Gemini_Projects/CLAUDE.md: na elke wijziging `git commit + push`
 
 ## Niet-onderhandelbare grenzen
 
-- ❌ Server-side pw/keyfile-opslag (zelfs encrypted) → verbreekt zero-knowledge
+- ❌ Server-side pw/keyfile-opslag in een vorm die de server kan openen (ook niet versleuteld met een serversleutel) → verbreekt zero-knowledge. Enige uitzondering: P-CRYPT-09 (verzegeld naar gebruikershardware).
 - ❌ Server-side decryptie → verbreekt zero-knowledge
 - ❌ "Recovery" via server-known seed → verbreekt zero-knowledge
 - ❌ Plaintext-export zonder confirm-dialog + audit-log + reden
 - ❌ Build zonder versie-bump
 - ❌ Nginx-edit zonder SHARED_INFRASTRUCTURE.md te raadplegen
+
+Uitwerking van P-CRYPT-09 (hardware-sleutels, noodsleutel, Seal_v2, Koblitz API-contract): `docs/HARDWARE_KEYS.md`. Bij twijfel over wat de server van een sleutel mag bewaren, wint dat document (§12 voor v0.2.0-Koblitz).

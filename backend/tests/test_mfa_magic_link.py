@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+import pyotp
 import pytest
 from httpx import AsyncClient
 
@@ -38,60 +39,129 @@ async def test_magic_link_unknown_email_no_leak(
     assert len(stub_email) == 0
 
 
+def _links(sent: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Alleen de magic-link-mails (TOTP instellen stuurt ook een melding)."""
+    return [m for m in sent if "/mfa.html#ml=" in m["body"]]
+
+
+def _token(sent: list[dict[str, Any]]) -> str:
+    links = _links(sent)
+    assert links, "geen magic-link-mail"
+    m = re.search(r"/mfa\.html#ml=([\w\-_]+)", links[-1]["body"])
+    assert m
+    return m.group(1)
+
+
+async def _register_with_totp(client: AsyncClient, email: str) -> None:
+    """Gebruiker met TOTP: na een wachtwoord-login is de sessie mfa=false."""
+    await client.post(
+        "/auth/register",
+        json={"email": email, "password": VALID_PW, "ack_data_loss": True},
+    )
+    await client.post("/auth/login", json={"email": email, "password": VALID_PW})
+    secret = (await client.post("/auth/totp/setup")).json()["secret"]
+    r = await client.post(
+        "/auth/totp/verify", json={"secret": secret, "code": pyotp.TOTP(secret).now()}
+    )
+    assert r.status_code == 200
+    await client.post("/auth/logout")
+
+
 async def test_magic_link_flow_happy_path(
     client: AsyncClient, stub_email: list[dict[str, Any]]
 ) -> None:
-    # 1. Register user
     email = "magic@example.com"
-    await client.post(
-        "/auth/register",
-        json={"email": email, "password": VALID_PW, "ack_data_loss": True},
-    )
+    await _register_with_totp(client, email)
 
-    # 2. Vraag magic-link aan (zonder ingelogd te zijn)
+    # 1. Wachtwoord-login → mfa=false, vault dicht
+    await client.post("/auth/login", json={"email": email, "password": VALID_PW})
+    assert (await client.get("/vault")).status_code == 403
+
+    # 2. Vraag magic-link aan
     r = await client.post("/auth/magic-link", json={"email": email})
     assert r.status_code == 200
-    assert len(stub_email) == 1
-    assert stub_email[0]["to"] == email
+    assert len(_links(stub_email)) == 1
+    assert _links(stub_email)[0]["to"] == email
+    token = _token(stub_email)
 
-    # 3. Extract token uit e-mail-body
-    body = stub_email[0]["body"]
-    m = re.search(r"/auth/magic-link/redeem\?t=([\w\-_]+)", body)
-    assert m, f"Geen token in e-mail-body: {body[:200]}"
-    token = m.group(1)
+    # 3. Verzilver in dezelfde browser (POST vanaf mfa.html) → mfa=true
+    r = await client.post("/auth/magic-link/redeem", json={"t": token})
+    assert r.status_code == 200
+    assert r.json() == {"ok": True}
+    assert "set-cookie" in {h.lower() for h in r.headers}
+    assert (await client.get("/vault")).status_code == 200
+    assert (await client.get("/auth/me")).json()["mfa_pass"] is True
 
-    # 4. Verzilver
-    r = await client.get(f"/auth/magic-link/redeem?t={token}", follow_redirects=False)
-    assert r.status_code == 302
-    assert "/vault.html" in r.headers["location"]
-    assert "horsesafe_session" in r.cookies or "set-cookie" in {h.lower() for h in r.headers}
-
-    # 5. Magic-link is single-use
-    r2 = await client.get(f"/auth/magic-link/redeem?t={token}", follow_redirects=False)
-    assert r2.status_code == 302
-    assert "error=invalid_link" in r2.headers["location"]
+    # 4. Magic-link is single-use
+    r2 = await client.post("/auth/magic-link/redeem", json={"t": token})
+    assert r2.status_code == 400
+    assert r2.json()["detail"]["error"] == "invalid_link"
 
 
-async def test_magic_link_grants_mfa_pass(
+async def test_magic_link_get_is_side_effect_free_redirect(
     client: AsyncClient, stub_email: list[dict[str, Any]]
 ) -> None:
-    """Magic-link redemption zet mfa=true cookie."""
-    email = "mfagrant@example.com"
-    await client.post(
-        "/auth/register",
-        json={"email": email, "password": VALID_PW, "ack_data_loss": True},
-    )
+    """Reviewronde 3: het SameSite=Strict-cookie gaat niet mee bij een klik vanuit webmail
+    (cross-site). De GET (links uit oudere mails) kijkt daarom niet naar het cookie en verbruikt
+    niets: hij stuurt door naar mfa.html, dat same-site POST en wél het cookie meestuurt."""
+    email = "webmail@example.com"
+    await _register_with_totp(client, email)
+    await client.post("/auth/login", json={"email": email, "password": VALID_PW})
     await client.post("/auth/magic-link", json={"email": email})
+    token = _token(stub_email)
 
-    body = stub_email[0]["body"]
-    m = re.search(r"\?t=([\w\-_]+)", body)
-    assert m
-    token = m.group(1)
+    # Cross-site klik: géén cookie mee
+    session = client.cookies.get("horsesafe_session")
+    assert session
+    client.cookies.clear()
+    r = await client.get(f"/auth/magic-link/redeem?t={token}", follow_redirects=False)
+    assert r.status_code == 302
+    assert r.headers["location"].endswith(f"/mfa.html#ml={token}")
+    assert "set-cookie" not in {h.lower() for h in r.headers}
 
-    # Volg redirect → cookie wordt gezet door redeem-endpoint
-    await client.get(f"/auth/magic-link/redeem?t={token}", follow_redirects=False)
-
-    # /vault is nu direct toegankelijk (mfa=true)
-    r = await client.get("/vault")
+    # De pagina POST daarna same-site, mét cookie → slaagt (token was niet verbruikt)
+    client.cookies.set("horsesafe_session", session)
+    r = await client.post("/auth/magic-link/redeem", json={"t": token})
     assert r.status_code == 200
-    assert r.json() == []
+    assert (await client.get("/vault")).status_code == 200
+
+
+async def test_magic_link_without_password_session_refused_and_not_consumed(
+    client: AsyncClient, stub_email: list[dict[str, Any]]
+) -> None:
+    """Reviewronde 2: mailbox-toegang alleen geeft geen sessie (en dus geen S)."""
+    email = "mailbox-only@example.com"
+    await _register_with_totp(client, email)
+    await client.post("/auth/magic-link", json={"email": email})
+    token = _token(stub_email)
+
+    # Geen cookie → geweigerd, geen sessie
+    r = await client.post("/auth/magic-link/redeem", json={"t": token})
+    assert r.status_code == 403
+    assert r.json()["detail"]["error"] == "magic_link_login_first"
+    assert "set-cookie" not in {h.lower() for h in r.headers}
+    assert (await client.get("/auth/me")).status_code == 401
+    assert (await client.get("/vault")).status_code == 401
+
+    # De link is niet verbruikt: na een wachtwoord-login werkt hij alsnog
+    await client.post("/auth/login", json={"email": email, "password": VALID_PW})
+    r = await client.post("/auth/magic-link/redeem", json={"t": token})
+    assert r.status_code == 200
+    assert (await client.get("/vault")).status_code == 200
+
+
+async def test_magic_link_session_of_other_user_refused(
+    client: AsyncClient, stub_email: list[dict[str, Any]]
+) -> None:
+    await _register_with_totp(client, "slachtoffer@example.com")
+    await _register_with_totp(client, "aanvaller@example.com")
+    await client.post("/auth/magic-link", json={"email": "slachtoffer@example.com"})
+    token = _token(stub_email)
+
+    await client.post("/auth/login", json={"email": "aanvaller@example.com", "password": VALID_PW})
+    r = await client.post("/auth/magic-link/redeem", json={"t": token})
+    assert r.status_code == 403
+    assert r.json()["detail"]["error"] == "magic_link_login_first"
+    me = (await client.get("/auth/me")).json()
+    assert me["email"] == "aanvaller@example.com"
+    assert me["mfa_pass"] is False

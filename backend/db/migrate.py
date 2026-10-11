@@ -42,6 +42,22 @@ async def run_migrations() -> list[int]:
     return applied
 
 
+async def check_vault_keys_schema() -> None:
+    """Weiger te starten op een DB met de nooit-uitgerolde WIP-005 (vault_keys zonder 'status').
+
+    Migratie 005 is herschreven (docs/HARDWARE_KEYS.md §12.9); zo'n dev-DB moet opnieuw worden
+    aangemaakt. Productie (schema 4) heeft de tabel niet en krijgt de nieuwe 005.
+    """
+    settings = get_settings()
+    async with connect(settings.db_path) as conn:
+        cursor = await conn.execute("PRAGMA table_info(vault_keys)")
+        cols = {str(r["name"]) for r in await cursor.fetchall()}
+    if cols and "status" not in cols:
+        raise RuntimeError(
+            "vault_keys heeft het WIP-schema van vóór v0.2.0-Koblitz; maak deze dev-DB opnieuw aan"
+        )
+
+
 if __name__ == "__main__":
     applied = asyncio.run(run_migrations())
     if applied:

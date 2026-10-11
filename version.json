@@ -1,6 +1,6 @@
 {
-  "version": "0.1.0",
-  "codename": "Massey",
+  "version": "0.2.0",
+  "codename": "Koblitz",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -13,10 +13,26 @@
     "Bellare",
     "Rogaway",
     "Bernstein",
-    "Massey"
+    "Massey",
+    "Koblitz",
+    "Miller",
+    "Montgomery",
+    "Lange"
   ],
-  "phase": "Phase 9 — Public launch (Massey): icthorse.nl/HorseSafe/ redirect LIVE + pen-test-checklist afgewerkt (OpenAPI-docs dicht in productie) + AGPL-3.0 public. LIVE: https://icthorsecloud.nl/HorseSafe/ + https://icthorse.nl/HorseSafe/",
-  "released": "2026-07-20",
+  "codename_sequence_2026_10_10": {
+    "0.2.0": "Koblitz — hardware-sleutels in het web (YubiKey Bio + noodsleutel), server-geverifieerd",
+    "0.3.0": "Miller — Android-app",
+    "0.4.0": "Montgomery — laptop ontgrendelen via telefoon-QR + vinger",
+    "0.5.0": "Lange — native kluis in de app (gepland na veldtest v0.4, niet bouwen)",
+    "daarna": "Schneier (browserextensie) en verdere ROADMAP-items schuiven door"
+  },
+  "phase": "Phase 10 — Koblitz (in bouw): hardware-sleutels per vault via WebAuthn PRF + Seal_v2 (P-CRYPT-09), noodsleutel met 24 uur wachttijd en blokkade, step-up, rekey, generieke SMTP-mailer. Ontwerp: docs/HARDWARE_KEYS.md. Nog niet gedeployed; LIVE draait 0.1.0-Massey.",
+  "released": "te bepalen (nog niet gedeployed)",
+  "previous_release": {
+    "version": "0.1.0",
+    "codename": "Massey",
+    "released": "2026-07-20"
+  },
   "live_url": "https://icthorsecloud.nl/HorseSafe/",
   "public_url": "https://icthorse.nl/HorseSafe/ (302 → HC55, LIVE 2026-07-20)",
   "deploy_status": {
@@ -32,11 +48,16 @@
   "kdbx_format": 4,
   "kdf_in_use": "AES-KDF (KeePassXC-CLI-verified). Argon2id-default deferred v1.0-Bernstein.",
   "test_results": {
-    "backend_pytest": "67/67 ✅",
-    "frontend_e2e_playwright": "5/5 ✅",
-    "kdbx_oracle_ci": "✓ KeePassXC-CLI roundtrip groen",
-    "live_smoke_test": "✓ health + register + login + vault + me + logout (full roundtrip op LIVE-server)"
+    "backend_pytest": "196/196 passed (2026-10-11, webauthn 2.7.1, cryptography 45.0.7)",
+    "backend_coverage": "te meten (doel ≥ 80%)",
+    "frontend_unit_node_test": "59/59 pass, 0 skipped (2026-10-11)",
+    "frontend_e2e_playwright": "10/10 groen (2026-10-11; admin/mfa/smoke tegen geïsoleerde backend)",
+    "frontend_e2e_hwkeys_virtual_authenticator": "hwkeys 2/2 + magiclink 3/3 (CDP virtual authenticator)",
+    "kdbx_oracle_ci": "te meten",
+    "smtp_587_starttls_vanaf_hc55": "te meten",
+    "live_smoke_test": "te meten (na deploy: /api/health = 0.2.0-Koblitz, test_attestation:false)"
   },
-  "schema_version": 4,
-  "next_version_planned": "0.2.0 (shared vaults + offline-modus ServiceWorker-cache)"
+  "schema_version": 5,
+  "design_doc": "docs/HARDWARE_KEYS.md",
+  "next_version_planned": "0.3.0-Miller (Android-app; zie ROADMAP.md en docs/HARDWARE_KEYS.md §10)"
 }

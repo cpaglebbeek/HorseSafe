@@ -16,6 +16,7 @@ from ..config import get_settings
 from ..db.connection import connect
 from ..models.vault import VaultPublic
 from ..services import audit_service, jwt_service, storage_service
+from ..services import vault_key_service as vk_svc
 
 router = APIRouter()
 
@@ -96,6 +97,7 @@ async def read_vault(vault_id: str, request: Request) -> Response:
 async def update_vault(
     vault_id: str,
     request: Request,
+    response: Response,
     if_match: str = Header(..., alias="If-Match"),
     blob: UploadFile = File(...),
 ) -> VaultPublic:
@@ -139,14 +141,31 @@ async def update_vault(
             for k, v in result.items()
             if not k.startswith("_") and k != "blob_path" and k != "user_id"
         }
+        # ETag ook als header (zoals GET en /rekey); de frontend las hem hier en kreeg null,
+        # waardoor de tweede save op rij zonder If-Match ging (422). Reviewronde 2.
+        response.headers["ETag"] = str(clean["etag"])
         return VaultPublic(**clean)  # type: ignore[arg-type]
 
 
 @router.delete("/{vault_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_vault(vault_id: str, request: Request) -> Response:
+    """Verwijder een kluis. Haar hardware-sleutels verdwijnen mee (FK ON DELETE CASCADE).
+
+    Reviewronde 3: die sleutels tellen als verwijderd, net als via ``DELETE …/keys/{id}``: per
+    sleutel een ``vault_key_delete``-audit (zodat ``stepup_service.totp_cooldown_until`` de
+    TOTP-afkoelperiode start als er een Bio bij zat, R6 / §12.8) en een melding (§12.6.8).
+    Anders kon wie wachtwoord + TOTP buitmaakt de kluis met de enige Bio weggooien en direct een
+    TOTP-step-up krijgen.
+    """
     user_id = _user(request)
     settings = get_settings()
+    ip = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
     async with connect(settings.db_path) as conn:
+        meta = await storage_service.get_vault_meta(conn, user_id, vault_id)
+        if not meta:
+            raise HTTPException(status_code=404, detail={"error": "not_found"})
+        keys = await vk_svc.list_keys(conn, user_id, vault_id)
         ok = await storage_service.delete_vault(conn, user_id, vault_id)
         if not ok:
             raise HTTPException(status_code=404, detail={"error": "not_found"})
@@ -154,8 +173,45 @@ async def delete_vault(vault_id: str, request: Request) -> Response:
             conn,
             user_id=user_id,
             event="vault_delete",
-            ip=request.client.host if request.client else None,
-            detail={"vault_id": vault_id},
+            ip=ip,
+            detail={"vault_id": vault_id, "keys": len(keys)},
+        )
+        for key in keys:
+            await audit_service.log(
+                conn,
+                user_id=user_id,
+                event="vault_key_delete",
+                ip=ip,
+                user_agent=user_agent,
+                detail={
+                    "vault_id": vault_id,
+                    "key_id": key["id"],
+                    "kind": key["kind"],
+                    "via": "vault_delete",
+                },
+            )
+        email = await vk_svc.user_email(conn, user_id) if keys else None
+    # Melding NA het sluiten van de DB-verbinding
+    if keys:
+        n_bio = sum(1 for k in keys if k["kind"] == "bio")
+        n_rec = sum(1 for k in keys if k["kind"] == "recovery")
+        await vk_svc.notify_user(
+            email,
+            "HorseSafe: sleutel verwijderd",
+            vk_svc.notify_body(
+                f"Je kluis '{meta['name']}' is verwijderd, en daarmee {n_bio} sleutel(s) en "
+                f"{n_rec} noodsleutel(s) die eraan gekoppeld waren.",
+                label=", ".join(str(k["label"]) for k in keys),
+                ip=ip,
+                advice=(
+                    "Log direct in, controleer je kluizen en sleutels en wijzig je "
+                    "accountwachtwoord als je dit niet zelf deed."
+                ),
+            ),
+            user_id=user_id,
+            event="vault_key_delete",
+            ip=ip,
+            user_agent=user_agent,
         )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

@@ -95,7 +95,7 @@ async def admin_send_magic_link(
         if not row:
             raise HTTPException(status_code=404, detail={"error": "user_not_found"})
         target_email = str(row["email"])
-        await magic_link_service.issue_magic_link(conn, user_id, target_email)
+        _token, mail_body = await magic_link_service.create_magic_link(conn, user_id)
         await audit_service.log(
             conn,
             user_id=str(payload["sub"]),
@@ -104,6 +104,7 @@ async def admin_send_magic_link(
             detail={"target_user": user_id, "target_email": target_email},
             reason=body.reason,
         )
+    await magic_link_service.send_magic_link(target_email, mail_body)
     return {"ok": True}
 
 

@@ -31,6 +31,8 @@
 
     <main>
       <section class="card">
+        <div id="magic-redeem" class="success" role="status" hidden></div>
+        <div id="magic-redeem-error" class="error" role="alert" hidden></div>
         <p class="muted">
           Voltooi één van onderstaande stappen om door te gaan naar je vault.
           Beide methoden zijn gelijkwaardig veilig.
@@ -57,10 +59,11 @@
         </div>
 
         <div id="magic-pane" hidden>
-          <h2 style="font-size: 1rem;">Stuur een eenmalige inlog-link naar je e-mail</h2>
+          <h2 style="font-size: 1rem;">Stuur een bevestigingslink naar je e-mail</h2>
           <p class="muted">
             We sturen een link die 10 minuten geldig is en die eenmalig gebruikt kan worden.
-            Als je geen e-mail ziet binnen 2 minuten — check spam.
+            Open hem <strong>in deze browser</strong>: de link bevestigt alleen je wachtwoord-login
+            hier en logt nergens anders in. Als je geen e-mail ziet binnen 2 minuten — check spam.
           </p>
           <form id="magic-form">
             <label for="magic-email">E-mailadres</label>

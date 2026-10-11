@@ -68,6 +68,25 @@ npx playwright install chromium   # eenmalig (browser binary)
 npm test
 ```
 
+### Hardware-sleutels (v0.2.0-Koblitz, `docs/HARDWARE_KEYS.md` §12)
+
+```bash
+cd frontend
+npm run test:unit      # node --test: Seal_v2, AAD-binding, {ph,kh} ↔ kdbxweb, fail-closed clientcontroles
+                       # testvectoren: specs/testvectors/seal_v2.json (ander pad: HS_SEAL_VECTORS=…)
+HS_PYTHON=/pad/naar/venv/bin/python npm run test:hwkeys
+HS_PYTHON=/pad/naar/venv/bin/python npx playwright test tests/magiclink.spec.ts
+```
+
+`tests/hwkeys.spec.ts` start zelf een backend (uvicorn, vrije poort, tijdelijke DB in `HS_E2E_TMPDIR` of de
+systeem-tmp) met `HORSESAFE_WEBAUTHN_RP_ID=localhost` en `HORSESAFE_TEST_ATTESTATION=1`, plus een statische
+frontend op een vrije poort, en gebruikt een CDP virtual authenticator (`ctap2`, `hasUserVerification`,
+`isUserVerified`, `hasPrf`). De frontend kiest in dev de backendpoort uit `localStorage['horsesafe.devApiPort']`
+(standaard 3997). Draai de overige e2e-specs nooit op HC55 zonder eigen backend: daar is 3997 productie.
+De gedeelde opzet (backend + frontend starten, TOTP-helpers) staat in `tests/e2e-stack.ts`. `tests/magiclink.spec.ts`
+gebruikt die ook: magic-link aanklikken vanaf een andere site (zoals webmail), waarbij het `SameSite=Strict`-cookie
+niet meegaat met de navigatie en wel met de same-site POST vanaf `mfa.html`.
+
 ## Wat doet de POC?
 
 1. **S1 — Landing** met register-form (account-pw + ack-checkbox)

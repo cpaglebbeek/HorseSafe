@@ -15,8 +15,11 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 | **Administrator** | Beheert user-accounts en server-stats; ziet GEEN vault-inhoud |
 | **Server (HorseSafe-backend)** | Slaat encrypted vault-blobs op, doet account-auth, host MFA-flow |
 | **Browser-client (HorseSafe-frontend)** | Voert crypto-operaties uit, beheert vault-content in geheugen |
-| **Browser-extensie (optioneel, v0.2)** | Doet autocomplete, écht clipboard-wipe, native messaging met HorseSafe-tab |
-| **MFA-provider Gmail** | Levert magic-link e-mails (hergebruik iCt_Horse magic-link stack) |
+| **Browser-extensie (optioneel, Schneier)** | Doet autocomplete, écht clipboard-wipe, native messaging met HorseSafe-tab |
+| **YubiKey Bio (v0.2.0-Koblitz)** | Hardware-sleutel van de gebruiker: vingerafdruk-UV + WebAuthn PRF; levert de sleutel waarmee de verzegelde ontgrendelkopie opengaat |
+| **Reserve-YubiKey / noodsleutel (v0.2.0-Koblitz)** | YubiKey 5 of Bio met alleen een PIN van 63 tekens, in de fysieke kluis; bruikbaar na 24 u wachttijd |
+| **Android-app (Miller, gepland)** | YubiKey inrichten, telefoon als sleutel, blokkeren; later goedkeuren van laptop-ontgrendeling (Montgomery) |
+| **Mailer (SMTP, v0.2.0-Koblitz)** | Generieke SMTP-mailer (587 STARTTLS, From = info@icthorse.nl) voor magic-links en beveiligingsmeldingen; Gmail SMTP alleen nog fallback |
 | **MFA-provider Authenticator-app** | Genereert TOTP-codes (Google Authenticator / Authy / etc.) |
 
 ### 1.3 Concepten
@@ -30,6 +33,11 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 | **Entry** | Eén wachtwoord-record binnen vault: title, username, password, URL, notes, attachments, history, expiry |
 | **Magic-link MFA** | Eenmalig e-mail-token, hergebruikt iCt_Horse magic-link infrastructuur |
 | **TOTP MFA (account-laag)** | RFC 6238, 30s window, 6 digits, SHA-1, base32-geseed. `totp_secret` in `users`-tabel (server kent secret om login-codes te verifiëren) |
+| **Ontgrendelmateriaal CK (v0.2.0-Koblitz)** | `{ph, kh}`: SHA-256 van het wachtwoord en de keyfile-hash, de directe invoer van de KDBX4-composite-key. Alleen in browser-RAM als `kdbxweb.ProtectedValue`. |
+| **Hardware-sleutel (`vault_keys`, v0.2.0-Koblitz)** | WebAuthn-credential per vault (`bio` of `recovery`) met een X25519-publieke sleutel `pk_c` die uit de PRF van de YubiKey wordt afgeleid |
+| **Verzegelde kopie (P-CRYPT-09)** | `Seal_v2(pk_c, CK)`; de server bewaart hem, kan hem niet openen en geeft hem pas vrij na een server-geverifieerde assertion |
+| **Step-up (v0.2.0-Koblitz)** | Verse bevestiging (Bio, of TOTP zonder actieve Bio) die 300 s als JWT-claim geldt; nodig voor uitbreidende sleutelacties |
+| **Noodsleutel-statussen** | `idle → waiting (24 u) → released (24 u) → consumed/expired`; `blocked` tot expliciet opheffen met Bio-step-up |
 | **Per-entry TOTP-renderer (vault-laag, v0.0.9-Bellare+)** | RFC 6238 client-side. `otpauth://`-URI in entry-custom-field `otp` (KeePassXC-compat). Server ziet seed NOOIT — zit binnen encrypted KDBX4. UI rendert 6-cijferige code + 30s countdown. Implementatie via `crypto.subtle.sign('HMAC')` browser-native, geen externe lib. |
 
 ### 1.4 Zero-knowledge bewijs
@@ -45,12 +53,15 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 | User-account-pw | hash met argon2id-server-side | — |
 | MFA-secret TOTP | gehashed met PBKDF2 in server-DB | base32-encoded plain (server moet TOTP-codes verifiëren!) |
 | Magic-link token | tijdelijk in server-RAM/DB tot redemption | — |
+| Verzegelde kopie `{ph,kh}` (v0.2.0) | ✅ ciphertext + `pk_c` | ✅ inhoud (privédeel alleen in de YubiKey, P-CRYPT-09) |
 
 **Belangrijkste constraint:** MFA-secrets staan plaintext op de server (RFC 6238 kan niet anders), maar MFA-secrets geven **alleen toegang tot account-laag, niet tot vault-laag.** De vault-decryptie vereist master-pw + keyfile die alleen de gebruiker kent.
 
 ### 1.5 Wachtwoord-vergeten consequentie
 
 **Strict zero-knowledge → server kan vault-content niet recoveren.** Bij verlies master-pw + keyfile = data **permanent** verloren. Hierop wordt expliciet gewaarschuwd bij account-aanmaak (verplichte checkbox).
+
+Vanaf v0.2.0-Koblitz kan een gekoppelde YubiKey (of de noodsleutel na 24 u) de vault nog openen zolang de verzegelde kopie actueel is. Dat is geen server-herstel: zonder de hardware van de gebruiker opent niets. Wachtwoord en keyfile blijven nodig voor KeePassXC (P-CRYPT-02) en voor rekey.
 
 ## 2. Logisch niveau
 
@@ -63,6 +74,24 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 | `HorseSafeTotp.generateTotp(otpauthUri)` | `frontend/js/totp.js` | RFC 6238 via `crypto.subtle.sign('HMAC')`. Base32-decoder + dynamic truncation per RFC 4226. Default SHA-1/6/30, override via URI-params. |
 | `state.totpTimer` + `startTotpLoop`/`stopTotpLoop` | `frontend/js/vault-ui.js` | Interval-lifecycle voor per-entry-TOTP-render. Start in `selectEntry`, stop in `lockVault` en bij entry-wissel. |
 | Detail-pane TOTP-rij (`d-totp-label`/`d-totp-cell`/`d-totp-code`/`d-totp-countdown`/`d-totp-copy`) | `frontend/vault.html` | UI-elementen voor live TOTP-code + countdown + clipboard-copy. Verborgen tot entry een geldig `otp`-veld heeft. |
+
+### 2.0b Componenten v0.2.0-Koblitz (hardware-sleutels)
+
+Bindend contract: `docs/HARDWARE_KEYS.md` §12.
+
+| Component | File | Doel |
+|---|---|---|
+| `HorseSafeHwKeys` | `frontend/js/hwkeys.js` | WebAuthn create/get met PRF, Seal_v2 (X25519 + HKDF + AES-GCM), `secretFromCredentials`/`credentialsFromHashes`, fail-closed `checkSupport()` |
+| Sleutelbeheer-UI | `frontend/js/hwkeys-ui.js` | Lijst, koppelen, vrijgave/annuleren, blokkeren/opheffen, verwijderen; statussen in gewone taal |
+| Step-up-dialoog | `frontend/js/stepup.js` | Bio-aanraking of TOTP-code; herhaalt de oorspronkelijke actie één keer |
+| Ontgrendelscherm | `frontend/vault.html` + `frontend/js/vault-ui.js` | Keuze YubiKey/Keyfile; `state.secret = {ph,kh}`; wijzig wachtwoord/keyfile via `/rekey` |
+| `/webauthn/options` | `backend/routes/webauthn.py` | Challenges voor register/unlock/stepup |
+| `/vault/{vid}/keys…`, `/rekey` | `backend/routes/vault_keys.py` | Koppelen, unlock, reseal, rekey, release, block, delete |
+| `/auth/stepup` | `backend/routes/auth.py` + `backend/services/stepup_service.py` | Step-up-claims in het JWT |
+| WebAuthn-verificatie | `backend/services/webauthn_service.py` | py_webauthn + eigen vlag-, AAGUID- en signCount-controles |
+| Sleutelservice | `backend/services/vault_key_service.py` | `validate_sealed`, recovery-state, meldingen |
+| Mailer | `backend/services/mail_service.py` | SMTP 587 STARTTLS; ook magic-link; `send_async` via `asyncio.to_thread` |
+| Vertrouwensanker | `backend/data/yubico_fido_roots.pem`, `backend/data/aaguids.json` | Gevendord publiek materiaal; gebouwd met `backend/tools/` |
 
 ### 2.1 Component-decompositie
 
@@ -79,6 +108,10 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 │  │ Clipboard-manager (best-effort wipe na 10s)                  │    │
 │  └──────────────────────────────────────────────────────────────┘    │
 │                                                                      │
+│  ┌──────────────────────────────────────────────────────────────┐    │
+│  │ HwKeys (v0.2.0): WebAuthn+PRF, Seal_v2, step-up-dialoog      │◄───┼── YubiKey Bio / noodsleutel (USB)
+│  └──────────────────────────────────────────────────────────────┘    │
+│                                                                      │
 └──────────────────────────────────────────────────────────────────────┘
                               │ HTTPS (TLS 1.3)
                               ▼
@@ -92,21 +125,29 @@ HorseSafe is een **gebruikers-bediende wachtwoord-vault**, gehost als SaaS op Ho
 │  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────────────┐  │
 │  │ /auth/* routes  │  │ /vault/* routes │  │ /admin/* routes      │  │
 │  │ login + MFA     │  │ blob CRUD only  │  │ user CRUD + stats    │  │
+│  │ + /auth/stepup  │  │ + keys, rekey   │  │                      │  │
 │  └─────────────────┘  └─────────────────┘  └──────────────────────┘  │
+│  ┌─────────────────┐  ┌───────────────────────────────────────────┐  │
+│  │ /webauthn/*     │  │ WebAuthn-verificatie (py_webauthn,        │  │
+│  │ options         │  │ Yubico-roots, AAGUID-allowlist)           │  │
+│  └─────────────────┘  └───────────────────────────────────────────┘  │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐    │
 │  │ Storage-layer                                                │    │
-│  │  - SQLite: users, mfa_secrets, audit_log, vault_metadata     │    │
+│  │  - SQLite: users, mfa_secrets, audit_log, vault_metadata,    │    │
+│  │    vault_keys, webauthn_challenges, devices (leeg) (v0.2.0)  │    │
 │  │  - Filesystem: /opt/horsesafe/vaults/<u-uuid>/<v-uuid>.kdbx  │    │
 │  └──────────────────────────────────────────────────────────────┘    │
 │                                                                      │
 │  ┌──────────────────────────────────────────────────────────────┐    │
-│  │ MFA-bridge: hergebruik iCt_Horse magic-link e-mailer         │    │
+│  │ Mailer: SMTP 587 STARTTLS (magic-link + meldingen, v0.2.0)   │    │
 │  └──────────────────────────────────────────────────────────────┘    │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### 2.2 Datamodel (SQLite)
+
+> Samenvatting van de oorspronkelijke tabellen. Actueel schema (versie 5, incl. `vault_keys`, `webauthn_challenges`, `devices`): `DATA_MODEL.md` en `backend/db/schema.sql`.
 
 ```sql
 CREATE TABLE users (
@@ -157,7 +198,8 @@ CREATE TABLE magic_links (
 | POST | `/auth/register` | — | Account aanmaken (e-mail + pw + akkoord-permanent-data-verlies) |
 | POST | `/auth/login` | — | Pw + MFA → JWT-cookie |
 | POST | `/auth/magic-link` | — | E-mail magic-link aanvragen |
-| GET | `/auth/magic-link/redeem?t=...` | — | Magic-link verzilveren |
+| GET | `/auth/magic-link/redeem?t=...` | — | Compat: 302 naar `mfa.html#ml=…` (geen bijwerkingen) |
+| POST | `/auth/magic-link/redeem` | JWT (wachtwoordsessie, zelfde gebruiker) | Magic-link verzilveren als tweede stap (same-site vanaf `mfa.html`) |
 | POST | `/auth/totp/setup` | JWT | TOTP-secret genereren + QR |
 | POST | `/auth/totp/verify` | JWT | TOTP-code valideren bij setup |
 | POST | `/auth/logout` | JWT | Sessie eindigen |
@@ -171,6 +213,17 @@ CREATE TABLE magic_links (
 | DELETE | `/admin/users/{id}` | JWT+admin | User + vaults verwijderen |
 | GET | `/admin/stats` | JWT+admin | Storage + login-pogingen |
 | GET | `/admin/audit` | JWT+admin | Audit-log |
+| POST | `/auth/stepup` | JWT+MFA | Step-up (Bio of TOTP), v0.2.0 |
+| POST | `/webauthn/options` | JWT+MFA | WebAuthn-opties (register/unlock/stepup), v0.2.0 |
+| GET/POST | `/vault/{id}/keys` | JWT+MFA (POST: + step-up als er al een sleutel is) | Hardware-sleutels lijst/koppelen, v0.2.0 |
+| POST | `/vault/{id}/keys/{kid}/unlock` | JWT+MFA + assertion | Verzegelde kopie vrijgeven, v0.2.0 |
+| PUT | `/vault/{id}/keys/sealed` | JWT+MFA + step-up | Opnieuw verzegelen, v0.2.0 |
+| PUT | `/vault/{id}/rekey` | JWT+MFA + step-up + If-Match | Wachtwoord/keyfile wijzigen, v0.2.0 |
+| POST/DELETE | `/vault/{id}/keys/{kid}/release` | JWT+MFA | Noodsleutel vrijgave aanvragen/annuleren, v0.2.0 |
+| POST/DELETE | `/vault/{id}/keys/{kid}/block` | JWT+MFA / + Bio-step-up | Noodsleutel blokkeren/opheffen, v0.2.0 |
+| DELETE | `/vault/{id}/keys/{kid}` | JWT+MFA | Sleutel verwijderen, v0.2.0 |
+
+Details en foutcodes: `API.md` en `docs/HARDWARE_KEYS.md` §12.6.
 
 ### 2.4 Flow: vault openen (v0.0.9-Bellare+)
 
@@ -217,6 +270,22 @@ CREATE TABLE magic_links (
 5. Frontend: genereert plaintext download
 ```
 
+### 2.7 Flow: ontgrendelen met YubiKey Bio (v0.2.0-Koblitz)
+
+```
+1. Frontend → backend: POST /webauthn/options {purpose:"unlock", vault_id} → challenge + allow_credentials (+ prf_salt)
+2. Frontend → YubiKey: navigator.credentials.get (UV = vinger, PRF eval = prf_salt)
+3. Frontend: controleert UV=1, BE=0, PRF-resultaat aanwezig (fail-closed)
+4. Frontend → backend: POST /vault/{id}/keys/{kid}/unlock {assertion}
+5. Backend: challenge verbruiken, origin/rpId/UP/UV/BE, handtekening, signCount; noodsleutel alleen in status released
+6. Backend → frontend: {id, sealed}; audit vault_key_unlock (of recovery_key_used + mail)
+7. Frontend: PRF → HKDF → sk_c; pk_c moet gelijk zijn aan public_key; Seal_v2 openen met eigen AAD → {ph,kh}
+8. Frontend: credentialsFromHashes({ph,kh}) → Kdbx.load(blob) → entries; tussenbuffers fill(0)
+   (InvalidKey hier = "kopie verouderd" na een wijziging in KeePassXC → één keer met pw/keyfile openen en Bijwerken)
+```
+
+Koppelen, rekey, step-up en de noodsleutel: `SEQUENCE_DIAGRAMS.md` SQ-9 t/m SQ-12.
+
 ## 3. Fysiek niveau
 
 ### 3.1 Hosting
@@ -229,6 +298,8 @@ CREATE TABLE magic_links (
 | Vault-blobs | HC55 `/opt/horsesafe/vaults/<user-uuid>/<vault-uuid>.kdbx` (mode 600) |
 | Audit-log | SQLite + append-only file `/opt/horsesafe/logs/audit.log` |
 | Backup | rsync naar Hetzner-storagebox elke nacht |
+| Vertrouwensanker WebAuthn (v0.2.0) | `backend/data/` in de repo (gedeployed met de backend) |
+| Mail (v0.2.0) | Uitgaand SMTP 587 STARTTLS vanaf HC55 (465 is dicht); credentials in `/opt/horsesafe/.env` |
 
 ### 3.2 Nginx-config (planning, nog NIET gedeployed)
 

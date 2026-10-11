@@ -2,8 +2,8 @@
 
 > DPIA-light. Onder GDPR Art. 35 lid 3 niet verplicht (geen large-scale of bijzondere categorieën), maar uitgevoerd ter zorgvuldigheid.
 
-**Datum:** 2026-05-21
-**Versie:** v0.0.0
+**Datum:** 2026-05-21 (herbeoordeeld 2026-10-10 voor v0.2.0-Koblitz, zie §9)
+**Versie:** v0.0.0 → v0.2.0-Koblitz
 **Verantwoordelijke:** Christian Glebbeek (iCt Horse)
 **Reviewer:** n.v.t. (single-stakeholder; revisie bij v0.1.0 publiek met externe input)
 
@@ -21,6 +21,10 @@ HorseSafe is een SaaS wachtwoord-vault waarmee individuele gebruikers + later or
 | IP+UA | Gewoon (technisch + audit) |
 | Vault-content (in browser) | **Potentieel gevoelig** — kan banking, medisch, ID-nummers bevatten |
 | Vault-blob (op server) | **Ciphertext** — server kan dit niet decrypteren |
+| Verzegelde ontgrendelkopie `{ph,kh}` (v0.2.0) | **Ciphertext** — verzegeld naar de YubiKey van de gebruiker (P-CRYPT-09); server kan dit niet openen |
+| Hardware-sleutelmetadata (v0.2.0) | Gewoon — label, soort, AAGUID (YubiKey-model), credential-id, publieke sleutels, signCount, tijdstippen van gebruik/vrijgave/blokkade |
+| Vingerafdruk (v0.2.0) | **Niet verwerkt door HorseSafe** — blijft in de YubiKey Bio (match-on-device); server ziet alleen de vlag "gebruiker geverifieerd" |
+| Meldingsmails (v0.2.0) | Gewoon — e-mailadres, onderwerp, tijd, IP; verstuurd via de SMTP-provider van iCt Horse |
 
 ## 3. Noodzaak + proportionaliteit
 
@@ -40,7 +44,10 @@ HorseSafe is een SaaS wachtwoord-vault waarmee individuele gebruikers + later or
 | Clipboard-leak naar andere app | Hoog | Laag (1 wachtwoord, 10s window) | Laag (best-effort wipe + v0.2 extensie) |
 | Insider-attack (admin) | Zeer laag | **Geen vault-content** (zero-knowledge); midden account-laag | Laag (audit-log + GDPR-rechten) |
 | Subverwerker-uitval (Hetzner) | Laag | Hoog (DOS) | Midden (rsync-backup + restore-procedure) |
-| Subverwerker-uitval (Gmail) | Laag | Midden (magic-link broken; TOTP-fallback) | Laag |
+| Subverwerker-uitval (mailprovider; v0.2.0 SMTP info@icthorse.nl, Gmail fallback) | Laag | Midden (magic-link en meldingen weg; TOTP-fallback; noodsleutel-vrijgave bewust uitgeschakeld) | Laag |
+| Server geeft verzegelde kopie vrij aan aanvaller (v0.2.0) | Laag | **Geen** zonder fysieke YubiKey + UV (kopie niet te openen) | Verwaarloosbaar |
+| Misbruik noodsleutel via overgenomen account (v0.2.0) | Zeer laag | Hoog | Laag (24 u wachttijd + mail + blokkade; fysieke sleutel + PIN van 63 tekens nodig) |
+| Gecompromitteerde server serveert kwaadaardige JS bij ontgrendelen (v0.2.0, R1) | Zeer laag | Hoog | Laag-midden (ongewijzigd t.o.v. v0.1.0; geaccepteerd en gedocumenteerd) |
 | Quantum-computer-attack op AES-256 | Zeer laag (decennia) | Hoog | n.v.t. (toekomstige Argon2id-upgrade) |
 
 ## 5. Maatregelen
@@ -77,6 +84,24 @@ Zie `SECURITY.md` + `GDPR_COMPLIANCE.md`. Kernzaken:
 
 ## 8. Hervalmoment
 
-- Bij toevoegen FIDO2 (v0.5.0) → re-evaluate (extra verwerking biometrics?)
+- ~~Bij toevoegen FIDO2 (v0.5.0) → re-evaluate (extra verwerking biometrics?)~~ uitgevoerd bij v0.2.0-Koblitz, zie §9
+- Bij v0.3.0-Miller (Android-app, telefoon-credential, apparaatgegevens en attestation-ketens) → re-evaluate
+- Bij v0.4.0-Montgomery (goedkeuringen met IP/plaats/browser-metadata naar de telefoon) → re-evaluate
 - Bij EU-buiten host-verhuizing → re-evaluate
 - Bij beleidwijziging Hetzner/Google → re-evaluate
+
+## 9. Herbeoordeling v0.2.0-Koblitz (2026-10-10)
+
+**Wijziging:** ontgrendelen met een YubiKey Bio, noodsleutel met wachttijd, step-up en meldingsmails. Ontwerp: `docs/HARDWARE_KEYS.md`.
+
+| Vraag | Oordeel |
+|---|---|
+| Verwerkt HorseSafe biometrische gegevens (Art. 9)? | **Nee.** De vingerafdruk wordt ingeschreven en gematcht in de YubiKey Bio zelf. Er gaan geen biometrische templates of metingen naar browser of server; de server ontvangt alleen een handtekening met de UV-vlag. |
+| Nieuwe persoonsgegevens? | Ja, beperkt: sleutelmetadata (label, AAGUID/model, credential-id, publieke sleutels, signCount, tijdstippen) en meldingsmails. Noodzakelijk voor beveiliging en uitvoering van de dienst (Art. 6(1)(b) en (f)). |
+| Blijft zero-knowledge intact? | Ja (P-CRYPT-01, -09): de server bewaart alleen een kopie die verzegeld is naar gebruikershardware en die hij aantoonbaar niet kan openen. Geen key-escrow (P-CRYPT-06). |
+| Dataminimalisatie | Challenges alleen als hash; audit zonder geheime of cryptografische payloads; geen telemetrie. |
+| Bewaartermijn | Sleutels tot verwijderen (of CASCADE met vault/account); challenges max. 1 dag; audit 13 maanden. |
+| Nieuwe subverwerker? | De SMTP-provider van iCt Horse (afzender info@icthorse.nl) vervangt Gmail als primaire mailroute. Opnemen in `GDPR_COMPLIANCE.md` / verwerkersoverzicht. |
+| Rechten betrokkene | Sleutels zijn door de gebruiker zelf in te zien en te verwijderen; inzage/verwijdering verder ongewijzigd. |
+
+**Conclusie:** geen hoog risico; geen DPIA-melding bij de AP nodig. Restrisico's zijn gelijk aan of lager dan v0.1.0 (extra hardwarefactor), met R1 en R2 als expliciet geaccepteerde restrisico's (`THREAT_MODEL.md`).
