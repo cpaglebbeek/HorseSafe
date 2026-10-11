@@ -22,6 +22,16 @@
   - submit + secundair-uitloggen buttons
   - error + status (muted)
 
+## Ontgrendelen met een YubiKey (v0.2.0-Koblitz)
+
+- `#hwkey-unlock` verschijnt alleen als er sleutels aan de kluis gekoppeld zijn (`GET /vault/{vid}/keys`).
+- `#hwkey-unlock-btn` "🔑 Ontgrendel met YubiKey": opties van de server (`POST /webauthn/options`, purpose `unlock`) → vingerafdruk op de YubiKey Bio → `POST /vault/{vid}/keys/{kid}/unlock` → verzegelde kopie openen met de PRF-uitvoer → kluis openen → S7.
+- `#recovery-details` "Noodsleutel gebruiken": aanvragen (24 uur wachttijd, mail), annuleren, blokkeren, en na vrijgave "🔑 Ontgrendel met noodsleutel" (PIN). `#recovery-notify` als meldingen niet zijn ingesteld.
+- `#recovery-alert` bovenaan bij een lopende vrijgave, met "Nu annuleren".
+- `#hwkey-support` bij een browser zonder PRF/X25519 (Safari, oude browsers) of een andere host dan `icthorsecloud.nl`.
+- De laatst gebruikte methode staat bovenaan; na 15 minuten inactiviteit vergrendelt de kluis vanzelf.
+- Contract en meldingen: `docs/HARDWARE_KEYS.md` §8 en §12.13; schermen S14-S16.
+
 ## Keyfile-format-restrictie (v0.0.9-Bellare, HS-BUG-005)
 
 | Format | kdbxweb-browser | kdbxweb-Node | pykeepass | KeePassXC-desktop | HorseSafe-advies |

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './isolated';
 
 /**
  * MFA-flow e2e v0.0.3-Merkle:

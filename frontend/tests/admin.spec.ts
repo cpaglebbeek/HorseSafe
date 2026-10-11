@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './isolated';
 
 const ADMIN_EMAIL = `admin+${Date.now()}@example.com`;
 const USER_EMAIL = `user+${Date.now()}@example.com`;

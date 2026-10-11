@@ -19,9 +19,9 @@ ssh horsecloud55
 # 1. Run bootstrap (idempotent)
 sudo bash <(curl -fsSL https://raw.githubusercontent.com/cpaglebbeek/HorseSafe/main/scripts/deploy_hc55.sh)
 
-# 2. Review .env (vooral als magic-link gewenst is, vul Gmail-credentials in)
+# 2. Review .env: vul HORSESAFE_SMTP_USER/PASSWORD/FROM in (Hostinger, uit ClaudeSecrets) en controleer
+#    HORSESAFE_WEBAUTHN_RP_ID/ORIGIN tegen de host
 sudo nano /opt/horsesafe/.env
-# → vul HORSESAFE_GMAIL_USER + HORSESAFE_GMAIL_APP_PASSWORD in indien magic-link nodig
 
 # 3. Voeg nginx-include toe aan de horsecloud55-server-block
 sudo nano /etc/nginx/sites-enabled/horsecloud55
@@ -44,21 +44,35 @@ bash /opt/horsesafe/repo/scripts/post_deploy_smoke.sh
 sudo -u horsesafe /opt/horsesafe/venv/bin/python -m backend.db.promote_admin christian@example.com
 ```
 
-## Update-deploy (na git-push naar main)
+## Update-deploy (na git-push naar main) — sinds v0.2.1-Koblitz
+
+**Altijd eerst een backup** van DB, vaults en `.env` (migraties zijn niet terug te draaien):
 
 ```bash
-ssh horsecloud55
+ssh icthorsecloud.nl
+TS=$(date -u +%Y%m%d-%H%M%S); B=/opt/horsesafe/backups-predeploy; sudo mkdir -p $B
+sudo sqlite3 /opt/horsesafe/db/horsesafe.db ".backup $B/horsesafe-$TS.db"
+sudo tar -czf $B/vaults-$TS.tgz -C /opt/horsesafe vaults
+sudo install -m 600 /opt/horsesafe/.env $B/env-$TS
+
 cd /opt/horsesafe/repo
 sudo -u horsesafe git pull
 sudo -u horsesafe /opt/horsesafe/venv/bin/pip install -r backend/requirements.txt
 sudo -u horsesafe /opt/horsesafe/venv/bin/python -m backend.db.migrate
-sudo rsync -a --delete frontend/ /opt/horsesafe/web/
-sudo chown -R horsesafe:horsesafe /opt/horsesafe/web
+# Alleen de productie-frontend (geen tests/, npm-bestanden, devserver.py, README.md)
+sudo rsync -a --delete --chown=horsesafe:horsesafe \
+  --exclude 'tests/' --exclude 'node_modules/' --exclude 'package.json' --exclude 'package-lock.json' \
+  --exclude 'playwright.config.ts' --exclude 'devserver.py' --exclude 'README.md' --exclude 'test-results/' \
+  frontend/ /opt/horsesafe/web/
 sudo systemctl restart horsesafe
-sudo systemctl status horsesafe
+bash scripts/post_deploy_smoke.sh
 ```
 
-Of: gewoon de bootstrap-script opnieuw draaien (idempotent):
+Nieuwe `.env`-sleutels vergelijk je met `backend/.env.example` (sinds Koblitz o.a. `HORSESAFE_SMTP_*`,
+`HORSESAFE_WEBAUTHN_RP_ID/ORIGIN/RP_NAME` en `HORSESAFE_TEST_ATTESTATION=false`). Geheimen komen uit
+ClaudeSecrets en worden nooit in de repo of het transcript gezet.
+
+Of: het bootstrap-script opnieuw draaien (idempotent, overschrijft `.env` niet; de backup blijft verplicht):
 ```bash
 sudo bash /opt/horsesafe/repo/scripts/deploy_hc55.sh
 sudo systemctl restart horsesafe
@@ -66,19 +80,20 @@ sudo systemctl restart horsesafe
 
 ## Rollback
 
-Bij failed deploy:
+Code terugzetten is niet genoeg als er een migratie meekwam: zet dan ook de DB-backup terug.
 ```bash
-# 1. Stop service
 sudo systemctl stop horsesafe
-
-# 2. Git checkout vorige tag
 cd /opt/horsesafe/repo
-sudo -u horsesafe git checkout <previous-tag>
+sudo -u horsesafe git checkout <vorige-tag>
 sudo -u horsesafe /opt/horsesafe/venv/bin/pip install -r backend/requirements.txt
-sudo rsync -a --delete frontend/ /opt/horsesafe/web/
-
-# 3. Start service
+sudo rsync -a --delete --chown=horsesafe:horsesafe \
+  --exclude 'tests/' --exclude 'node_modules/' --exclude 'package.json' --exclude 'package-lock.json' \
+  --exclude 'playwright.config.ts' --exclude 'devserver.py' --exclude 'README.md' --exclude 'test-results/' \
+  frontend/ /opt/horsesafe/web/
+# Alleen bij een migratie in de teruggedraaide versie:
+sudo install -o horsesafe -g horsesafe -m 600 /opt/horsesafe/backups-predeploy/horsesafe-<TS>.db /opt/horsesafe/db/horsesafe.db
 sudo systemctl start horsesafe
+curl -fsS https://icthorsecloud.nl/HorseSafe/api/health
 ```
 
 ## Volledige uninstall (failsafe)
@@ -120,7 +135,7 @@ sudo -u horsesafe bash /opt/horsesafe/backup.sh
 ## Health-monitoring
 
 - `GET /HorseSafe/api/health` — publiek, geen auth
-- Response: `{"status":"ok","version":"...","db":"ok","vaults_dir":"ok"}`
+- Response: `{"status":"ok","version":"...","db":"ok","vaults_dir":"ok","test_attestation":false}` — `test_attestation` moet in productie altijd `false` zijn
 - Uptime-monitoring via bestaande Dashboard-stack (Dashboard-tile v0.0.8+)
 - Backup-log: `/opt/horsesafe/logs/backup.log` — controleer dagelijks 03:01+
 

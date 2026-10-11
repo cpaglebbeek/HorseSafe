@@ -5,7 +5,23 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 ## [Unreleased]
 - v0.3.0-Miller: Android-app (YubiKey inrichten, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app). Zie `ROADMAP.md`.
 
-## [0.2.0-Koblitz] — 2026-10-10 (in bouw; nog niet gedeployed)
+## [0.2.1-Koblitz] — 2026-10-11 (repo; nog niet gedeployed)
+
+Open punten van Koblitz uit `ACTIONS.md`. Geen functionele wijziging aan backend of frontend.
+
+### Fixed
+- **e2e raakte productie:** de specs `admin`, `mfa` en `smoke` gebruikten de backend op :3997 — op HC55 is dat LIVE. Ze draaien nu via `frontend/tests/isolated.ts` op een eigen tijdelijke backend per worker (`tests/e2e-stack.ts`); een vangnet breekt elk verzoek naar :3997 af en laat de test falen.
+- **Deploy kopieerde dev-bestanden naar de webroot:** `devserver.py`, `README.md`, `tests/`, `package*.json` en `playwright.config.ts` stonden in `/opt/horsesafe/web/` (publiek leesbaar, geen geheimen). `scripts/deploy_hc55.sh` en het runbook sluiten ze uit; ze verdwijnen bij de volgende deploy.
+- `backend/app.py` black-conform (CI-stap "Black format check").
+
+### Changed
+- **CI:** job "Frontend unit + e2e": `node --test tests/unit/` en Playwright met de WebAuthn virtual authenticator; geen gedeelde backend op :3997 meer.
+- **`scripts/deploy_hc55.sh`:** `.env`-sjabloon met `HORSESAFE_SMTP_*`, `HORSESAFE_WEBAUTHN_*` en `HORSESAFE_TEST_ATTESTATION=false`.
+- **`DEPLOYMENT.md` + `docs/DEPLOY_HC55_LIVE.md`:** kopie- in plaats van symlinkmodel, verplichte backup vóór elke update-deploy, rollback inclusief DB-backup bij migraties.
+- **`PRIVACY_STATEMENT.md` (0.2.1) + `GDPR_COMPLIANCE.md`:** Hostinger als SMTP-subverwerker, Gmail alleen nog uitgeschakelde reserve; sleutelmetadata, verzegelde kopie, challenges en meldingsmails met doel, grondslag en bewaartermijn; vingerafdruk wordt niet verwerkt (DPIA §9).
+- **`UI_DESIGN.md` + `docs/screens/`:** S6 uitgebreid met de YubiKey-route; nieuw S14 Sleutelbeheer, S15 Step-up, S16 Wachtwoord/keyfile wijzigen.
+
+## [0.2.0-Koblitz] — 2026-10-10 (LIVE 2026-10-11)
 
 Ontwerp en bindend contract: `docs/HARDWARE_KEYS.md` (§12). Besluiten Christian 10-10-2026: zie §11 daarvan.
 

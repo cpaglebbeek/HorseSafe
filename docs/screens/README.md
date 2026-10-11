@@ -1,6 +1,6 @@
 # docs/screens/ — HorseSafe schermen-referentie
 
-> Per scherm uit `UI_DESIGN.md` (S1-S12): doel + key-messages + CTA + screenshot (vanaf Fase 2 frontend POC).
+> Per scherm uit `UI_DESIGN.md` (S1-S16; S14-S16 sinds v0.2.0-Koblitz): doel + key-messages + CTA + screenshot (vanaf Fase 2 frontend POC).
 
 ## Conventie
 

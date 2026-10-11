@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# HorseSafe HC55 deploy-script v0.0.7-Bellare
+# HorseSafe HC55 deploy-script v0.2.1-Koblitz (sinds v0.0.7-Bellare)
 #
 # Idempotente bootstrap voor productie-deploy op HorseCloud55.
 # Voer uit als root op de server:
@@ -31,7 +31,7 @@ INSTALL_DIR=/opt/horsesafe
 REPO_URL=https://github.com/cpaglebbeek/HorseSafe.git
 SERVICE_USER=horsesafe
 
-echo "═══ HorseSafe HC55 deploy v0.0.7-Bellare ═══"
+echo "═══ HorseSafe HC55 deploy v0.2.1-Koblitz ═══"
 
 # 1. Pre-flight
 [ "$(id -u)" -eq 0 ] || { echo "ERROR: run als root"; exit 1; }
@@ -90,6 +90,20 @@ HORSESAFE_RATE_LIMIT_ENABLED=true
 HORSESAFE_BCRYPT_ROUNDS=12
 HORSESAFE_PUBLIC_URL=https://icthorsecloud.nl/HorseSafe
 # Vul Gmail-credentials hieronder in vóór magic-link in gebruik te nemen:
+# Mailer (v0.2.0-Koblitz): SMTP met STARTTLS op 587, From = SMTP-gebruiker. Wachtwoord uit ClaudeSecrets
+# icthorse-mail/info_password — handmatig invullen, nooit in de repo.
+HORSESAFE_SMTP_HOST=smtp.hostinger.com
+HORSESAFE_SMTP_PORT=587
+HORSESAFE_SMTP_USER=
+HORSESAFE_SMTP_PASSWORD=
+HORSESAFE_SMTP_FROM=
+HORSESAFE_SMTP_STARTTLS=true
+# WebAuthn (hardware-sleutels): moet exact overeenkomen met de host waarop HorseSafe draait
+HORSESAFE_WEBAUTHN_RP_ID=icthorsecloud.nl
+HORSESAFE_WEBAUTHN_ORIGIN=https://icthorsecloud.nl
+HORSESAFE_WEBAUTHN_RP_NAME=HorseSafe
+HORSESAFE_TEST_ATTESTATION=false
+# Oude fallback-mailer (SMTP_SSL 465; werkt niet op HC55)
 HORSESAFE_GMAIL_USER=
 HORSESAFE_GMAIL_APP_PASSWORD=
 EOF
@@ -107,7 +121,11 @@ sudo -u "$SERVICE_USER" "$INSTALL_DIR/venv/bin/python" -m backend.db.migrate
 
 # 9. Frontend kopie
 echo "→ frontend kopiëren naar $INSTALL_DIR/web/"
-rsync -a --delete "$INSTALL_DIR/repo/frontend/" "$INSTALL_DIR/web/"
+# Alleen de productie-frontend: tests, dev-server en npm-bestanden horen niet op de webserver
+rsync -a --delete \
+  --exclude 'tests/' --exclude 'node_modules/' --exclude 'package.json' --exclude 'package-lock.json' \
+  --exclude 'playwright.config.ts' --exclude 'devserver.py' --exclude 'README.md' --exclude 'test-results/' \
+  "$INSTALL_DIR/repo/frontend/" "$INSTALL_DIR/web/"
 chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_DIR/web"
 
 # 10. nginx-snippet

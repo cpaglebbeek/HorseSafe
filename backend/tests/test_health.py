@@ -31,7 +31,7 @@ async def test_openapi_docs_disabled_by_default(client: AsyncClient) -> None:
 
 async def test_health_koblitz(client: AsyncClient) -> None:
     body = (await client.get("/health")).json()
-    assert body["version"] == "0.2.0-Koblitz"
+    assert body["version"] == "0.2.1-Koblitz"
     assert body["test_attestation"] is False
     assert not {"smtp", "mail", "keys"} & set(body)
 

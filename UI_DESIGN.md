@@ -36,6 +36,9 @@
 - **Keyfile-format-compatibiliteit** (HS-BUG-005): 64-hex-char ASCII (default, alle runtimes) > KeePassXC 2.x XML (import-only via lokale Node-resave) > 32-byte raw (niet ondersteund, kdbxweb-browser-bug)
 - Lock-cleanup: `lockVault()` reset zowel `vault-pw.value=''` als `vault-keyfile.value=''`
 - Submit → `unlockOrCreate()` → `openDatabase(blob, pw, keyFileBuffer)` met `await credentials.ready` → S7
+- **v0.2.0-Koblitz — YubiKey-route** (`#hwkey-unlock`, alleen zichtbaar als er sleutels gekoppeld zijn): knop "🔑 Ontgrendel met YubiKey" (`#hwkey-unlock-btn`) met de hint "Steek de sleutel in en leg je vinger erop zodra hij knippert". De laatst gebruikte methode (YubiKey of keyfile) staat bovenaan (localStorage, in try/catch). Zonder geschikte browser (`#hwkey-support`): "Gebruik Chrome of Edge op de laptop". Uitklapper "Noodsleutel gebruiken" (`#recovery-details`) met per noodsleutel de status en de knoppen aanvragen / annuleren / blokkeren / ontgrendelen; banner `#recovery-notify` als meldingen niet zijn ingesteld (vrijgave dan uitgeschakeld). Zie S14.
+- **Waarschuwing** `#recovery-alert` bovenaan (ook in S7) zodra er een vrijgave loopt: wie, wanneer, "Nu annuleren".
+- **Automatisch vergrendelen** na 15 minuten inactiviteit (`AUTO_LOCK_MS`); het wachtwoordveld wordt direct na openen geleegd.
 
 ### S7. Vault-content (hoofdscherm)
 - Linker-zijbalk: groepen-boom (Root → General, Internet, eMail, ...)
@@ -79,6 +82,24 @@
 - Globale stats: totaal users, storage-gebruik, login-pogingen-laatste-24u
 - Audit-log-viewer (filter op user/event/datum)
 
+### S14. Sleutelbeheer (v0.2.0-Koblitz) — paneel `#keys-section` in S7
+- Openen via "🔑 Sleutels" (`#keys-open`) in de werkbalk van S7; alleen met een geopende kluis.
+- Tabel `#keys-body`: naam, soort (YubiKey Bio / Noodsleutel), gekoppeld, laatst gebruikt, status in gewone taal (klaar · in de kluis (klaar) · wacht nog 13 u 20 m (tot …) · vrijgegeven tot … · gebruikt · verlopen · geblokkeerd sinds … · "kopie verouderd") en per rij de acties.
+- Koppelen: naam (`#key-label`) + "+ YubiKey Bio koppelen" / "+ Noodsleutel koppelen"; uitleg in een bevestiging (Bio: vingerafdruk; noodsleutel: PIN van 63 tekens, PIN niet bij de sleutel, daarna in de fysieke kluis). Vanaf de tweede sleutel eerst S15.
+- "↻ Bijwerken" (`#keys-reseal`, S15): alle sleutels opnieuw verzegelen na een wachtwoord/keyfile-wijziging buiten HorseSafe.
+- Noodsleutel: blokkeren kan altijd (defensief, zonder S15); opheffen alleen met S15 via de YubiKey Bio.
+- Banner `#notify-banner` als meldingen niet zijn ingesteld.
+- Fouten (`#keys-error`) in gewone taal volgens `docs/HARDWARE_KEYS.md` §12.13.
+
+### S15. Bevestig dat jij het bent — step-up-dialoog (v0.2.0-Koblitz) — `#stepup-section`
+- Verschijnt bij een 403 `stepup_required` (sleutel koppelen vanaf de tweede, bijwerken, S16, blokkade opheffen); na succes wordt de oorspronkelijke actie één keer herhaald.
+- Standaard: "🔑 Bevestig met YubiKey Bio" (`#stepup-bio`). Een authenticator-code (`#stepup-totp-form`) alleen als er nog geen actieve Bio is, of de browser geen hardware-sleutels kan; blokkade opheffen kan alleen met de Bio.
+- `role="dialog"`, `aria-modal`, "Annuleren" (`#stepup-cancel`); fouten in `#stepup-error`.
+
+### S16. Wachtwoord of keyfile wijzigen (v0.2.0-Koblitz) — `#rekey-form` in S14
+- Nieuw wachtwoord (2×) en/of nieuwe keyfile; een leeg veld behoudt dat onderdeel. Verwijderen alleen via een expliciet vinkje (`#rekey-pw-remove`, `#rekey-kf-remove`) met bevestiging.
+- Eerst S15; daarna worden de kluis en álle sleutelkopieën in één keer bijgewerkt (ook de noodsleutel in de kluis). Bij een onduidelijke uitkomst controleert de client of de wijziging is doorgevoerd en meldt hij welk wachtwoord geldt.
+
 ### S12. Settings
 - E-mail wijzigen (vereist re-auth)
 - Accountwachtwoord wijzigen (vereist re-auth)
@@ -102,7 +123,12 @@ S1 landing
   ├─→ S2 login → S4 MFA → S5 vault-list → S6 unlock → S7 content
   └─→ S3 register → S2
 
+S6 unlock
+  ├─→ (YubiKey Bio) → S7
+  └─→ (noodsleutel: aanvragen → 24 u → ontgrendelen) → S7
+
 S7 content
+  ├─→ S14 sleutelbeheer ─→ S15 step-up ─→ S16 wachtwoord/keyfile wijzigen
   ├─→ S8 entry-edit (modal)
   ├─→ S9 import-flow
   ├─→ S10 export-flow

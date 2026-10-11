@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
+  "version": "0.2.1",
   "codename": "Koblitz",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
@@ -24,9 +24,10 @@
     "0.3.0": "Miller — Android-app",
     "0.4.0": "Montgomery — laptop ontgrendelen via telefoon-QR + vinger",
     "0.5.0": "Lange — native kluis in de app (gepland na veldtest v0.4, niet bouwen)",
-    "daarna": "Schneier (browserextensie) en verdere ROADMAP-items schuiven door"
+    "daarna": "Schneier (browserextensie) en verdere ROADMAP-items schuiven door",
+    "0.2.1": "Koblitz-patch — e2e nooit tegen productie (tests/isolated.ts + prod-guard), deploy-excludes, CI-jobs node --test + Playwright-WebAuthn, privacy- en UI-docs bijgewerkt (geen functionele wijziging)"
   },
-  "phase": "Phase 10 — Koblitz LIVE (2026-10-11): hardware-sleutels per vault via WebAuthn PRF + Seal_v2 (P-CRYPT-09), noodsleutel met 24 uur wachttijd en blokkade, step-up, rekey, generieke SMTP-mailer. Ontwerp: docs/HARDWARE_KEYS.md. Veldtest met echte YubiKey Bio nog open.",
+  "phase": "Phase 10 — Koblitz LIVE (2026-10-11; repo v0.2.1, live nog 0.2.0): hardware-sleutels per vault via WebAuthn PRF + Seal_v2 (P-CRYPT-09), noodsleutel met 24 uur wachttijd en blokkade, step-up, rekey, generieke SMTP-mailer. Ontwerp: docs/HARDWARE_KEYS.md. Veldtest met echte YubiKey Bio nog open.",
   "released": "2026-10-11",
   "previous_release": {
     "version": "0.1.0",

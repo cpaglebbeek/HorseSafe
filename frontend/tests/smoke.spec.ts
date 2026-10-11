@@ -1,12 +1,9 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './isolated';
 
 /**
  * Smoke-test e2e: vendored kdbxweb + argon2 + backend round-trip.
  *
- * Vereist: backend draait op localhost:3997 met:
- *   HORSESAFE_CORS_ORIGINS=http://localhost:8000
- *   HORSESAFE_COOKIE_SECURE=false
- *   HORSESAFE_DB_PATH + HORSESAFE_VAULTS_DIR naar tmp-dir
+ * Backend: eigen tijdelijke stack per worker via tests/isolated.ts (nooit :3997 = LIVE).
  *
  * Frontend serveert vanaf localhost:8000 (playwright webServer doet python -m http.server).
  */

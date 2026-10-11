@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "HorseSafe"
-    app_version: str = "0.2.0-Koblitz"
+    app_version: str = "0.2.1-Koblitz"
 
     db_path: Path = Field(default=Path("./db/horsesafe.db"))
     vaults_dir: Path = Field(default=Path("./vaults"))

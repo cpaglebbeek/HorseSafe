@@ -4,8 +4,8 @@
 
 **Verwerker:** iCt Horse — KvK 96787112 — info@icthorse.nl
 **Functionaris Gegevensbescherming:** n.v.t. (geen wettelijke verplichting, klein bedrijf)
-**Versie:** 0.1.0 (finaal, publieke launch)
-**Datum:** 2026-07-20
+**Versie:** 0.2.1 (aangevuld voor hardware-sleutels en de nieuwe mailroute)
+**Datum:** 2026-10-11 (eerder: 0.1.0, 2026-07-20)
 
 ## 1. Welke gegevens verzamelen we?
 
@@ -18,12 +18,17 @@
 | Vault-blob (ciphertext) | Opslag versleutelde wachtwoorden | Art. 6(1)(b) | Tot delete door user |
 | Vault-metadata (naam, grootte, etag) | Vault-management | Art. 6(1)(b) | Tot delete |
 | Audit-log | Security, GDPR-bewijslast | Art. 6(1)(f) | 13 maanden, daarna geanonimiseerd |
+| Hardware-sleutelmetadata (v0.2.0) — naam, soort, YubiKey-model (AAGUID), credential-id, publieke sleutels, teller, tijdstippen van koppelen/gebruik/vrijgave/blokkade | Ontgrendelen met YubiKey, noodsleutel-wachttijd | Art. 6(1)(b) | Tot je de sleutel ontkoppelt of je vault/account verwijdert |
+| Verzegelde ontgrendelkopie (v0.2.0) | Ontgrendelen met YubiKey | Art. 6(1)(b) | Idem — ciphertext die alleen jouw YubiKey kan openen; wij kunnen hem niet lezen |
+| WebAuthn-uitdagingen (v0.2.0) | Bewijs dat de sleutel echt aanwezig was | Art. 6(1)(b) | Maximaal 1 dag |
+| Meldingsmails (v0.2.0) — e-mailadres, onderwerp, tijdstip, IP | Waarschuwen bij koppelen, noodsleutel-aanvraag, -gebruik en -blokkade | Art. 6(1)(f) | Afleverlog bij de mailprovider volgens diens termijn; tekst in het audit-log 13 maanden |
 
 ## 2. Wat verzamelen we NIET?
 
 - ❌ Vault-inhoud (entries, wachtwoorden, URLs) — server kan dit niet decrypteren
 - ❌ Master-wachtwoord van vault — verlaat browser nooit
-- ❌ Keyfile-inhoud — verlaat browser nooit
+- ❌ Keyfile-inhoud — verlaat browser nooit (bij een gekoppelde YubiKey staat alleen een kopie op de server die verzegeld is naar jouw sleutel)
+- ❌ Vingerafdruk — wordt in de YubiKey Bio zelf vergeleken; wij ontvangen alleen de melding "gebruiker geverifieerd"
 - ❌ Browser-fingerprint, locatie-data, tracking-cookies
 - ❌ Telemetrie naar externe services
 
@@ -35,11 +40,12 @@
 | HorseSafe-admin (Christian) | User-CRUD, server-stats, **GEEN vault-content** (zero-knowledge) |
 | Verwerker iCt Horse | Server-infra-beheer, geen routine-data-toegang |
 | Sub-verwerker Hetzner | Server-hosting (Helsinki, EU) — geen logische toegang |
-| Sub-verwerker Google (Gmail) | Magic-link e-mail verzending — alleen e-mail-adres + token |
+| Sub-verwerker Hostinger (SMTP, afzender info@icthorse.nl) | Verzending van magic-link- en meldingsmails — e-mailadres, onderwerp en mailtekst (nooit vault-inhoud, wachtwoorden of sleutels) |
+| Sub-verwerker Google (Gmail) | Alleen nog als uitgeschakelde reserve-mailroute; in productie niet in gebruik sinds v0.2.0 |
 
 ## 4. Doorgifte buiten EU?
 
-**Nee.** Server staat in Helsinki (Hetzner, EU). Magic-link via Gmail (Google EU-Standard Contract Clauses).
+**Nee.** Server staat in Helsinki (Hetzner, EU). Mail gaat via Hostinger (EU-gevestigd; de locatie van de mailservers wordt bij de verwerkersovereenkomst vastgelegd). De reserve-route via Gmail valt onder de EU-Standard Contract Clauses van Google.
 
 ## 5. Jouw rechten (GDPR Art. 15-22)
 

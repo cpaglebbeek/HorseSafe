@@ -1,6 +1,8 @@
 # DEPLOYMENT.md — HorseSafe
 
-> Productie-deploy op HorseCloud55. **Niet uitvoeren** vóór Fase 1-5 stabiel + sanitycheck groen + SHARED_INFRASTRUCTURE.md update.
+> Productie-deploy op HorseCloud55 (`icthorsecloud.nl`). LIVE sinds v0.0.7-Bellare; huidige stand v0.2.x-Koblitz.
+> **Het uitvoerbare runbook is [`docs/DEPLOY_HC55_LIVE.md`](docs/DEPLOY_HC55_LIVE.md)** (eerste deploy, update-deploy met
+> verplichte backup, rollback). Dit document beschrijft de doelomgeving en de achtergrond. Bijgewerkt 2026-10-11 (v0.2.1).
 
 ## Doel-omgeving
 
@@ -25,36 +27,20 @@
 
 ## Bootstrap
 
-```bash
-# als root
-useradd -r -s /bin/false -d /opt/horsesafe horsesafe
-mkdir -p /opt/horsesafe/{backend,web,db,vaults,logs,tmp}
-chown -R horsesafe:horsesafe /opt/horsesafe
-chmod 700 /opt/horsesafe/{db,vaults,logs,tmp}
-chmod 755 /opt/horsesafe/{backend,web}
+Gebruik `scripts/deploy_hc55.sh` (idempotent; zie runbook). Het script:
 
-# Code-deploy
-sudo -u horsesafe git clone https://github.com/cpaglebbeek/HorseSafe.git /opt/horsesafe/repo
-sudo -u horsesafe ln -s /opt/horsesafe/repo/backend /opt/horsesafe/backend
-sudo -u horsesafe ln -s /opt/horsesafe/repo/frontend /opt/horsesafe/web
+- maakt de service-user `horsesafe` en `/opt/horsesafe/{db,vaults,logs,tmp,web}` aan;
+- kloont/pullt de repo naar `/opt/horsesafe/repo` en installeert de venv in `/opt/horsesafe/venv`;
+- genereert bij de eerste keer `/opt/horsesafe/.env` (mode 600) met willekeurige JWT- en TOTP-sleutels;
+- draait `backend.db.init` + `backend.db.migrate`;
+- **kopieert** (rsync, geen symlink) alleen de productie-frontend naar `/opt/horsesafe/web/` — zonder
+  `tests/`, `node_modules/`, `package*.json`, `playwright.config.ts`, `devserver.py` en `README.md`;
+- zet nginx-snippet, systemd-unit en backup-cron klaar (reload/start doe je zelf na review).
 
-# Python venv
-sudo -u horsesafe python3.12 -m venv /opt/horsesafe/venv
-sudo -u horsesafe /opt/horsesafe/venv/bin/pip install -r /opt/horsesafe/backend/requirements.txt
-
-# DB-init
-sudo -u horsesafe /opt/horsesafe/venv/bin/python -m backend.db.init
-
-# .env (mode 600)
-cat > /opt/horsesafe/.env <<EOF
-HORSESAFE_JWT_SECRET=$(openssl rand -hex 32)
-HORSESAFE_TOTP_ENCRYPTION_KEY=$(openssl rand -hex 32)
-HORSESAFE_MAGIC_LINK_BRIDGE_URL=...
-HORSESAFE_GMAIL_APP_PASSWORD=...
-EOF
-chmod 600 /opt/horsesafe/.env
-chown horsesafe:horsesafe /opt/horsesafe/.env
-```
+Verplichte `.env`-sleutels naast de gegenereerde: zie `backend/.env.example` — vanaf v0.2.0-Koblitz
+`HORSESAFE_SMTP_HOST/PORT/USER/PASSWORD/FROM/STARTTLS` (Hostinger 587, From = SMTP-gebruiker) en
+`HORSESAFE_WEBAUTHN_RP_ID/ORIGIN/RP_NAME` (= `icthorsecloud.nl`). `HORSESAFE_TEST_ATTESTATION` staat in
+productie altijd op `false`.
 
 ## Systemd
 
@@ -156,17 +142,15 @@ ssh u123456@u123456.your-storagebox.de "ls /horsesafe/ | sort | head -n -30 | xa
 
 ## Rollback
 
-Symlinks (`/opt/horsesafe/{backend,web}` → `repo/`) maken rollback simpel:
-```bash
-cd /opt/horsesafe/repo
-git checkout <previous-tag>
-systemctl restart horsesafe
-```
+Zie runbook §Rollback. Let op: `web/` is een kopie (geen symlink) en migraties zijn niet omkeerbaar —
+bij een migratie in de teruggedraaide versie ook de DB-backup uit `/opt/horsesafe/backups-predeploy/`
+terugzetten.
 
 ## Smoke-tests post-deploy
 
 ```bash
 curl -fsS https://icthorsecloud.nl/HorseSafe/                # 200 + HTML
 curl -fsS https://icthorsecloud.nl/HorseSafe/api/health      # 200 {"status":"ok"}
-curl -fsS https://icthorsecloud.nl/HorseSafe/api/openapi.json | jq .info.version
+curl -sS -o /dev/null -w '%{http_code}' https://icthorsecloud.nl/HorseSafe/api/openapi.json  # 404: docs dicht in productie
+bash scripts/post_deploy_smoke.sh                             # volledige smoke
 ```

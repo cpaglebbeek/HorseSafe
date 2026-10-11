@@ -1,6 +1,6 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-10-10
+> Laatst bijgewerkt: 2026-10-11
 
 ## 🆕 2026-10-10 — v0.2.0-Koblitz (hardware-sleutels in het web, server-geverifieerd)
 
@@ -17,20 +17,22 @@ Ontwerp + bindend contract: `docs/HARDWARE_KEYS.md` (§12). Besluiten Christian 
 - [x] ~~**Versie-bump** — `config.py` `app_version` = `0.2.0-Koblitz`; `version.json` 0.2.0 Koblitz~~ ✅ 2026-10-10
 
 **Open (Koblitz)**
-- [ ] **e2e-specs admin/mfa/smoke omzetten naar `tests/e2e-stack.ts`** — ze wijzen nu naar :3997 = LIVE productie (10/11-10 alleen OPTIONS/429, geen schrijfverzoeken aangekomen)
-- [ ] **`scripts/deploy_hc55.sh` rsync-excludes** (`tests/`, `package*.json`, `node_modules/`, `devserver.py`, `README.md`) + script-header/.env-sjabloon bijwerken; DEPLOYMENT.md is verouderd
+- [ ] **Deploy v0.2.1** — alleen nodig om `devserver.py`/`README.md` uit de webroot te halen en de versie te tonen; volgens het runbook met backup (akkoord Christian)
+- [ ] **CI v0.2.1 groen op GitHub** controleren na de push
+- [x] ~~**e2e-specs admin/mfa/smoke omzetten naar `tests/e2e-stack.ts`** — ze wijzen nu naar :3997 = LIVE productie (10/11-10 alleen OPTIONS/429, geen schrijfverzoeken aangekomen)~~ ✅ 2026-10-11 (v0.2.1)
+- [x] ~~**`scripts/deploy_hc55.sh` rsync-excludes** (`tests/`, `package*.json`, `node_modules/`, `devserver.py`, `README.md`) + script-header/.env-sjabloon bijwerken; DEPLOYMENT.md is verouderd~~ ✅ 2026-10-11 (v0.2.1)
 - [x] ~~**Bouw afronden volgens §12** — backend (migratie 005 herschreven, py_webauthn, step-up, rekey, recovery block/unblock, mailer) en frontend (`hwkeys.js`, `hwkeys-ui.js`, `stepup.js`, ontgrendelscherm, rekey-flow); per onderdeel tegen §12.14 afvinken~~ ✅ 2026-10-11 (commit 68e4695, 3 adversariële reviewrondes, 16 bevindingen gefixt)
 - [x] ~~**Testvectoren Seal_v2** — `specs/testvectors/seal_v2.json` + `gen_seal_v2.py`~~ ✅ 2026-10-10 (reviewronde 2; pytest + `node --test` zonder skips)
 - [x] ~~**LIVE v0.1.0-Massey kwetsbaar voor HS-BUG-008 punt 1 en 5**~~ ✅ 2026-10-11 vervallen: Koblitz (met fix) is live
 - [x] ~~**Tests meten en in `version.json` zetten**~~ ✅ 2026-10-11 — pytest 196/196, `node --test` 59/59, Playwright 10/10; kdbx-oracle-CI nog te meten
-- [ ] **CI-jobs** — `node --test` en Playwright-WebAuthn toevoegen aan `.github/workflows/ci.yml`
+- [x] ~~**CI-jobs** — `node --test` en Playwright-WebAuthn toevoegen aan `.github/workflows/ci.yml`~~ ✅ 2026-10-11 (v0.2.1)
 - [ ] **HS-BUG-007 sluiten** zodra de tests in §12.14 groen zijn
 - [x] ~~**SMTP-gegevens in `/opt/horsesafe/.env`** — `HORSESAFE_SMTP_HOST/PORT/USER/PASSWORD/FROM` uit ClaudeSecrets (Christian); daarna aantoonbaar mail afgeleverd vanaf HC55 via 587/STARTTLS (acceptatie 5)~~ ✅ 2026-10-11 — Hostinger 587, 250 + afgeleverd in inbox
 - [x] ~~**Deploy HC55** — rsync met `--exclude tests/ --exclude 'package*.json' --exclude node_modules/`, migratie 005, restart; live `/api/health` = `0.2.0-Koblitz` met `test_attestation:false` (acceptatie 6)~~ ✅ 2026-10-11 00:32 UTC — DB/vaults/.env-backup in `/opt/horsesafe/backups-predeploy/`, schema 5, post_deploy_smoke groen
 - [ ] **YubiKeys inrichten** (tot Miller via Yubico Authenticator / `ykman`) — Bio: PIN van 63 tekens, minimale PIN-lengte 63, always-uv, 2-3 vingers; noodsleutel: PIN van 63 tekens, PIN op papier apart van de sleutel
 - [ ] **Veldtest** — Bio in Chrome op de laptop koppelen en ontgrendelen; Windows Hello-passkey wordt geweigerd (acceptatie 7)
-- [ ] **GDPR_COMPLIANCE.md / PRIVACY_STATEMENT.md** — SMTP-provider als (sub)verwerker en sleutelmetadata opnemen (volgt uit DPIA §9; buiten de Koblitz-docsscope van 10-10)
-- [ ] **UI_DESIGN.md + docs/screens/** — ontgrendelscherm YubiKey/Keyfile, sleutelbeheer, step-up-dialoog documenteren
+- [x] ~~**GDPR_COMPLIANCE.md / PRIVACY_STATEMENT.md** — SMTP-provider als (sub)verwerker en sleutelmetadata opnemen (volgt uit DPIA §9; buiten de Koblitz-docsscope van 10-10)~~ ✅ 2026-10-11 (v0.2.1)
+- [x] ~~**UI_DESIGN.md + docs/screens/** — ontgrendelscherm YubiKey/Keyfile, sleutelbeheer, step-up-dialoog documenteren~~ ✅ 2026-10-11 (v0.2.1)
 
 ## 📋 Gepland — v0.3.0-Miller (Android-app) — NIET in deze fase
 

@@ -53,9 +53,7 @@ def create_app() -> FastAPI:
     # OpenAPI-schema + interactieve docs alleen in dev/test. In productie uit:
     # ze onthullen de volledige API-oppervlakte van een zero-knowledge dienst.
     docs_kwargs = (
-        {}
-        if settings.docs_enabled
-        else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+        {} if settings.docs_enabled else {"docs_url": None, "redoc_url": None, "openapi_url": None}
     )
     app = FastAPI(
         title=settings.app_name,

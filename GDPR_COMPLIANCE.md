@@ -1,6 +1,7 @@
 # GDPR_COMPLIANCE.md — HorseSafe
 
 > Compliance-matrix tegen GDPR. Cross-ref: `PRIVACY_STATEMENT.md`, `DPIA.md`, `SECURITY.md`.
+> Bijgewerkt 2026-10-11 (v0.2.1): hardware-sleutels en de SMTP-subverwerker uit DPIA §9 verwerkt.
 
 ## Rol-classificatie
 
@@ -57,12 +58,13 @@ Verstrekt via `PRIVACY_STATEMENT.md` link in:
 
 - **By design:** zero-knowledge architectuur — server kan content niet zien
 - **By default:** dark-theme + wachtwoord verborgen + clipboard-wipe + MFA verplicht voor vault
+- **Hardware-sleutels (v0.2.0):** vingerafdruk blijft in de YubiKey (match-on-device); alleen niet-gesynchroniseerde sleutels toegestaan (P-AUTH-08); ontgrendelkopie verzegeld naar gebruikershardware (P-CRYPT-09); noodsleutel pas na 24 uur wachttijd met melding (P-OPS-07)
 
 ## Art. 28 — Verwerkersovereenkomst (DPA)
 
 Voor zakelijke klanten v1.0+: DPA-template levert in:
 - Verwerkersrol (alleen metadata + auth)
-- Sub-verwerkers (Hetzner + Google Gmail)
+- Sub-verwerkers: Hetzner (hosting, EU) + Hostinger (SMTP voor magic-link- en meldingsmails, sinds v0.2.0); Google Gmail alleen als uitgeschakelde reserve
 - Subprocessing-notificatie 30 dagen vooruit
 - Audit-recht klant
 - Datalek-notificatie 24u
@@ -99,7 +101,7 @@ Zie `DPIA.md`. Conclusie: verwerking valt **niet** onder DPIA-plicht (geen large
 
 ## Art. 44-49 — Doorgifte derde landen
 
-Geen doorgifte buiten EU. Hetzner (DE/FI) + Google (EU SCC).
+Geen doorgifte buiten EU. Hetzner (DE/FI) + Hostinger (EU-gevestigd; mailserverlocatie vastleggen in de DPA) + Google alleen als reserve-mailroute (EU SCC).
 
 ## Compliance-audit-checklist
 
