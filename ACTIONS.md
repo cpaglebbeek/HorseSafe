@@ -1,6 +1,31 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-10-11
+> Laatst bijgewerkt: 2026-10-12
+
+## 🆕 2026-10-12 — v0.3.0-Miller deel 1 (Android: YubiKey inrichten en keuren)
+
+Bouwplan + kritiekcorrecties: akkoord Christian 12-10. Ontwerp: `docs/HARDWARE_KEYS.md` §4.1, §7.1, §10, §11.1. Bouwen/testen/publiceren/checklist: `android/README.md`. Sessie: `prompts/2026-10-12_miller_deel1.md`.
+
+**Gedaan**
+- [x] ~~**`android/` gebouwd** — één module `:app`, yubikit 3.0.1, geen INTERNET; inrichten (nieuw + hervatten), keuren zonder/met PIN, PIN wijzigen, vingers beheren, oefenen, rapport (whitelist, serial-HMAC, export/import)~~ ✅ 12-10
+- [x] ~~**Tests** — `testDebugUnitTest` 250/250, `lintRelease` 0 errors (16 warnings), `verifyYubikitHashes` 4/4, `verifyNoSlf4jProvider` groen (build-box via `remote-gradle.sh`)~~ ✅ 12-10
+- [x] ~~**Release-APK lokaal op HC55** — versionCode 300 / 0.3.0-Miller, sha256 `1efcec3b…6cfd`, `scripts/verify_apk.sh` GROEN (signer `32491e0f…3f17`)~~ ✅ 12-10
+- [x] ~~**Versie** — `version.json` 0.3.0 Miller (phase 11), `backend/config.py` + `test_health.py` 0.3.0-Miller (pytest 196/196), `frontend/vault.html` footer~~ ✅ 12-10
+- [x] ~~**Docs** — HARDWARE_KEYS §4.1/§7/§9/§10/§11.1, THREAT_MODEL R4 + R16–R21, ROADMAP, CHANGELOG, UI_DESIGN + `docs/screens/M00..M12`, `android/README.md`, README-status~~ ✅ 12-10
+
+**Open (Miller deel 1)**
+- [ ] **Commit** — per bestand `git add` (nooit `-A`; `.github/workflows/ci.yml` NIET meenemen), aparte commit voor de versie-bump; daarna push (akkoord Christian)
+- [ ] **Bevestigen door Christian** — release-build blokkeert PIN-schermen ook bij alleen ontwikkelaarsopties aan (advies: ja); antwoorden op de open vragen van het plan waar nu volgens advies gebouwd is (§11.1)
+- [ ] **Emulator-smoke** — `android/scripts/smoke.sh` op hb-root (na WhatIf + akkoord; gedeelde infra): start, `logcat -b crash` leeg, FLAG_SECURE; ook InitializationProvider-verwijdering en dispatchKeyEvent controleren
+- [ ] **Hardwaretest (Christian)** — eerst wisbare testsleutel: min 63 accepteert, 0x1D aanwezig, firmware Bio ≥ 5.7.2 / YK5 ≥ 5.7.0, USB op de Fold6, U2F na alwaysUv, NFC-timeouts, FLAG_SECURE vs Link to Windows/DeX, `adb_wifi_enabled` leesbaar; dan echte Bio + noodsleutel; resultaten in `version.json`
+- [ ] **Publicatie** — `apk-publish.sh HorseSafe HorseSafe-v0.3.0-Miller-release.apk` (release-artefact, lokaal gebouwd) na smoke + akkoord; update-aanbod in de HorseAPK-app aantonen
+- [ ] **Server-side minPinLength/credProtect-patch** (Koblitz 0.2.x) — afdwingen bij koppelen + MPE weigeren via veld `variant` in `aaguids.json` (THREAT_MODEL R18); eerst Chrome-ondersteuning meten
+- [ ] **androidTest** met fake-`KeyLink` ("M4 geblokkeerd bij ADB/a11y", kritiek 11) — vraagt test-afhankelijkheden + emulator
+- [ ] **Attestation-vectoren** in `specs/testvectors/attestation/` met clientDataJSON + `backend/tests/test_attestation_vectors.py`
+- [ ] **CI-job `android`** (aparte commit, `gh auth refresh -s workflow`); de structuuraudit breekt niet op `android/` (alleen aanwezigheid van vaste dirs gecontroleerd), maar `android` staat ook niet in de lijst
+- [ ] **Docs** — ARCHITECTURE, COMPONENT_DIAGRAM, SEQUENCE_DIAGRAMS (SQ-13 inrichten, SQ-14 keuren), DEPENDENCIES (yubikit-licenties), SECURITY, DPIA (korte herbeoordeling); `/ModelArchDSL update` voor `ac_android`
+- [ ] **Release-keystore** — eigen keystore buiten de repo of debug-keystore bewust aanvaarden (R4, kritiek 13)
+- [ ] **Miller deel 2 (0.3.1)** — ontgrendelen op de telefoon, koppelen (QR + SAS), telefoon-credential, device-API, migratie 006, in-app update; pas na de veldtest en een nieuw akkoord
 
 ## 🆕 2026-10-10 — v0.2.0-Koblitz (hardware-sleutels in het web, server-geverifieerd)
 
@@ -29,15 +54,15 @@ Ontwerp + bindend contract: `docs/HARDWARE_KEYS.md` (§12). Besluiten Christian 
 - [ ] **HS-BUG-007 sluiten** zodra de tests in §12.14 groen zijn
 - [x] ~~**SMTP-gegevens in `/opt/horsesafe/.env`** — `HORSESAFE_SMTP_HOST/PORT/USER/PASSWORD/FROM` uit ClaudeSecrets (Christian); daarna aantoonbaar mail afgeleverd vanaf HC55 via 587/STARTTLS (acceptatie 5)~~ ✅ 2026-10-11 — Hostinger 587, 250 + afgeleverd in inbox
 - [x] ~~**Deploy HC55** — rsync met `--exclude tests/ --exclude 'package*.json' --exclude node_modules/`, migratie 005, restart; live `/api/health` = `0.2.0-Koblitz` met `test_attestation:false` (acceptatie 6)~~ ✅ 2026-10-11 00:32 UTC — DB/vaults/.env-backup in `/opt/horsesafe/backups-predeploy/`, schema 5, post_deploy_smoke groen
-- [ ] **YubiKeys inrichten** (tot Miller via Yubico Authenticator / `ykman`) — Bio: PIN van 63 tekens, minimale PIN-lengte 63, always-uv, 2-3 vingers; noodsleutel: PIN van 63 tekens, PIN op papier apart van de sleutel
+- [ ] **YubiKeys inrichten** — sinds 12-10 met de HorseSafe-app (v0.3.0-Miller deel 1, `android/README.md`): eerst de testsleutel, dan Bio (PIN 63, minimum 63, alwaysUv, 2-3 vingers) en noodsleutel (PIN 63 alleen op papier, apart)
 - [ ] **Veldtest** — Bio in Chrome op de laptop koppelen en ontgrendelen; Windows Hello-passkey wordt geweigerd (acceptatie 7)
 - [x] ~~**GDPR_COMPLIANCE.md / PRIVACY_STATEMENT.md** — SMTP-provider als (sub)verwerker en sleutelmetadata opnemen (volgt uit DPIA §9; buiten de Koblitz-docsscope van 10-10)~~ ✅ 2026-10-11 (v0.2.1)
 - [x] ~~**UI_DESIGN.md + docs/screens/** — ontgrendelscherm YubiKey/Keyfile, sleutelbeheer, step-up-dialoog documenteren~~ ✅ 2026-10-11 (v0.2.1)
 
-## 📋 Gepland — v0.3.0-Miller (Android-app) — NIET in deze fase
+## 📋 Gepland — v0.3.x-Miller deel 2 en verder — NIET in deze fase
 
-- [ ] `android/` in deze repo met README (sjabloon HorseAPK/android; `nl.icthorse.horsesafe`, debug-keystore) — `docs/HARDWARE_KEYS.md` §7
-- [ ] YubiKey inrichten vanuit de app (getInfo, PIN 63, setMinPinLength, always-uv, vingers inschrijven)
+- [x] ~~`android/` in deze repo met README~~ ✅ 12-10 (deel 1)
+- [x] ~~YubiKey inrichten vanuit de app~~ ✅ 12-10 (deel 1; hardwaretest open)
 - [ ] Telefoon koppelen (QR + SAS), `kind='phone'` met Keystore `BIOMETRIC_STRONG`, nooit `DEVICE_CREDENTIAL`
 - [ ] Migratie 006 (`pairings`, `device_nonces`), device-API (`/devices…`, `/device/v1/*`), `/app/latest` + `/app/download`
 - [ ] Noodsleutel blokkeren/deblokkeren vanaf de telefoon (`sig_biosig`, telefoonvinger als tweede step-up-methode)

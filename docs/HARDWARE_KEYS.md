@@ -111,23 +111,69 @@ Een blokkade blijft staan tot er expliciet wordt gedeblokkeerd (besluit 3). Er i
 
 ## 4. Sequences
 
-### 4.1 YubiKey inrichten (app, Miller; USB-C, NFC alleen voor de reserve-YubiKey 5 NFC)
-1. `getInfo` uitlezen: firmware, AAGUID, opties `bioEnroll`/`alwaysUv`/`setMinPINLength`, `minPinLength`, PIN aanwezig.
-   - Stop met uitleg bij firmware zonder CTAP 2.1-config.
-   - Stop ook bij een Multi-protocol Bio met PIV aan (PIN maximaal 8 tekens), met de instructie om PIV uit te zetten.
-   - Advies: firmware 5.7.4 of hoger.
-2. PIN instellen:
-   - De app genereert een PIN van 63 ASCII-tekens, getoond in groepen, één keer, met FLAG_SECURE en niet kopieerbaar.
-   - Christian typt 3 willekeurige groepen opnieuw ter controle.
-   - Daarna `ClientPin.setPin` of `changePin`.
-   - De PIN gaat op papier, apart van de sleutel. Hij mag niet alleen in de vault staan.
-3. `Config.setMinPinLength(63, ["icthorsecloud.nl"], false)`, en daarna `getInfo` teruglezen ter controle.
-4. `Config.toggleAlwaysUv()` tot `alwaysUv=true`, en dat teruglezen.
-5. Alleen bij `bio`: 2 of 3 vingers inschrijven met `FingerprintBioEnrollment`. De `FEEDBACK_FP_*`-codes worden in het Nederlands getoond.
-6. Alleen bij `recovery` (optioneel): NFC en ongebruikte applets uitzetten via Management.
-7. Er wordt geen credential vanuit de app aangemaakt. Registreren gebeurt in de laptopbrowser (4.2), zodat de PRF van één client komt.
+### 4.1 YubiKey inrichten (app, Miller deel 1 — GEBOUWD in v0.3.0-Miller)
 
-Tot Miller richt Christian de YubiKey in met Yubico Authenticator / `ykman` (zelfde instellingen).
+Inrichten gebeurt sinds v0.3.0-Miller **in de Android-app** (`android/`, zie §7 en `android/README.md`),
+niet meer met Yubico Authenticator / `ykman`. Die blijven alleen nodig voor een **reset** (de app kan niet
+resetten) en eventueel om applets uit te zetten. De app heeft geen INTERNET en praat niet met de server.
+
+**Profielen:** `BIO_MAIN` (hoofdsleutel, YubiKey Bio, 2-3 vingers), `RECOVERY_YK5` (noodsleutel, YubiKey 5
+NFC, geen vinger), `RECOVERY_BIO` (noodsleutel op een Bio zonder vinger). Inrichten alleen via USB (de 5 NFC
+met één OTG-adapter); NFC alleen voor "keuren zonder PIN". NFC blijft aan; "NFC uitzetten" (oude stap 6)
+vervalt.
+
+1. **Herkennen (alleen lezen):** firmware, vormfactor en serienummer via Management (`DeviceInfo`; firmware
+   niet uit getInfo), ruwe getInfo in een eigen verbinding (`RawInfo`: aanwezigheid van 0x0C/0x0D/0x0E/0x1D)
+   en een verse `Ctap2Session.getInfo()` (nooit `getCachedInfo`). Elke stap in een eigen
+   `requestConnection`. Oordeel groen/oranje/rood per eis (scherm M3). **STOP** bij:
+   - geen `FIDO_2_1`, of `setMinPINLength`/`authnrCfg`/`alwaysUv` ontbreekt, of maxRpids < 1;
+   - firmware onbekend, Bio < **5.7.2**, YubiKey 5 < **5.7.0** (YSA-2024-03);
+   - AAGUID niet in de allowlist (`backend/data/aaguids.json`, MDS) of klasse past niet bij de rol;
+   - `maxPINLength` < 63, of **afwezig** (`MAX_PIN_LENGTH_UNKNOWN`; open vraag 4 blijft STOP tot meting);
+   - meer dan één sleutel, of de sleutel wordt losgekoppeld.
+2. **Nieuw-sleutelgate:** STOP als er al een PIN staat (dan PIN wijzigen of "Inrichting hervatten"), als
+   `bioEnroll=true`, `forcePinChange=true`, resident credentials > 0, of (YubiKey 5) alwaysUv al aan zonder
+   PIN (`YK5_ALWAYS_UV_PRESET`).
+3. **PIN:** de app genereert 63 ASCII-tekens (alfabet van 29, `SecureRandom`) in 9 groepen van 7 met elk een
+   controleteken (Σ(i+1)·v_i mod 29). Tonen per groep zolang je de kaart ingedrukt houdt (M4, FLAG_SECURE,
+   Canvas uit een CharArray, geen String), overschrijven op het papieren formulier (M5) en **alle 9 groepen**
+   hertypen op een eigen toetsenblok (M6). Geen systeemtoetsenbord, geen klembord.
+4. **Attestation-keuring** (makeCredential met rpId `keuring.horsesafe.invalid`, `rk=false`, MC-token als
+   er een PIN is): packed + x5c tot de gevendorde Yubico-roots, AAGUID in het leaf gelijk aan authData,
+   rpIdHash, vlaggen, ES256. **Volgorde:** YubiKey 5 altijd vóór setPin; Bio vóór setPin als alwaysUv=false,
+   anders direct na setPin en vóór het minimum.
+5. **`ClientPin.setPin`**, daarna vers teruglezen: `clientPin=true`, 8 pogingen. Een verloren antwoord bij
+   opnieuw proberen geeft `PIN_STATE_UNKNOWN` (formulier bewaren, hervatten).
+6. **Tellen:** resident credentials = 0 (CM-token, alleen `getMetadata`), vingers = 0.
+7. **Onomkeerbaar (M6b, vinkje):** `Config.setMinPinLength(63, ["icthorsecloud.nl"], false)` met een ACFG-token;
+   vers teruglezen: `minPinLength=63`, `forcePinChange=false`.
+8. **alwaysUv:** alleen `toggleAlwaysUv()` als vers gelezen `false`; daarna vers teruglezen = `true`.
+9. **YubiKey 5:** U2F-controle — staat `U2F_V2` nog in `versions` na alwaysUv, dan oranje "afwijkend,
+   vastgelegd" (geen STOP tot de meting op de testsleutel).
+10. **Alleen `BIO_MAIN`:** 2 of 3 vingers inschrijven (BE-token; `FEEDBACK_FP_*` in het Nederlands; namen
+    zoals `R-wijs`, lengte uit `getMaxTemplateFriendlyName`), elk met een testaanraking. Op een noodsleutel
+    nooit een vinger (`RECOVERY_KEY_NO_FINGERS`, `RECOVERY_BIO_HAS_FINGER`).
+11. **Eindkeuring en rapport** zonder geheimen (whitelist; serienummer alleen als HMAC met een app-privé
+    sleutel), bewaard in app-privéopslag en te exporteren/importeren via de opslagkiezer (SAF). Een
+    inrichtingsrapport wordt de nieuwe vergelijkingsbasis.
+12. **Afsluiten:** wist de PIN en beëindigt het proces (A-12).
+
+**Per stap een eigen token met precies één permissie** (ACFG 0x20, BE 0x08, CM 0x04, MC 0x01); vooraf
+`isTokenSupported`, nooit stil terugvallen op subcommand 0x05; na elke schrijfactie een verse getInfo.
+
+**Inrichting hervatten (F2r/F3r):** voor een sleutel waarop de PIN al staat maar de inrichting niet af is
+(app gecrasht, sleutel uitgetrokken, STOP na setPin). Toegang alleen als `clientPin=true`, resident = 0 en
+(minimum < 63 of alwaysUv false of — hoofdsleutel — 0 vingers). De PIN komt van papier (M8, met
+controletekens; een fout controleteken kost geen poging) en daarna volgt de rest van de vaste volgorde met
+dezelfde terugleescontroles.
+
+**Verder in de app:** keuren zonder PIN (elk kwartaal, ook via NFC), keuren met PIN (vingerlijst, resident
+credentials, attestation), PIN wijzigen, vingers beheren (toevoegen, hernoemen, verwijderen, testaanraking;
+alleen hoofdsleutel), oefenen (papier controleren zonder sleutel; optioneel één echte PIN-controle met een
+CM-token).
+
+Er wordt **geen credential voor `icthorsecloud.nl`** vanuit de app aangemaakt. Registreren gebeurt in de
+laptopbrowser (4.2), zodat de PRF van één client komt.
 
 ### 4.2 YubiKey koppelen (laptop, vault geopend met pw/keyfile, dus CK in RAM) — Koblitz
 Zie §12.6.1 voor het exacte contract. In het kort: server-opties (twee challenges, `key_id`, `prf_salt`) → `credentials.create` → `credentials.get` met PRF → client verzegelt en controleert zelf → `POST /vault/{vid}/keys` → server verifieert attestation, UV, BE, AAGUID, assertion en sealed-vorm.
@@ -210,25 +256,85 @@ Het exacte Koblitz-contract staat in §12. Miller- en Montgomery-endpoints worde
 
 **Meldingen (besluit 4):** generieke SMTP-mailer (§12.11), afzender = SMTP-gebruiker (info@icthorse.nl). Ook de magic-link loopt via deze mailer. Vanaf Miller komt daar de inbox van de telefoon bij (polling).
 
-## 7. Android-app (`android/`, Miller — niet in Koblitz)
+## 7. Android-app (`android/`, Miller)
 
-**Basis:** `nl.icthorse.horsesafe` (debug `.debug`); sjabloon `HorseAPK/android` (Gradle 8.10.2, AGP 8.7.3, Kotlin 2.0.21, Compose BOM 2024.11.00); minSdk 33 (platform-XDH), compile/target 35; versionName uit `../version.json`; ondertekend met `~/.android/debug.keystore`.
+### 7.1 Deel 1 — GEBOUWD in v0.3.0-Miller (2026-10-12): YubiKey inrichten en keuren
 
-**Bibliotheken:** `com.yubico.yubikit:android|fido|core|management:3.0.1` (3.2.x vraagt kotlin-stdlib 2.2); `androidx.biometric:1.2.0-alpha05`, `fragment-ktx:1.8.5`; OkHttp, WorkManager; `zxing-android-embedded` (zonder GMS), `androidx.webkit`; Tink 1.8.0 alleen als de platform-XDH-vectortest faalt.
+Bouwen, testen, publiceren en de hardwarechecklist: `android/README.md`.
 
-**Hardening:** `allowBackup=false` + dataExtractionRules die alles uitsluiten; `FLAG_SECURE` overal; geen cleartext; network-security-config met pins op ISRG Root X1 en X2; `usb.host required=false` met device-filter VID 0x1050; yubikit-`OtpActivity` verwijderd (`tools:node="remove"`); geen FCM (besluit 6).
+**Basis:** `nl.icthorse.horsesafe` (debug `.debug`); één Gradle-module `:app`; Gradle 8.10.2, AGP 8.7.3,
+Kotlin 2.0.21, Compose BOM 2024.11.00; minSdk 33, compile/target 35; `versionName`/`versionCode` uit
+`../version.json` (`X.Y.Z-Codenaam`, `X*10000+Y*100+Z`, patch < 100). Release: niet-debuggable,
+geminificeerd (R8), ondertekend met `~/.android/debug.keystore` op HC55 (signer `32491e0f…3f17`, E8).
+
+**Bibliotheken:** alleen `com.yubico.yubikit:android|core|fido|management:3.0.1` (3.1/3.2.x vragen Kotlin 2.2),
+AndroidX core/lifecycle/activity-compose, Compose Material3 en kotlinx-coroutines. **Geen**
+netwerkbibliotheek, geen biometric, geen WorkManager, geen Crashlytics/ACRA. Toeleveringsketen: geen
+`verification-metadata.xml` (zou elk artefact moeten dekken); in plaats daarvan
+`:app:verifyYubikitHashes` (SHA-256 van de vier yubikit-artefacten) en `:app:verifyNoSlf4jProvider`
+(hangt aan `preBuild`, faalt bij een slf4j-provider op de classpath).
+
+**Manifest (minimaal, bewaakt door `ReleaseManifestTest` en `scripts/verify_apk.sh`):**
+- permissies: NFC, `HIDE_OVERLAY_WINDOWS`, `DETECT_SCREEN_CAPTURE`, `DETECT_SCREEN_RECORDING` (plus de
+  interne `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` van AndroidX); **geen INTERNET**,
+  `ACCESS_NETWORK_STATE`, `USE_BIOMETRIC`, `USE_FINGERPRINT` of `REQUEST_INSTALL_PACKAGES`
+  (`tools:node="remove"`);
+- `usb.host` en `nfc` met `required=false`; **geen** USB-intent-filter en geen `device_filter.xml` (kritiek
+  12: detectie alleen via `startUsbDiscovery` zolang de app open is);
+- yubikit-`OtpActivity` en `YubiKeyPromptActivity`, `androidx.startup.InitializationProvider` en
+  `ProfileInstallReceiver` verwijderd; precies één exported component (MainActivity, MAIN/LAUNCHER);
+  geen provider of service;
+- `allowBackup=false`; `fullBackupContent` (`backup_rules.xml`) en `dataExtractionRules` (cloud-backup én
+  device-transfer) sluiten elk domein uit;
+  `usesCleartextTraffic=false`;
+- `configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboard|keyboardHidden|uiMode|navigation|fontScale"`
+  (geen `fold`: geen geldige waarde; vouwen valt onder screenSize/smallestScreenSize/screenLayout).
+
+**Hardening (A-1..A-22 uit het bouwplan):** FLAG_SECURE en `setRecentsScreenshotEnabled(false)` vóór
+`setContent`; overlays verborgen en `filterTouchesWhenObscured`; schermopname-callbacks (API 34/35);
+PIN-schermen (M4, M5, M6, M8) geblokkeerd bij een niet-toegestane toegankelijkheidsdienst, multi-window/PiP,
+een ander display of DeX, schermopname, en in de release-build ook bij ingeschakelde
+ontwikkelaarsopties of ADB (USB of draadloos); eigen toetsenblok zonder IME, hardwaretoetsen geslikt op
+schermen met een geheim; PIN alleen in een CharArray (`SecretBuffer`) en gewist bij `onStop`/`onCleared`;
+geen logging in productiecode (bronbeleidstest + R8 `-assumenosideeffects`); `CrashGuard` voorkomt
+dropbox en crashdialoog (de platform-pre-handler schrijft nog wel naar `logcat -b crash`); "Afsluiten"
+beëindigt het proces.
+
+| Pakket | Inhoud (deel 1) |
+|---|---|
+| `app/` | `MainActivity` (één activity, Compose), `ServiceLocator` (koppeling, vertrouwensankers uit assets met hash uit BuildConfig, fail-closed) |
+| `secure/` | `SecureWindow`, `EnvironmentGuard`, `CrashGuard`, `ProcessEnd`, `SecretRegistry` |
+| `pin/` | `Alphabet` (29 tekens), `PinGenerator` (`SecureRandom`), `GroupCheck` (controleteken mod 29), `PinCompare` (constante tijd), `SecretBuffer` |
+| `yubikey/` | `RawInfo`, `Inspector`, `MgmtOps`, `Tokens`, yubikit-adapters voor PIN, Config, BioEnroll, CredMgmt en attestation; `transport/` (`YubiKitKeyDiscovery`, `YubiKeyLink`, `ConnectionRunner`: één fase per `requestConnection`, buiten de main thread) |
+| `attest/` | `AttestationVerifier` (Kotlin-port van `webauthn_service.py` stap 5-8), `AaguidAllowlist`, `TrustRoots`, `AuthDataParser` — ankers `yubico_fido_roots.pem` + `aaguids.json` bij de build uit `../backend/data` gekopieerd |
+| `flow/` | `DefaultSetupMachine` (nieuw + hervatten), `KeuringFlow`, `ChangePinFlow`, `FingerFlow`, `PracticeFlow`, `Policy`/`Checks` (gates), `Stop` (Nederlandse reden + advies) |
+| `report/` | `Report` + `ReportSchema` (whitelist, faalt op onbekend veld), `ReportStore` (app-privé, `baselineFor`), `ReportCompare`, `SafReportIo` (export/import), `SerialHasher` (HMAC van het serienummer, Keystore-sleutel) |
+| `ui/` | Schermen M0..M12 (zie `UI_DESIGN.md` en `docs/screens/M00..M12`), `PinKeypad`, `GroupReveal`, `HorseSafeViewModel` |
+
+**Niet in deel 1:** INTERNET en elke servercommunicatie, telefoon-credential en Keystore-sleutels
+(K_wrap/K_dev/K_biosig), `StrongGate`/`USE_BIOMETRIC`, koppelen (QR + SAS), device-API, migratie 006,
+meldingen (polling), in-app update (updates via de HorseAPK-app), reset/`deleteCredential`/
+`updateDeviceConfig`/`setMode`, applets of NFC uitzetten, test-emulator `hb-horsesafe`, CI-job `android`.
+
+### 7.2 Deel 2 en verder (v0.3.x-Miller) — gepland
+
+Zoals ontworpen op 10-10-2026; de pakketten hieronder komen er in deel 2 bij.
+
+**Extra bibliotheken:** `androidx.biometric:1.2.0-alpha05`, `fragment-ktx:1.8.5`; OkHttp, WorkManager;
+`zxing-android-embedded` (zonder GMS), `androidx.webkit`; Tink 1.8.0 alleen als de platform-XDH-vectortest
+faalt. **Extra hardening:** INTERNET met network-security-config en pins op ISRG Root X1 en X2, geen
+cleartext; geen FCM (besluit 6).
 
 | Pakket | Inhoud |
 |---|---|
-| `biometric/StrongGate` | alleen `BIOMETRIC_STRONG`, altijd met CryptoObject, negatieve knop "Annuleren". Unit-test + lint-check: `DEVICE_CREDENTIAL` komt nergens voor. Afgeleid van `iCtHorseKey`. |
+| `biometric/StrongGate` | alleen `BIOMETRIC_STRONG`, altijd met CryptoObject, negatieve knop "Annuleren". Unit-test + lint-check: `DEVICE_CREDENTIAL` komt nergens voor (die bronbeleidstest bestaat al in deel 1). Afgeleid van `iCtHorseKey`. |
 | `keystore/` | K_wrap, K_dev, K_biosig volgens §2, StrongBox eerst. `KeyPermanentlyInvalidatedException` → lokaal wissen, server-status `revoked`, scherm "Opnieuw koppelen". |
 | `crypto/` | `Seal` v2, HKDF, X25519; vectortests op `specs/testvectors/seal_v2.json`. Let op: WebAuthn-PRF hasht de salt (`SHA-256("WebAuthn PRF" ‖ 0x00 ‖ prf_salt)`) vóór hmac-secret; de app moet dat zelf doen als hij hmac-secret direct aanspreekt. |
-| `yubikey/` | `Inspector`, `PinOps`, `ConfigOps` (setMinPinLength 63, toggleAlwaysUv), `BioEnrollOps`, `MgmtOps` |
 | `net/` | K_dev-interceptor, inbox (long-poll / WorkManager 15 min), lokale meldingen |
 | `pairing/`, `approve/` | QR-scan, SAS, goedkeuringskaart, WebMessageListener (v0.4.0) |
 | `update/` | port van `ClaudeWeb/android/.../update/` (ApkVerifier: sha256, package, certificaat, alleen eigen host) |
 
-Test-emulator `hb-horsesafe` (besluit 5) komt in Miller, niet nu.
+Test-emulator `hb-horsesafe` (besluit 5) komt in deel 2 (deel 1 heeft geen biometrie).
 
 ## 8. Webversie (Koblitz)
 
@@ -246,7 +352,7 @@ Test-emulator `hb-horsesafe` (besluit 5) komt in Miller, niet nu.
 | R1 | Een gecompromitteerde server serveert kwaadaardige web-JS en vangt CK bij webontgrendeling (P-CRYPT-05; geldt ook voor de WebView). | Expliciet in THREAT_MODEL. Hoogste zekerheid: native kluis (v0.5.0), op termijn een getekende bundel of de extensie. |
 | R2 | De 24-uurswachttijd wordt alleen door de server afgedwongen. | Wie de server overneemt heeft nog steeds de fysieke noodsleutel en de PIN van 63 tekens nodig. Melding, blokkade en audit. |
 | R3 | De Bio valt na 3 vingers terug op de PIN. | Niet uit te zetten. PIN van 63 tekens, minimumlengte 63, 8 pogingen tot reset. |
-| R4 | De debug-keystore op HC55 tekent de APK (Miller). | Eis E8 accepteert dit. In de app een expliciete updatebevestiging met versie en sha256. |
+| R4 | De debug-keystore op HC55 tekent de release-APK (Miller). Het wachtwoord van een debug-keystore is publiek bekend (`android`): wie `~/.android/debug.keystore` kan lezen, kan een update maken die Android en HorseAPK accepteren (supply-chain-pad naar een app die PIN's maakt). | Eis E8 accepteert dit voorlopig. Signer-digest `32491e0f…3f17` op M12 en in `scripts/verify_apk.sh`; publiceren alleen vanaf een lokale build op HC55. Deel 1 heeft geen in-app update (geen INTERNET): updates via de HorseAPK-app. Open vraag: eigen release-keystore buiten de repo, of bewust aanvaarden (kritiek 13). |
 | R5 | Een aanvaller met alleen een account-sessie kan DoS plegen (sleutels verwijderen, blokkeren). | Uitbreidende acties vragen step-up; defensieve acties niet. Alles wordt gemeld en gelogd. De keyfile-route blijft werken. |
 | R6 | Account-sessie + TOTP + verwijderen van alle bio-sleutels geeft TOTP-step-up, en daarmee een eigen (echte) Bio koppelen. | TOTP-step-up pas 24 uur (`recovery_delay_hours`) na het verwijderen van een Bio (los of samen met haar kluis) of na het instellen van TOTP terwijl er al sleutels waren (403 `stepup_cooldown`, met meldingen). TOTP kan niet worden vervangen zonder de huidige code (409 `totp_already_configured`). Deblokkeren kan nooit met TOTP en alleen met een Bio die al gekoppeld was vóór de blokkade (`stepup_key`, 403 `stepup_key_too_new`). Vóór rekey/opnieuw verzegelen toont de client elke ontvangende sleutel (recent gekoppeld gemarkeerd) en vraagt bevestiging. Daarna is voor de noodsleutel nog steeds de fysieke sleutel met PIN nodig, plus 24 uur met meldingen. Restrisico: zonder TOTP is het accountwachtwoord genoeg voor S; de mailbox alleen niet (R14). |
 | R7 | Diefstal van de telefoon met kennis van de toestel-PIN (Miller). | Een vinger toevoegen maakt K_wrap en K_biosig ongeldig. Intrekken via het web. |
@@ -258,6 +364,12 @@ Test-emulator `hb-horsesafe` (besluit 5) komt in Miller, niet nu.
 | R13 | Mailserver onbereikbaar → noodsleutel-vrijgave zonder dat Christian het merkt. | Vrijgave geweigerd zonder geconfigureerd kanaal (503) en teruggedraaid als de melding niet afgeleverd kon worden (§12.6.6). |
 | R14 | Magic-link of backup-codes als omweg om MFA (reviewronde 2): de magic-link gaf zonder wachtwoord een `mfa=true`-sessie (mailbox = S, en alle Koblitz-meldingen gaan naar diezelfde mailbox); backup-codes aanmaken kon met alleen het wachtwoord en gaf via `/backup-codes/verify` `mfa=true`. | Besluit (reviewronde 2, 10-10-2026): de magic-link is uitsluitend een **tweede stap** bovenop een wachtwoordsessie van dezelfde gebruiker in dezelfde browser; zonder die sessie wordt hij geweigerd en niet verbruikt (`login.html?error=magic_link_login_first`); hij geeft nooit zelf een sessie. Reviewronde 3: de link wijst naar `mfa.html#ml=<token>`, dat same-site `POST /auth/magic-link/redeem` doet; het `SameSite=Strict`-cookie gaat bij een klik vanuit webmail (cross-site) namelijk niet mee. `POST /auth/backup-codes/generate` vereist een sessie met MFA (403 `mfa_required`); bestaande codes blijven dan geldig. S = wachtwoord + tweede factor (TOTP, magic-link of een eerder met MFA aangemaakte backup-code). |
 | R15 | Wie `vault_keys.public_key` kan wijzigen (DB-schrijftoegang, gemanipuleerde back-up, injectie elders) laat bij de volgende reseal/rekey het echte `{ph,kh}` naar zijn eigen sleutel verzegelen; een verwisselde sleutel ziet er in de bevestigingsdialoog hetzelfde uit. | De client legt bij het koppelen `{key_id: public_key}` vast **in de versleutelde KDBX** (Meta/CustomData `HorseSafe.KeyPins.v1`, beschermd door de KDBX-HMAC; eerst vastleggen en opslaan, dan pas `POST …/keys`). `resealAll`/`rekey` verzegelen alleen naar sleutels die daar exact zo staan; anders `key_pin_mismatch`/`key_not_pinned` vóór er iets verzegeld wordt, en het sleutelpaneel waarschuwt. Restrisico: een sleutel waarvan de pin ontbreekt (kluis buiten HorseSafe zonder CustomData opgeslagen, of koppelen afgebroken) moet opnieuw gekoppeld worden; R1 (kwaadaardige JS) blijft. |
+| R16 (B-17) | PIN-kopieën in de yubikit-heap: `ClientPin.preparePin` geeft bytes terug die yubikit niet wist (`setPin`: 64 opgevulde bytes; `changePin`: nieuwe en huidige PIN; `getPinToken`: huidige PIN als SHA-256-invoer); het gedeelde ECDH-geheim wordt niet gewist. yubikit maakt géén String van de PIN. `Ctap2Session.clientPin` is package-private, dus een eigen wisbare implementatie kan niet via de publieke API. | De app zelf houdt de PIN alleen in een CharArray en wist die; "Afsluiten" beëindigt het proces na elke stap met een PIN (A-12), zodat de heap verdwijnt. Release niet-debuggable (geen JDWP/`run-as`). Geaccepteerd restrisico; een shim in het yubikit-package is te breekbaar bij een update (open vraag 13). |
+| R17 | Slechts 8 PIN-pogingen bij een PIN van 63 tekens: typfouten op de laptop kosten pogingen; na 3 fouten op rij opnieuw insteken, bij 0 is de PIN geblokkeerd en is alleen een reset (alles weg) mogelijk. | Controleteken per groep (vangt elke enkele fout en elke omwisseling van buren) zodat de app een fout op papier vangt zonder poging; "Oefenen" zonder sleutel; M8 blokkeert bij ≤ 3 resterende pogingen (`PIN_RETRIES_LOW`); advies op de laptop: groep voor groep typen, na 2 fouten stoppen. Noodsleutel-PIN wordt zelden gebruikt: periodiek oefenen. Een geblokkeerde noodsleutel = opnieuw inrichten en koppelen. |
+| R18 | MPE-gat aan de serverkant: de server dwingt bij het koppelen geen `minPinLength=63` of `credProtect` af en weigert een Bio Multi-protocol Edition (PIN max. 8 bij PIV aan) niet. Een sleutel die níet via de app is ingericht, kan dus met een korte PIN gekoppeld worden. | De app weigert MPE met PIV en elke sleutel met `maxPINLength` < 63 of onbekend. Server-side patch gepland (minPinLength/credProtect afdwingen, MPE weigeren via een nog toe te voegen veld `variant` in `aaguids.json`; de app leidt de variant nu af uit de MDS-beschrijving), afhankelijk van een meting van de Chrome-ondersteuning (open vraag 14). Tot dan: alleen sleutels koppelen die met de app zijn ingericht en gekeurd. |
+| R19 | Gecompromitteerde telefoon (root, malware, kwaadaardige toegankelijkheidsdienst, overlay) leest de PIN tijdens het tonen of invoeren, of vervalst het oordeel van de app. | FLAG_SECURE, overlays verborgen, toegankelijkheidsdiensten buiten de (lege) allowlist geven STOP, multi-window/DeX/ander display/schermopname blokkeren de PIN-schermen, release blokkeert ook bij ontwikkelaarsopties of ADB; geen INTERNET (de app kan niets wegsturen); vliegtuigmodus in de checklist. De server verifieert bij het koppelen opnieuw zelf de attestation (§12.4), los van de telefoon. Restrisico: tegen root-malware met geheugentoegang beschermt de app niet (buiten scope, zoals malware op de laptop). |
+| R20 | Verschillende PIN's tussen sessies (kritiek 7): hoofdsleutel en noodsleutel worden in aparte processen ingericht, dus de app kan niet controleren dat de twee PIN's verschillen. | Elke inrichting genereert een nieuwe willekeurige PIN (kans op gelijkheid verwaarloosbaar); papierregel "elke sleutel een eigen formulier, nooit het papier van de andere sleutel" en de oranje melding `DIFFERENT_PINS` op M3/M10. Geaccepteerd restrisico. |
+| R21 | Crash-buffer: bij een onverwachte crash schrijft de pre-handler van het platform de stacktrace naar `logcat -b crash`, ook met eigen `UncaughtExceptionHandler`. | Exception-berichten bevatten nooit PIN-data (canary-test); `CrashGuard` voorkomt dropbox en de crashdialoog; geen logging in productiecode. Restrisico: type en stapnaam van de fout zijn in de crash-buffer zichtbaar voor wie ADB-toegang heeft. |
 
 ## 10. Fasering en acceptatiecriteria
 
@@ -285,8 +397,23 @@ Acceptatie:
 6. Live geeft `/api/health` `0.2.0-Koblitz` terug, met `test_attestation:false`.
 7. Veldtest: Bio in Chrome op de laptop koppelen en ontgrendelen. Een Windows Hello-passkey wordt geweigerd.
 
-**v0.3.0-Miller: Android-app (inrichten, koppelen, telefoon-credential, blokkeren, update)** — later
-Werk: `android/` met README; CI-job `android`; migratie 006 (`pairings`, `device_nonces`), device-API, `/app/*`; `/APKDeploy`; test-emulator `hb-horsesafe` (besluit 5); polling-inbox (besluit 6).
+**v0.3.0-Miller deel 1: Android-app, YubiKey inrichten en keuren** — GEBOUWD 2026-10-12 (niet gepubliceerd)
+Werk: `android/` met README (§7.1, §4.1); geen INTERNET, geen server, geen backend-wijziging (alleen
+`app_version`). Versieregel: deel 1 = 0.3.0, latere Miller-delen = 0.3.1, 0.3.2, … (de ontwerpimpact is op
+10-10 al genomen; besluit 2 blijft intact).
+Acceptatie deel 1:
+1. `:app:testDebugUnitTest` groen (250/250 op 12-10), `:app:lintRelease` 0 errors, `verifyYubikitHashes` en
+   `verifyNoSlf4jProvider` groen — ✅ 2026-10-12.
+2. Release-APK lokaal op HC55: `scripts/verify_apk.sh` GROEN (signer `32491e0f…`, versionCode 300, geen INTERNET,
+   niet debuggable, geen provider/service, één exported component) — ✅ 2026-10-12.
+3. Emulator-smoke zonder sleutel (`scripts/smoke.sh`: start, `logcat -b crash` leeg, FLAG_SECURE) — open (WhatIf/akkoord).
+4. Hardware-veldtest door Christian volgens `android/README.md`: eerst de wisbare testsleutel met alle
+   metingen, daarna de echte Bio en de noodsleutel, en koppelen + ontgrendelen in Chrome (Koblitz-acceptatie 7) — open.
+5. Publicatie via HorseAPK (`apk-publish.sh HorseSafe HorseSafe-v0.3.0-Miller-release.apk`) en het
+   update-aanbod in de HorseAPK-app aangetoond — open (na akkoord).
+
+**v0.3.x-Miller deel 2 en verder: koppelen, telefoon-credential, blokkeren, update** — later
+Werk: INTERNET + network-security-config; CI-job `android`; migratie 006 (`pairings`, `device_nonces`), device-API, `/app/*`; in-app update; `/APKDeploy`; test-emulator `hb-horsesafe` (besluit 5); polling-inbox (besluit 6).
 Acceptatie: zoals in het ontwerp van 10-10-2026 (JVM-vectortests gelijk aan JS, `StrongGate == BIOMETRIC_STRONG`, geen `DEVICE_CREDENTIAL`; pytest op mac/attestation/D-handtekening; apksigner-digest `32491e0f…`; rooktest; `/api/app/latest`-sha256; veldtest Fold6 + Bio; release-alarm binnen 15 min en blokkeren uit de app → web 409 `recovery_blocked`). Deblokkeren via `DELETE /device/v1/recovery/{kid}/block` met `sig_biosig` (telefoonvinger).
 
 **v0.4.0-Montgomery: laptop ontgrendelen via telefoon-QR + vinger, en ontgrendelen in de app (WebView)** — later
@@ -306,7 +433,40 @@ Vastgesteld door Christian; bindend.
 6. **Telefoonmeldingen:** polling, geen FCM (Miller).
 7. **v0.5.0-Lange** niet bouwen.
 
-**Scope nu:** alleen v0.2.0-Koblitz (web + backend), volgens §12.
+**Scope 10-10:** alleen v0.2.0-Koblitz (web + backend), volgens §12.
+
+### 11.1 Akkoord 12-10-2026: bouwplan Miller deel 1
+
+Christian gaf akkoord op het bouwplan "HorseSafe 0.3.0-Miller deel 1: YubiKey inrichten en keuren", inclusief
+de correcties uit de adversariële kritiek. Gebouwd volgens dat plan:
+
+1. **Versie:** 0.3.0-Miller = deel 1; latere delen 0.3.x.
+2. **Scope deel 1:** geen INTERNET, geen server, geen Keystore-sleutels, geen in-app update (updates via HorseAPK).
+3. **Volgorde attestation:** YubiKey 5 vóór setPin; Bio vóór setPin als alwaysUv=false, anders direct na setPin en vóór het minimum.
+4. **Firmwaregrens per klasse:** Bio < 5.7.2 en YubiKey 5 < 5.7.0 → STOP (YSA-2024-03).
+5. **U2F_V2 na alwaysUv:** oranje "afwijkend, vastgelegd", geen STOP (tot meting).
+6. **Flow "Inrichting hervatten"** voor een gedeeltelijk ingerichte sleutel.
+7. **Oefencontrole op de sleutel** altijd met een token met permissie (CM), nooit zonder.
+8. **Geen `verification-metadata.xml`**, wel een eigen SHA-256-controle op de vier yubikit-artefacten.
+9. **Geen USB-intent-filter/device_filter**; geldige `configChanges` zonder `fold`.
+10. **Serienummer** alleen als HMAC in het rapport; **rapport-import** via SAF voor de kwartaalvergelijking.
+
+Gebouwd volgens het **advies** bij de open vragen van het plan; een expliciet antwoord van Christian per vraag
+staat nog open (zie `ACTIONS.md`):
+- alle 9 groepen hertypen in plaats van 3 willekeurige (vraag 8); alfabet van 29 tekens met controleteken mod 29 (vraag 9);
+- het release-artefact publiceren, niet de debug-APK (vraag 3);
+- noodsleutel inrichten via USB, NFC alleen voor "keuren zonder PIN", NFC blijft aan (vraag 6); de app zet geen applets uit (vraag 7);
+- harde STOP bij een toegankelijkheidsdienst buiten de lege allowlist (vraag 10);
+- PIN-opslag: Bio-PIN papier + kluis, noodsleutel-PIN alleen papier apart, nooit ClaudeSecrets (vraag 11);
+- rapporten app-privé plus export/import (vraag 12).
+
+Keuzes die bij de bouw/review zijn gemaakt en nog een bevestiging van Christian vragen:
+- de release-build blokkeert de PIN-schermen ook als alleen de ontwikkelaarsopties aan staan (niet alleen bij USB-ADB);
+- `maxPINLength` afwezig blijft STOP (open vraag 4) tot de meting op de testsleutel;
+- `androidx.startup.InitializationProvider` is uit het manifest verwijderd (geen providers, A-15); op een toestel te controleren;
+- YubiKey 5 met alwaysUv al aan zonder PIN wordt geweigerd (`YK5_ALWAYS_UV_PRESET`);
+- kritiek 7 variant 2: geen controle "verschillende PIN's", wel papierregel + restrisico (R20);
+- restrisico's R4 (debug-keystore) en R16 (B-17) bewust aanvaarden of anders oplossen (open vragen 13 en kritiek 13).
 
 ---
 

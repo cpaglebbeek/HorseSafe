@@ -107,6 +107,34 @@
 - Magic-link only-toggle
 - Verwijder mijn account (rood, vereist re-auth + typ "VERWIJDER MIJN DATA")
 
+## Android-app (v0.3.0-Miller deel 1) — schermen M0..M12
+
+Eén activity met Compose (`android/`, `ui/Navigation.kt`); per scherm een korte referentie in
+`docs/screens/M<NN>_*.md`. Teksten in het Nederlands (`ui/Texts.kt`). Schermen met een geheim
+(**M4, M5, M6, M8**) zijn geblokkeerd zolang de omgevingscontrole een overtreding ziet (BlockedPanel,
+invoer gewist) en slikken hardwaretoetsen; bij verlaten van het venster wordt de PIN verborgen.
+
+| # | Scherm | Doel | Geheim |
+|---|---|---|---|
+| M0 | Start | omgevingsoordeel + menu: nieuwe hoofdsleutel, nieuwe noodsleutel, hervatten, keuren zonder/met PIN, PIN wijzigen, vingers beheren, oefenen, rapporten, over (geen reset) | — |
+| M1 | Checklist | vliegtuigmodus, geen schermkoppeling, ontwikkelaarsopties uit, Auto Blocker aan, niemand kijkt mee, pen + formulier | — |
+| M2 | Sleutel aansluiten | één YubiKey direct in USB-C (YK5 via één OTG-adapter); NFC alleen bij keuren zonder PIN; "altijd openen" niet aanvinken | — |
+| M3 | Oordeel | sleuteltype, firmware, per eis groen/oranje/rood; "nog te doen" bij hervatten; melding verschillende PIN's (noodsleutel) | — |
+| M4 | PIN tonen | 9 kaarten (4+3 tekens + omkaderd controleteken), alleen zichtbaar zolang ingedrukt; Canvas uit CharArray | ja |
+| M5 | Overschrijven | papier controleren; bevestigen dat alle 9 groepen met controleteken op papier staan | ja |
+| M6 | Overtypen | eigen toetsenblok (29 tekens + Wis), alle 9 groepen; per groep alleen "klopt"/"groep N wijkt af" | ja |
+| M6b | Onomkeerbaar | rood kader, vinkje + "Ik begrijp het, vastzetten" vóór minimum 63 | — |
+| M7 | Vingers | inschrijven met voortgang en Nederlandse feedback, naam (R-wijs …), testaanraking; beheren: toevoegen/hernoemen/verwijderen | — |
+| M8 | PIN invoeren | PIN van papier per groep met controleteken (fout controleteken kost geen poging); banner PIN-pogingen x/8, geblokkeerd bij ≤ 3; ook voor Oefenen | ja |
+| M9 | Keuring | rapport met vergelijking met de vorige basis (verschil = rood; geen basis = oranje) | — |
+| M10 | Rapport | whitelist-velden, zelfgekozen codes (zak, papierlocatie), exporteren/importeren, "Afsluiten" (wist PIN, beëindigt app), verwijzing naar S14 | — |
+| M11 | Stop | reden, wat je nu doet, wat al op de sleutel staat; reset alleen buiten de app (testsleutel) | — |
+| M12 | Over | versie, SHA-256 van de vertrouwensankers, signer-digest, licenties (yubikit Apache-2.0) | — |
+
+Flow nieuwe sleutel: M0 → M1 → M2 → M3 → M4 → M5 → M6 → (bezig: attestation/setPin/tellen) → M6b →
+(bezig: minimum, alwaysUv) → [hoofdsleutel: M7] → M10. Hervatten: M0 → M1 → M2 → M3 → M8 → (rest van de
+volgorde) → M10. Elke STOP → M11.
+
 ## UI-principes
 
 - **Donker-thema-default** (security-tools-stijl, minder light-leakage bij schoudersurfing)

@@ -58,6 +58,7 @@ Browser-based wachtwoordkluis met client-side KDBX4-encryptie (KeePass-compat), 
 - `DEPENDENCIES.md` — externe libs, services, integraties
 - `THREAT_MODEL.md` — dreigingsmodel + zero-knowledge bewijs
 - `docs/HARDWARE_KEYS.md` — hardware-sleutels, noodsleutel, telefoon-app; bindend Koblitz API-contract (§12)
+- `android/README.md` — Android-app (Miller deel 1): bouwen, testen, publiceren, hardwarechecklist, PIN-opslag
 - `API.md`, `DATA_MODEL.md`, `SECURITY.md`, `DPIA.md`, `SEQUENCE_DIAGRAMS.md`, `COMPONENT_DIAGRAM.md`, `ROADMAP.md`, `CHANGELOG.md`
 - `BUGS.md` — open bugs met kleurcode (groen/geel/rood/loop)
 - `ACTIONS.md` — openstaande acties + WhatIf-vervolgvragen
@@ -66,4 +67,4 @@ Browser-based wachtwoordkluis met client-side KDBX4-encryptie (KeePass-compat), 
 
 ## Status
 
-v0.2.0-Koblitz (web + backend) is LIVE sinds 2026-10-11 (publiek, AGPL-3.0); veldtest met echte YubiKey Bio volgt. Acceptatiecriteria in `docs/HARDWARE_KEYS.md` §10. Daarna: v0.3.0-Miller (Android-app) en v0.4.0-Montgomery (laptop ontgrendelen via telefoon-QR + vinger). v0.5.0-Lange (native kluis in de app) is gepland maar wordt pas na de veldtest van v0.4 gebouwd.
+v0.2.0-Koblitz (web + backend) is LIVE sinds 2026-10-11 (publiek, AGPL-3.0); veldtest met echte YubiKey Bio volgt. Acceptatiecriteria in `docs/HARDWARE_KEYS.md` §10. v0.3.0-Miller deel 1 (Android-app `android/`: YubiKey inrichten en keuren, zonder INTERNET) is gebouwd op 2026-10-12 en nog niet gepubliceerd; zie `android/README.md`. Daarna: Miller deel 2 (0.3.x: koppelen, telefoon-credential) en v0.4.0-Montgomery (laptop ontgrendelen via telefoon-QR + vinger). v0.5.0-Lange (native kluis in de app) is gepland maar wordt pas na de veldtest van v0.4 gebouwd.

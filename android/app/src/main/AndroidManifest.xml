@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HorseSafe 0.3.0-Miller deel 1 — minimaal manifest (A-14, A-15, kritiek 4 + 12).
+  - GEEN INTERNET (zero-knowledge, P-CRYPT-09 aantoonbaar in het manifest); expliciet verwijderd
+    voor het geval een afhankelijkheid hem toevoegt.
+  - GEEN USE_BIOMETRIC / DEVICE_CREDENTIAL (deel 1 bewaart geen geheim).
+  - GEEN USB intent-filter / device_filter.xml: detectie alleen via startUsbDiscovery terwijl de app open is.
+  - yubikit OtpActivity + YubiKeyPromptActivity verwijderd.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.NFC" />
+    <uses-permission android:name="android.permission.HIDE_OVERLAY_WINDOWS" />
+    <uses-permission android:name="android.permission.DETECT_SCREEN_CAPTURE" />
+    <uses-permission android:name="android.permission.DETECT_SCREEN_RECORDING" />
+
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" tools:node="remove" />
+
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+
+    <application
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:usesCleartextTraffic="false"
+        android:hasFragileUserData="false"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.HorseSafe"
+        tools:targetApi="35">
+
+        <activity
+            android:name=".app.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|density|keyboard|keyboardHidden|uiMode|navigation|fontScale"
+            android:windowSoftInputMode="stateAlwaysHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- yubikit-AAR: niet gebruikte UI-activities weg (A-15). -->
+        <activity
+            android:name="com.yubico.yubikit.android.ui.OtpActivity"
+            tools:node="remove" />
+        <activity
+            android:name="com.yubico.yubikit.android.ui.YubiKeyPromptActivity"
+            tools:node="remove" />
+
+        <!--
+          androidx.startup: geen providers of services (A-15). De initializers (emoji2, lifecycle-process,
+          profileinstaller) zijn niet nodig: Compose gebruikt EmojiCompat alleen als die geconfigureerd is,
+          en de app gebruikt ProcessLifecycleOwner niet (alleen de lifecycle van de activity).
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            tools:node="remove"
+            tools:ignore="MissingClass" />
+
+        <!-- androidx.profileinstaller: exported receiver; niet nodig, één exported component (A-15). -->
+        <receiver
+            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+            tools:node="remove"
+            tools:ignore="MissingClass" />
+    </application>
+</manifest>

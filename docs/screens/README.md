@@ -1,6 +1,6 @@
 # docs/screens/ — HorseSafe schermen-referentie
 
-> Per scherm uit `UI_DESIGN.md` (S1-S16; S14-S16 sinds v0.2.0-Koblitz): doel + key-messages + CTA + screenshot (vanaf Fase 2 frontend POC).
+> Per scherm uit `UI_DESIGN.md` (S1-S16; S14-S16 sinds v0.2.0-Koblitz; Android-app M0-M12 sinds v0.3.0-Miller): doel + key-messages + CTA + screenshot (vanaf Fase 2 frontend POC).
 
 ## Conventie
 
@@ -54,3 +54,24 @@ Per scherm één markdown-bestand: `S<NN>_<slug>.md` met onderstaande structuur.
 | S12 | Settings | `S12_settings.md` (placeholder) | — | ⏳ Fase 3 |
 
 Placeholders worden bij Fase 2-start ingevuld; screenshots na elk schermbouw-commit.
+
+## Android-app (v0.3.0-Miller deel 1)
+
+| # | Scherm | MD | PNG |
+|---|---|---|---|
+| M0 | Start | `M00_start.md` | — |
+| M1 | Checklist | `M01_checklist.md` | — |
+| M2 | Sleutel aansluiten | `M02_connect.md` | — |
+| M3 | Oordeel | `M03_judgement.md` | — |
+| M4 | PIN tonen | `M04_reveal.md` | — (FLAG_SECURE: geen screenshot mogelijk) |
+| M5 | Overschrijven | `M05_copy.md` | — |
+| M6 | Overtypen | `M06_retype.md` | — |
+| M6b | Onomkeerbaar | `M06b_irreversible.md` | — |
+| M7 | Vingers | `M07_fingers.md` | — |
+| M8 | PIN invoeren | `M08_pin_entry.md` | — |
+| M9 | Keuring | `M09_keuring.md` | — |
+| M10 | Rapport | `M10_report.md` | — |
+| M11 | Stop | `M11_stop.md` | — |
+| M12 | Over | `M12_about.md` | — |
+
+Alle Android-schermen hebben FLAG_SECURE; screenshots alleen uit een emulator-debugbuild (nog niet gemaakt).

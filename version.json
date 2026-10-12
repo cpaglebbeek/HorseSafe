@@ -1,6 +1,6 @@
 {
-  "version": "0.2.1",
-  "codename": "Koblitz",
+  "version": "0.3.0",
+  "codename": "Miller",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
     "Rijndael (Daemen+Rijmen — AES)",
@@ -21,14 +21,16 @@
   ],
   "codename_sequence_2026_10_10": {
     "0.2.0": "Koblitz — hardware-sleutels in het web (YubiKey Bio + noodsleutel), server-geverifieerd",
-    "0.3.0": "Miller — Android-app",
+    "0.3.0": "Miller deel 1 — Android-app: YubiKey inrichten en keuren (geen INTERNET, geen server)",
     "0.4.0": "Montgomery — laptop ontgrendelen via telefoon-QR + vinger",
     "0.5.0": "Lange — native kluis in de app (gepland na veldtest v0.4, niet bouwen)",
     "daarna": "Schneier (browserextensie) en verdere ROADMAP-items schuiven door",
-    "0.2.1": "Koblitz-patch — e2e nooit tegen productie (tests/isolated.ts + prod-guard), deploy-excludes, CI-jobs node --test + Playwright-WebAuthn, privacy- en UI-docs bijgewerkt (geen functionele wijziging)"
+    "0.2.1": "Koblitz-patch — e2e nooit tegen productie (tests/isolated.ts + prod-guard), deploy-excludes, CI-jobs node --test + Playwright-WebAuthn, privacy- en UI-docs bijgewerkt (geen functionele wijziging)",
+    "0.3.x": "Miller deel 2 en verder (ontgrendelen op de telefoon, koppelen, device-API) — patch-ophoging binnen de fase"
   },
-  "phase": "Phase 10 — Koblitz LIVE (2026-10-11; repo v0.2.1, live nog 0.2.0): hardware-sleutels per vault via WebAuthn PRF + Seal_v2 (P-CRYPT-09), noodsleutel met 24 uur wachttijd en blokkade, step-up, rekey, generieke SMTP-mailer. Ontwerp: docs/HARDWARE_KEYS.md. Veldtest met echte YubiKey Bio nog open.",
+  "phase": "Phase 11 — Miller deel 1 (YubiKey inrichten en keuren, Android)",
   "released": "2026-10-11",
+  "built": "2026-10-12 (0.3.0-Miller deel 1, repo; nog niet gepubliceerd)",
   "previous_release": {
     "version": "0.1.0",
     "codename": "Massey",
@@ -49,7 +51,7 @@
   "kdbx_format": 4,
   "kdf_in_use": "AES-KDF (KeePassXC-CLI-verified). Argon2id-default deferred v1.0-Bernstein.",
   "test_results": {
-    "backend_pytest": "196/196 passed (2026-10-11, webauthn 2.7.1, cryptography 45.0.7)",
+    "backend_pytest": "196/196 passed (2026-10-12, /opt/horsesafe/venv, na versie-bump 0.3.0-Miller; test_health 5/5)",
     "backend_coverage": "te meten (doel ≥ 80%)",
     "frontend_unit_node_test": "59/59 pass, 0 skipped (2026-10-11)",
     "frontend_e2e_playwright": "10/10 groen (2026-10-11; admin/mfa/smoke tegen geïsoleerde backend)",
@@ -57,9 +59,23 @@
     "kdbx_oracle_ci": "te meten",
     "smtp_587_starttls_vanaf_hc55": "250 + afgeleverd in info@icthorse.nl-inbox (2026-10-11 00:32 UTC)",
     "live_smoke_test": "groen 2026-10-11: /api/health 0.2.0-Koblitz, test_attestation:false, schema 5, post_deploy_smoke.sh groen",
-    "hardware_veldtest_yubikey_bio": "open — eerste echte koppeling door Christian"
+    "hardware_veldtest_yubikey_bio": "open — eerst wisbare testsleutel in de app (android/README.md checklist), daarna echte Bio + noodsleutel en koppelen in Chrome",
+    "android_unit_jvm": "250/250 groen, 0 skipped (2026-10-12, :app:testDebugUnitTest op de build-box via remote-gradle.sh; FakeYubiKey + yubikit 3.0.1, bronbeleid, release-manifest, canary)",
+    "android_lint_release": "0 errors, 16 warnings (2026-10-12; GradleDependency 12, AndroidGradlePluginVersion 2, MissingApplicationIcon 1, UnusedResources 1)",
+    "android_supply_chain": "verifyYubikitHashes 4/4 (yubikit 3.0.1), verifyNoSlf4jProvider groen (2026-10-12)",
+    "android_release_apk": "lokaal op HC55 gebouwd 2026-10-12: versionCode 300, versionName 0.3.0-Miller, sha256 1efcec3b86d1270f8fab80833b65d20f214e922cdb5ca53d7720260b0cd26cfd, signer 32491e0f…3f17; scripts/verify_apk.sh GROEN (geen INTERNET, niet debuggable, geen provider/service, één exported component)",
+    "android_instrumented": "niet aanwezig (androidTest nog te bouwen)",
+    "android_emulator_smoke": "niet gedraaid (scripts/smoke.sh; vraagt WhatIf + akkoord, gedeelde infra)"
   },
   "schema_version": 5,
   "design_doc": "docs/HARDWARE_KEYS.md",
-  "next_version_planned": "0.3.0-Miller (Android-app; zie ROADMAP.md en docs/HARDWARE_KEYS.md §10)"
+  "next_version_planned": "0.3.1-Miller (Miller deel 2: ontgrendelen op de telefoon, koppelen; zie docs/HARDWARE_KEYS.md §10)",
+  "phase_note": "Web: Koblitz LIVE 2026-10-11 (live draait nog 0.2.0-Koblitz; 0.2.1 en 0.3.0 niet gedeployed — backend wijzigt in 0.3.0 functioneel niet). Android 0.3.0-Miller gebouwd 2026-10-12, nog niet gepubliceerd; hardware-veldtest met wisbare testsleutel open.",
+  "android": {
+    "path": "android/",
+    "package": "nl.icthorse.horsesafe",
+    "versionCode_rule": "X*10000 + Y*100 + Z (patch < 100)",
+    "signer_sha256": "32491e0f87f46daea0fe2fc048994c9902df4725ec82f3b536dc23d933e73f17",
+    "published": false
+  }
 }

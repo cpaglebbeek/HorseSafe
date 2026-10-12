@@ -9,6 +9,7 @@
 - Gebruiker kent zijn master-pw en bewaart keyfile veilig (USB/printout/separate device)
 - HC55-server kan gecompromitteerd raken (worst case in dit model)
 - TLS staat aan en valide cert (LE auto-renew)
+- (v0.3.0-Miller deel 1) De YubiKeys worden ingericht en gekeurd met de Android-app (`android/`) op een eigen telefoon (Galaxy Z Fold6) in vliegtuigmodus. De app heeft geen INTERNET-permissie en verwerkt niets op de server; een telefoon met root of malware valt buiten het model (R19).
 - (v0.2.0-Koblitz) Hardware-sleutels zijn een YubiKey Bio (dagelijks) en een reserve-YubiKey met PIN van 63 tekens (noodsleutel, in de fysieke kluis). De gebruiker ontgrendelt met hardware-sleutels alleen in Chrome/Edge op icthorsecloud.nl.
 
 ## STRIDE-matrix
@@ -87,7 +88,14 @@ Uitgebreide tabel: `docs/HARDWARE_KEYS.md` §9. Samengevat:
 | R13 | Mailserver onbereikbaar → noodsleutel-vrijgave zonder dat de eigenaar het merkt | Vrijgave geweigerd zonder meldkanaal (503 `notify_unavailable`); teruggedraaid als de melding niet afgeleverd wordt (503 `notify_failed`) | Koblitz |
 | R14 | Magic-link of backup-codes als omweg om MFA (reviewronde 2): de magic-link gaf zonder wachtwoord een `mfa=true`-sessie (mailbox = S, en alle Koblitz-meldingen gaan naar diezelfde mailbox); backup-codes aanmaken kon met alleen het wachtwoord en gaf via `/backup-codes/verify` `mfa=true`. | Besluit (reviewronde 2, 10-10-2026): de magic-link is uitsluitend een **tweede stap** bovenop een wachtwoordsessie van dezelfde gebruiker in dezelfde browser; zonder die sessie wordt hij geweigerd en niet verbruikt (`login.html?error=magic_link_login_first`); hij geeft nooit zelf een sessie. `POST /auth/backup-codes/generate` vereist een sessie met MFA (403 `mfa_required`); bestaande codes blijven dan geldig. S = wachtwoord + tweede factor (TOTP, magic-link of een eerder met MFA aangemaakte backup-code). | Koblitz |
 | R15 | Wie `vault_keys.public_key` kan wijzigen (DB-schrijftoegang, gemanipuleerde back-up, injectie elders) laat bij de volgende reseal/rekey het echte `{ph,kh}` naar zijn eigen sleutel verzegelen; een verwisselde sleutel ziet er in de bevestigingsdialoog hetzelfde uit. | De client legt bij het koppelen `{key_id: public_key}` vast **in de versleutelde KDBX** (Meta/CustomData `HorseSafe.KeyPins.v1`, beschermd door de KDBX-HMAC; eerst vastleggen en opslaan, dan pas `POST …/keys`). `resealAll`/`rekey` verzegelen alleen naar sleutels die daar exact zo staan; anders `key_pin_mismatch`/`key_not_pinned` vóór er iets verzegeld wordt, en het sleutelpaneel waarschuwt. Restrisico: een sleutel waarvan de pin ontbreekt (kluis buiten HorseSafe zonder CustomData opgeslagen, of koppelen afgebroken) moet opnieuw gekoppeld worden; R1 (kwaadaardige JS) blijft. | Koblitz |
-| R4, R7, R8, R11 | Debug-keystore, telefoondiefstal met toestel-PIN, `sk_c` kort in app-RAM, Doze-vertraging | Zie `docs/HARDWARE_KEYS.md` §9 | Miller |
+| R4 | Release-APK getekend met de debug-keystore op HC55; het wachtwoord daarvan is publiek bekend, dus wie het bestand kan lezen kan een geaccepteerde update maken | E8 accepteert dit voorlopig; signer-digest `32491e0f…3f17` op M12 en in `android/scripts/verify_apk.sh`; publiceren alleen vanaf een lokale build op HC55; geen in-app update in deel 1. Open: eigen release-keystore of bewust aanvaarden | Miller deel 1 |
+| R16 (B-17) | PIN-bytekopieën in de yubikit-heap (`ClientPin.preparePin` wist zijn uitvoer niet; ECDH-geheim niet gewist). yubikit maakt geen String van de PIN; `Ctap2Session.clientPin` is package-private | App houdt de PIN alleen in een gewiste CharArray; "Afsluiten" beëindigt het proces na elke stap met PIN; release niet-debuggable. Geaccepteerd restrisico | Miller deel 1 |
+| R17 | 8 PIN-pogingen bij 63 tekens: typfouten kosten pogingen; 0 = geblokkeerd, alleen reset | Controleteken per groep, Oefenen zonder sleutel, M8 blokkeert bij ≤ 3 pogingen, typadvies voor de laptop | Miller deel 1 |
+| R18 | MPE-gat server-side: de server dwingt bij koppelen geen `minPinLength=63`/`credProtect` af en weigert een Bio Multi-protocol (PIN max. 8) niet | App weigert MPE met PIV en `maxPINLength` < 63/onbekend; alleen met de app ingerichte sleutels koppelen; Koblitz-patch gepland (afhankelijk van Chrome-meting) | Miller deel 1 / Koblitz-patch |
+| R19 | Gecompromitteerde telefoon (root, malware, a11y-dienst, overlay) leest de PIN of vervalst het oordeel | FLAG_SECURE, overlays verborgen, a11y/multi-window/DeX/opname/ontwikkelaarsopties blokkeren de PIN-schermen, geen INTERNET, vliegtuigmodus; server verifieert attestation bij het koppelen zelf. Root-malware met geheugentoegang: buiten scope | Miller deel 1 |
+| R20 | Hoofd- en noodsleutel-PIN niet tussen sessies te vergelijken | Elke inrichting een nieuwe willekeurige PIN; papierregel + oranje melding | Miller deel 1 |
+| R21 | Platform-crashbuffer (`logcat -b crash`) bevat bij een crash type en stapnaam | Geen PIN-data in exception-berichten (canary-test), geen logging, `CrashGuard` voorkomt dropbox | Miller deel 1 |
+| R7, R8, R11 | Telefoondiefstal met toestel-PIN, `sk_c` kort in app-RAM, Doze-vertraging | Zie `docs/HARDWARE_KEYS.md` §9 | Miller deel 2 |
 
 ## Vault-content vs. metadata
 
@@ -122,6 +130,7 @@ Uitgebreide tabel: `docs/HARDWARE_KEYS.md` §9. Samengevat:
 5. **Hardware-sleutels alleen in Chrome/Edge op de laptop** (v0.2.0-Koblitz). Safari en iOS worden fail-closed geweigerd; telefoon volgt in Miller. FIDO2 als account-MFA (los van de vault-laag) staat nog op de roadmap (Rogaway).
 6. **Mail via één SMTP-provider** (v0.2.0: generieke mailer, info@icthorse.nl via 587 STARTTLS; Gmail alleen fallback). Bij storing: TOTP voor login; noodsleutel-vrijgave is dan bewust uitgeschakeld (R13).
 7. **Single-device locking in v0.0.x.** Gelijktijdige edits op twee devices → conflict-merge in v0.1.x.
+8. **Android-app deel 1 (v0.3.0-Miller) richt in en keurt alleen.** Ontgrendelen op de telefoon, koppelen en meldingen volgen in deel 2. Reset kan alleen buiten de app (Yubico Authenticator / `ykman`).
 
 ## Dreigingen waar HorseSafe NIET tegen beschermt
 

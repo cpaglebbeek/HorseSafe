@@ -1,0 +1,24 @@
+# Gradle- en Android-artefacten
+.gradle/
+build/
+**/build/
+.kotlin/
+captures/
+.cxx/
+
+# Lokaal SDK-pad (zie local.properties.example)
+local.properties
+
+# Signing en artefacten (nooit committen)
+*.jks
+*.keystore
+keystore.properties
+*.apk
+*.aab
+
+# Rapporten van een echte sleutel
+*.horsesafe-report.json
+
+# IDE
+.idea/
+*.iml

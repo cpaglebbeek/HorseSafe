@@ -3,7 +3,52 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.3.0-Miller: Android-app (YubiKey inrichten, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app). Zie `ROADMAP.md`.
+- v0.3.1-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+
+## [0.3.0-Miller] — 2026-10-12 (Miller deel 1; repo, APK nog niet gepubliceerd)
+
+Android-app voor het inrichten en keuren van de YubiKeys. Bouwplan + kritiekcorrecties: akkoord Christian 12-10
+(`docs/HARDWARE_KEYS.md` §11.1). Backend en web wijzigen functioneel niet; geen deploy nodig.
+
+### Added — `android/` (`nl.icthorse.horsesafe`, versionCode 300)
+- **Inrichten** van de hoofdsleutel (YubiKey Bio) en de noodsleutel (YubiKey 5 NFC, of Bio zonder vinger):
+  PIN van 63 tekens (9 groepen van 7 met controleteken mod 29, alfabet van 29), tonen per groep met
+  hold-to-reveal, overschrijven op papier, alle 9 groepen hertypen; attestation-keuring tot de Yubico-roots
+  (YK5 vóór setPin; Bio vóór setPin bij alwaysUv=false, anders direct erna en vóór het minimum);
+  `setMinPinLength(63, ["icthorsecloud.nl"])` na een expliciete onomkeerbaar-bevestiging; alwaysUv; 2-3 vingers
+  met testaanraking (alleen hoofdsleutel). Elke schrijfactie vers teruggelezen; per stap een token met één permissie.
+- **Inrichting hervatten** voor een sleutel waarop de PIN al staat maar de rest niet (crash, uittrekken, STOP na setPin).
+- **Keuren zonder PIN** (ook via NFC) en **met PIN**, **PIN wijzigen**, **vingers beheren** (toevoegen, hernoemen,
+  verwijderen, testaanraking), **oefenen** (papier controleren zonder sleutel; optioneel één echte controle met CM-token).
+- **Rapport zonder geheimen** (whitelist; serienummer alleen als HMAC met app-privé Keystore-sleutel), app-privé
+  bewaard, export en import via de opslagkiezer; vergelijking met een basis uit het verleden, eigen app-sleutel eerst;
+  een inrichtingsrapport wordt de nieuwe basis.
+- **Poorten (STOP):** firmware Bio < 5.7.2 / YubiKey 5 < 5.7.0 (YSA-2024-03), geen FIDO 2.1-config, AAGUID niet
+  toegestaan of klasse past niet, `maxPINLength` < 63 of onbekend, al gebruikte sleutel, YK5 met alwaysUv al aan
+  zonder PIN, vinger op een noodsleutel; nieuwe stops o.a. `PIN_STATE_UNKNOWN`, `UV_BLOCKED`,
+  `YK5_ALWAYS_UV_PRESET`, `RECOVERY_KEY_NO_FINGERS`. U2F_V2 na alwaysUv: oranje.
+- **Hardening:** geen INTERNET; FLAG_SECURE, overlays verborgen, schermopname-detectie; PIN-schermen geblokkeerd
+  bij a11y-dienst, multi-window/DeX/ander display, opname en (release) ontwikkelaarsopties/ADB; eigen
+  toetsenblok, hardwaretoetsen geslikt; PIN alleen in een gewiste CharArray; geen logging; "Afsluiten"
+  beëindigt het proces; geen back-up; geen USB-intent-filter; `OtpActivity`, `YubiKeyPromptActivity`,
+  `InitializationProvider` en `ProfileInstallReceiver` verwijderd.
+- **Build:** yubikit 3.0.1 gepind met `:app:verifyYubikitHashes`; `:app:verifyNoSlf4jProvider`; versie uit
+  `version.json`; release niet-debuggable en geminificeerd, getekend met de debug-keystore van HC55
+  (signer `32491e0f…3f17`); `scripts/verify_apk.sh` (apksigner + aapt2) en `scripts/smoke.sh` (emulator, niet gedraaid).
+- **Tests:** 250 JVM-tests (FakeYubiKey + echte yubikit-code via CTAPHID-fake, volgorde per profiel, crash/hervat,
+  attestation, whitelist, canary-lektest, bronbeleid, release-manifest).
+
+### Changed
+- `version.json` 0.3.0 / Miller, phase 11; `backend/config.py` `app_version` en `backend/tests/test_health.py` → `0.3.0-Miller`;
+  footer `frontend/vault.html`.
+- `docs/HARDWARE_KEYS.md` §4.1 (inrichten gebeurt nu in de app), §7 (7.1 gebouwd / 7.2 deel 2), §9 (R4 bijgewerkt,
+  R16–R21), §10 (Miller in delen, versieregel 0.3.x), §11.1; `THREAT_MODEL.md`, `ROADMAP.md`, `ACTIONS.md`,
+  `UI_DESIGN.md` + `docs/screens/M00..M12`, `README.md`.
+
+### Known issues / open
+- Niet getest op een toestel of met een echte YubiKey; emulator-smoke en androidTest ontbreken.
+- Server dwingt minPinLength/credProtect nog niet af en weigert MPE niet bij het koppelen (THREAT_MODEL R18).
+- CI bouwt `android/` nog niet (geen job `android`).
 
 ## [0.2.1-Koblitz] — 2026-10-11 (repo; nog niet gedeployed)
 
