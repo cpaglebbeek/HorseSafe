@@ -3,7 +3,24 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.3.3-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+- v0.3.4-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+
+## [0.3.3-Miller] — 2026-10-13 (bugfix: gewiste Bio onterecht "al gebruikt")
+
+Gemeld door Christian: na "Sleutel wissen" weigerde "Nieuwe hoofdsleutel" met `KEY_ALREADY_USED` op M11,
+zonder dat er een PIN getoond was. WhatIf + akkoord 13-10.
+
+### Fixed — `android/` (versionCode 303)
+- **Nieuw-sleutelgate eiste 8 PIN-pogingen ook zonder PIN.** Een gewiste (of nieuwe) Bio meldt zonder PIN geen
+  of een ander aantal; dat werd als "al gebruikt" gelezen. Zonder PIN is het nu een oranje regel met het gemeten
+  getal; de echte controle blijft 8 pogingen teruglezen direct na setPin (`PIN_READBACK_FAILED`). Met een PIN
+  blijft een afwijkend aantal rood.
+- **M11 liet de oorzaak van een gate-stop niet zien:** "Beoordeling" toont nu ook de gate-regels (rood eerst),
+  M11 toont de sleutelgegevens (o.a. PIN-pogingen) en een stopcode (bv. `KEY_ALREADY_USED`) om door te geven,
+  omdat schermafdrukken zwart zijn.
+
+### Tests
+- Nep-YubiKey: `retriesWithoutPin` (null/0/3/7); inrichten na wissen; met PIN blijft de regel rood. 272/272.
 
 ## [0.3.2-Miller] — 2026-10-13 (bugfix: echte YubiKeys onterecht afgewezen)
 

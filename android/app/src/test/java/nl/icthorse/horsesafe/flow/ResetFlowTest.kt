@@ -151,4 +151,21 @@ class ResetFlowTest {
         val r = flow().inspect(key)
         assertFalse(r.toString().contains("31234567"))
     }
+
+    /** 0.3.3: gemeten op een echte Bio — na wissen (zonder PIN) geen of een ander aantal PIN-pogingen; toch inrichten. */
+    @Test fun naWissenInrichtenOokAlsPogingenZonderPinOntbreken() = runBlocking {
+        for (without in listOf<Int?>(null, 0, 3)) {
+            val key = FakeYubiKey(KeyProfiles.bioFido574().copy(retriesWithoutPin = without))
+            assertTrue(SetupDriver(key, Profile.BIO_MAIN).runNew() is State.ReportReady)
+            val f = flow()
+            readyAndConfirmed(f, key)
+            key.reinsert()
+            assertTrue(f.wipe(key) is ResetOutcome.Wiped)
+            val d = SetupDriver(key, Profile.BIO_MAIN)
+            val end = d.runNew()
+            assertTrue("pogingen zonder PIN = $without: $end", end is State.ReportReady)
+            assertTrue((end as State.ReportReady).report.checks.any { it.id == "gate_pin_retries" && it.verdict == Verdict.ORANGE })
+            assertEquals(8, key.pinRetries)
+        }
+    }
 }

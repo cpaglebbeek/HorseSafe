@@ -71,6 +71,9 @@ class DefaultSetupMachine(
     private var facts0: KeyFacts? = null
     /** Detectie- en gateregels plus latere regels (geen geheimen). */
     private val checks = mutableListOf<CheckResult>()
+
+    /** Alle regels tot nu toe (herkennen + gate + later); voor M11 "Beoordeling" (0.3.3). */
+    val allChecks: List<CheckResult> get() = checks.toList()
     private var violations: List<Stop> = emptyList()
     private var timing: AttestTiming = AttestTiming.AFTER_SET_PIN
     private var pending: Set<Written> = emptySet()

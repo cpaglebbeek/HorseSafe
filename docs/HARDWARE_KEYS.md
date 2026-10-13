@@ -136,7 +136,8 @@ vervalt.
    - meer dan één sleutel, of de sleutel wordt losgekoppeld.
 2. **Nieuw-sleutelgate:** STOP als er al een PIN staat (dan PIN wijzigen of "Inrichting hervatten"), als
    `bioEnroll=true`, `forcePinChange=true`, resident credentials > 0, of (YubiKey 5) alwaysUv al aan zonder
-   PIN (`YK5_ALWAYS_UV_PRESET`).
+   PIN (`YK5_ALWAYS_UV_PRESET`). PIN-pogingen zonder PIN zijn sinds 0.3.3 **geen** stop (een gewiste Bio meldt
+   geen of een ander aantal, gemeten 13-10-2026); oranje regel, en na setPin moeten het er 8 zijn.
 3. **PIN:** de app genereert 63 ASCII-tekens (alfabet van 29, `SecureRandom`) in 9 groepen van 7 met elk een
    controleteken (Σ(i+1)·v_i mod 29). Tonen per groep zolang je de kaart ingedrukt houdt (M4, FLAG_SECURE,
    Canvas uit een CharArray, geen String), overschrijven op het papieren formulier (M5) en **alle 9 groepen**

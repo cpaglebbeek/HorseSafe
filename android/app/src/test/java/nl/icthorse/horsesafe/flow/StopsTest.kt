@@ -142,7 +142,9 @@ class StopsTest {
 
     @Test fun forcePinChangeEnMinderDan8Pogingen() = runBlocking {
         assertEquals(Stop.FORCE_PIN_CHANGE, stopOf(KeyProfiles.yk5_57(), Profile.RECOVERY_YK5) { it.preset(forceChange = true) }.first.stop)
-        assertEquals(Stop.KEY_ALREADY_USED, stopOf(KeyProfiles.yk5_57(), Profile.RECOVERY_YK5) { it.preset(retries = 7) }.first.stop)
+        // 0.3.3: zonder PIN is een afwijkend aantal pogingen geen stop meer (oranje); na setPin moeten het er 8 zijn.
+        val end = SetupDriver(FakeYubiKey(KeyProfiles.yk5_57().copy(retriesWithoutPin = 7)), Profile.RECOVERY_YK5).runNew()
+        assertTrue("$end", end is State.ReportReady)
     }
 
     @Test fun residentCredentialZonderPinGeeftStopNaSetPin() = runBlocking {
@@ -230,5 +232,15 @@ class StopsTest {
 
     @Test fun elkeStopHeeftTekstEnAdvies() {
         Stop.entries.forEach { assertTrue(it.name, it.tekst.isNotBlank() && it.advies.isNotBlank()) }
+    }
+
+    /** Met een PIN op de sleutel blijft een afwijkend aantal pogingen een stop (wordt al eerder PIN_ALREADY_SET). */
+    @Test fun pogingenRegelMetPinBlijftRood() {
+        val key = FakeYubiKey(KeyProfiles.bioFido574())
+        key.preset(pin = "x".repeat(63).toCharArray(), retries = 5)
+        val facts = runBlocking { KeyProfiles.inspector().inspect(key) }
+        val g = Gates.newKey(facts, Profile.BIO_MAIN)
+        assertEquals(Stop.PIN_ALREADY_SET, g.stop)
+        assertTrue(g.checks.any { it.id == "gate_pin_retries" && it.verdict == Verdict.RED })
     }
 }

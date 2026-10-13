@@ -82,3 +82,9 @@ linked_actions: [Miller deel 1]
 - RCA: (1) `MAX_PIN_LENGTH_UNKNOWN` — getInfo 0x1D maxPINLength bestaat pas sinds CTAP 2.2 (yubikit `RESULT_MAX_PIN_LENGTH = 0x1D`, standaard 63 als afwezig); YubiKey 5.7 = CTAP 2.1 meldt het nooit; mijn gate (open vraag 4 = STOP tot meting) blokkeerde dus elke echte sleutel. (2) `CLASS_MISMATCH` — wordt vóór de PIN-lengte gecontroleerd, dus bij de tweede poging een andere rol gekozen; melding noemde type en rol niet.
 - WhatIf → "akkoord". Fix: `MaxPinLengthPolicy.ASSUME_CTAP21_MAX` standaard (oranje, setPin(63) is de proef, ook MPE); typemelding met aangesloten type + gekozen rol (check + M11 + advies). Nep-YubiKey meldt 0x1D standaard niet.
 - Gemeten: 270/270, lint 0 errors, release vc 302 sha256 `496c431f…b71e`, verify_apk GROEN, smoke Android 16 + 14 groen.
+
+## 13-10 — 0.3.3-Miller: bugfix na wissen
+- Christian: wissen werkt (aanraken, gewist), maar "Nieuwe hoofdsleutel" → M11 "De sleutel is al gebruikt of gemanipuleerd (resident credentials of vingers aanwezig)", zonder dat er een PIN getoond was.
+- RCA: enige route zonder PIN = nieuw-sleutelgate `gate_pin_retries` (retries == null || < 8 → KEY_ALREADY_USED). Een gewiste Bio meldt zonder PIN geen/ander aantal; nooit eerder op echte hardware geraakt (eerder stopte de app al op PIN of 0x1D). Tweede gebrek: gate-regels kwamen niet in M11 "Beoordeling" (alleen Detected-regels) → oorzaak niet af te lezen.
+- WhatIf → "akkoord". Fix: zonder PIN oranje (setPin-readback 8 blijft), M11 toont alle regels (rood eerst), sleutelgegevens en stopcode.
+- Gemeten: 272/272, lint 0 errors, release vc 303 sha256 `cc24e2de…7b8e`, verify_apk GROEN, smoke Android 16 + 14 groen.

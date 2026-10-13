@@ -1,5 +1,5 @@
 {
-  "version": "0.3.2",
+  "version": "0.3.3",
   "codename": "Miller",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
@@ -26,13 +26,14 @@
     "0.5.0": "Lange — native kluis in de app (gepland na veldtest v0.4, niet bouwen)",
     "daarna": "Schneier (browserextensie) en verdere ROADMAP-items schuiven door",
     "0.2.1": "Koblitz-patch — e2e nooit tegen productie (tests/isolated.ts + prod-guard), deploy-excludes, CI-jobs node --test + Playwright-WebAuthn, privacy- en UI-docs bijgewerkt (geen functionele wijziging)",
-    "0.3.x": "Miller deel 2 en verder (ontgrendelen op de telefoon, koppelen, device-API) — patch-ophoging binnen de fase, vanaf 0.3.3",
+    "0.3.x": "Miller deel 2 en verder (ontgrendelen op de telefoon, koppelen, device-API) — patch-ophoging binnen de fase, vanaf 0.3.4",
     "0.3.1": "Miller-patch — Android-app: ingerichte sleutel wissen (FIDO-reset) met bevestiging serienummer + 3 s vasthouden, zelfde-sleutelcontrole na opnieuw insteken",
-    "0.3.2": "Miller-bugfix — maxPINLength (0x1D, CTAP 2.2) ontbreekt op YubiKey 5.7: CTAP 2.1-maximum 63 aannemen (oranje), setPin is de proef; typemelding noemt aangesloten type en gekozen rol"
+    "0.3.2": "Miller-bugfix — maxPINLength (0x1D, CTAP 2.2) ontbreekt op YubiKey 5.7: CTAP 2.1-maximum 63 aannemen (oranje), setPin is de proef; typemelding noemt aangesloten type en gekozen rol",
+    "0.3.3": "Miller-bugfix — gewiste/nieuwe Bio onterecht KEY_ALREADY_USED: PIN-pogingen zonder PIN niet meer als stop (oranje; 8 pogingen na setPin blijft de controle); M11 toont gate-regels, sleutelgegevens en stopcode"
   },
   "phase": "Phase 11 — Miller (YubiKey inrichten, keuren en wissen, Android)",
   "released": "2026-10-11",
-  "built": "2026-10-13 (0.3.2-Miller: bugfix maxPINLength + typemelding)",
+  "built": "2026-10-13 (0.3.3-Miller: bugfix PIN-pogingen zonder PIN + diagnose M11)",
   "previous_release": {
     "version": "0.1.0",
     "codename": "Massey",
@@ -61,17 +62,17 @@
     "kdbx_oracle_ci": "te meten",
     "smtp_587_starttls_vanaf_hc55": "250 + afgeleverd in info@icthorse.nl-inbox (2026-10-11 00:32 UTC)",
     "live_smoke_test": "groen 2026-10-11: /api/health 0.2.0-Koblitz, test_attestation:false, schema 5, post_deploy_smoke.sh groen",
-    "hardware_veldtest_yubikey_bio": "gestart 13-10: echte sleutel gaf MAX_PIN_LENGTH_UNKNOWN (0x1D afwezig op 5.7 → opgelost in 0.3.2) en CLASS_MISMATCH (rol koos ander type); verder: inrichten, keuren, wissen op testsleutel",
-    "android_unit_jvm": "270/270 groen, 0 skipped (2026-10-13, 0.3.2: nep-YubiKey zonder 0x1D als standaard, zoals echte 5.7)",
-    "android_lint_release": "0 errors, 16 warnings (2026-10-13, 0.3.2)",
+    "hardware_veldtest_yubikey_bio": "lopend 13-10: wissen op echte Bio werkt (aanraken, nagelezen); daarna KEY_ALREADY_USED door PIN-pogingen zonder PIN → opgelost in 0.3.3; volgende: inrichten hoofdsleutel",
+    "android_unit_jvm": "272/272 groen, 0 skipped (2026-10-13, 0.3.3)",
+    "android_lint_release": "0 errors, 16 warnings (2026-10-13, 0.3.3)",
     "android_supply_chain": "verifyYubikitHashes 4/4 (yubikit 3.0.1), verifyNoSlf4jProvider groen (2026-10-12)",
-    "android_release_apk": "lokaal op HC55 gebouwd 2026-10-13: versionCode 302, versionName 0.3.2-Miller, sha256 496c431fbc2facbb5f93c3a36471ed1082c3dbc25fecf74d73ef029121f2b71e, signer 32491e0f…3f17; scripts/verify_apk.sh GROEN",
+    "android_release_apk": "lokaal op HC55 gebouwd 2026-10-13: versionCode 303, versionName 0.3.3-Miller, sha256 cc24e2deeb04d73e220302ff46bd0b94a54a2134f7bea33688ac5a973f367b8e, signer 32491e0f…3f17; scripts/verify_apk.sh GROEN",
     "android_instrumented": "niet aanwezig (androidTest nog te bouwen)",
-    "android_emulator_smoke": "groen 2026-10-13 (0.3.2): emulator-5584 (Android 16) en emulator-5554 (Android 14) 0 FATAL, proces leeft, M0 toont 0.3.2-Miller"
+    "android_emulator_smoke": "groen 2026-10-13 (0.3.3): emulator-5584 (Android 16) en emulator-5554 (Android 14) 0 FATAL, proces leeft, M0 toont 0.3.3-Miller"
   },
   "schema_version": 5,
   "design_doc": "docs/HARDWARE_KEYS.md",
-  "next_version_planned": "0.3.3-Miller (Miller deel 2: ontgrendelen op de telefoon, koppelen; zie docs/HARDWARE_KEYS.md §10)",
+  "next_version_planned": "0.3.4-Miller (Miller deel 2: ontgrendelen op de telefoon, koppelen; zie docs/HARDWARE_KEYS.md §10)",
   "phase_note": "Web: Koblitz LIVE 2026-10-11 (live draait nog 0.2.0-Koblitz; 0.2.1 en 0.3.0 niet gedeployed — backend wijzigt in 0.3.0 functioneel niet). Android 0.3.0-Miller gebouwd 2026-10-12, nog niet gepubliceerd; hardware-veldtest met wisbare testsleutel open.",
   "android": {
     "path": "android/",

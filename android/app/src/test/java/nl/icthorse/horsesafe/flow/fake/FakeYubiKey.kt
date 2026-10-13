@@ -63,6 +63,8 @@ data class KeySpec(
     /** Sleutel die minimum 63 (= maximum) weigert (onzekerheid 2). */
     val refusesMin63: Boolean = false,
     val transport: Transport = Transport.USB,
+    /** PIN-pogingen die de sleutel meldt zolang er GEEN PIN op staat; null = niet gemeld (0.3.3). */
+    val retriesWithoutPin: Int? = 8,
 )
 
 /**
@@ -308,7 +310,7 @@ class FakeYubiKey(val spec: KeySpec) : KeyLink {
                 maxRpidsForSetMinPinLength = spec.maxRpids,
                 pinUvAuthProtocols = listOf(2, 1),
                 uvModality = if (spec.bio) 2 else null,
-                pinRetries = pinRetries,
+                pinRetries = if (this@FakeYubiKey.pin == null) spec.retriesWithoutPin else pinRetries,
                 pinPowerCycleRequired = powerCycleRequired,
                 uvRetries = if (spec.bio) uvRetries else null,
             )

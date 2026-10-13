@@ -173,7 +173,9 @@ fun M11Stop(u: UiState, vm: HorseSafeViewModel) {
             }
             SectionTitle("Wat je nu doet")
             Body(stop.advies)
+            Small("Code: ${stop.name}")
         }
+        FactsPanel(u)
         Panel {
             SectionTitle("Wat al op de sleutel staat")
             val w = st?.written.orEmpty()
@@ -185,7 +187,8 @@ fun M11Stop(u: UiState, vm: HorseSafeViewModel) {
         if (u.secretsTouched) Small(Texts.QUIT_INFO)
         if (u.checks.isNotEmpty()) {
             SectionTitle("Beoordeling")
-            CheckList(u.checks)
+            // Rood eerst: dat is de reden van de stop.
+            CheckList(u.checks.sortedBy { if (it.verdict == nl.icthorse.horsesafe.flow.Verdict.RED) 0 else 1 })
         }
     }
 }

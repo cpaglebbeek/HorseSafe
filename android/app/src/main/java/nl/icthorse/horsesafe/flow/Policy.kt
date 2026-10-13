@@ -146,9 +146,16 @@ object Gates {
         if (facts.option("clientPin") == true) c.red("gate_client_pin", "Er staat al een PIN op de sleutel.", Stop.PIN_ALREADY_SET)
         else c.green("gate_client_pin", "Geen PIN op de sleutel.")
         val retries = facts.pinRetries
-        if (retries == null || retries < Limits.FULL_PIN_RETRIES) {
-            c.red("gate_pin_retries", "PIN-pogingen niet ${Limits.FULL_PIN_RETRIES}; de sleutel is al gebruikt.", Stop.KEY_ALREADY_USED)
-        } else c.green("gate_pin_retries", "${Limits.FULL_PIN_RETRIES} PIN-pogingen.")
+        when {
+            retries == Limits.FULL_PIN_RETRIES -> c.green("gate_pin_retries", "${Limits.FULL_PIN_RETRIES} PIN-pogingen.")
+            // 0.3.3: zonder PIN zegt het aantal niets (pogingen dalen alleen met een PIN); gemeten 13-10-2026 op een
+            // gewiste Bio. De echte controle is het teruglezen van 8 pogingen direct na setPin (PIN_READBACK_FAILED).
+            facts.option("clientPin") != true -> c.orange(
+                "gate_pin_retries",
+                "PIN-pogingen zonder PIN: ${retries ?: "niet gemeld"}. Na het zetten van de PIN controleert de app ${Limits.FULL_PIN_RETRIES} pogingen.",
+            )
+            else -> c.red("gate_pin_retries", "PIN-pogingen ${retries ?: "niet gemeld"}, niet ${Limits.FULL_PIN_RETRIES}; de sleutel is al gebruikt.", Stop.KEY_ALREADY_USED)
+        }
         if (facts.forcePinChange) c.red("gate_force_pin_change", "De sleutel eist een PIN-wijziging.", Stop.FORCE_PIN_CHANGE)
         else c.green("gate_force_pin_change", "Geen PIN-wijziging geëist.")
         // Review-bevinding: een YubiKey 5 zonder PIN met alwaysUv aan wijkt af van de fabrieksstand

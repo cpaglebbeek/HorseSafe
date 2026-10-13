@@ -336,6 +336,8 @@ class HorseSafeViewModel(
             }
             if (st.order >= State.PinGenerated.order && st !is State.Stopped) n = n.copy(secretsTouched = true)
             if (st is State.Stopped && st.written.isNotEmpty()) n = n.copy(secretsTouched = true)
+            // 0.3.3: ook de gate-regels tonen (alleen Detected-regels liet de oorzaak van een gate-stop onzichtbaar).
+            if (st is State.Stopped) (machine as? DefaultSetupMachine)?.allChecks?.takeIf { it.isNotEmpty() }?.let { n = n.copy(checks = it) }
             n
         }
         // Het inrichtingsrapport is de basis voor de eerste keuring: direct bewaren, niet pas bij Afsluiten.
