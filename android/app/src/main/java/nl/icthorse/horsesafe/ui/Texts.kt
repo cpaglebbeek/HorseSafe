@@ -89,4 +89,16 @@ object Texts {
 slf4j-api — MIT License, © QOS.ch.
 AndroidX, Jetpack Compose, Kotlin en kotlinx.coroutines — Apache License 2.0, © The Android Open Source Project / JetBrains s.r.o.
 Vertrouwensankers: Yubico FIDO-roots en de AAGUID-lijst (FIDO MDS3), gelijk aan de server."""
+
+    // F8 Sleutel wissen (M13, 0.3.1)
+    const val RESET_WARNING = "Wissen haalt alles van het FIDO-deel van de sleutel: alle passkeys en koppelingen, de PIN, de vingers, de minimale PIN-lengte en alwaysUv. Daarna werkt de sleutel nergens meer, ook niet in HorseSafe. Is dit je enige gekoppelde sleutel, dan sluit je jezelf buiten."
+    const val RESET_CONNECT = "Sluit de sleutel aan die je wilt wissen (USB, of NFC bij een YubiKey 5). De app leest eerst alleen uit wat erop staat."
+    const val RESET_LOSES = "Alle FIDO-credentials (ook voor andere sites), de PIN, de vingers, de minimale PIN-lengte 63 en alwaysUv. PIV, OATH en OpenPGP blijven staan. Er is geen herstel."
+    const val RESET_REPLUG_USB = "Haal de sleutel eruit en steek hem meteen weer in. Vraagt Android om USB-toestemming, tik dan direct op OK."
+    const val RESET_REPLUG_NFC = "Haal de sleutel weg van de telefoon en houd hem er meteen weer tegen. Houd hem daarna stil tegen de telefoon."
+    const val RESET_WINDOW = "Een YubiKey accepteert wissen alleen in de eerste seconden na het aansluiten. De app controleert eerst dat het dezelfde sleutel is (serienummer); bij een andere sleutel wordt er niets gewist."
+    const val RESET_TOUCH = "Raak het gouden contact van de sleutel aan om het wissen te bevestigen (bij NFC: stil tegen de telefoon houden)."
+    const val RESET_TOUCH_BIO = "Raak de vingerafdruksensor van de YubiKey Bio aan om het wissen te bevestigen."
+    const val RESET_DONE = "Op de sleutel staan geen PIN en geen vingers meer. Je kunt hem nu opnieuw inrichten."
+    const val RESET_DONE_SERVER = "Was deze sleutel gekoppeld in HorseSafe (Instellingen > Hardwaresleutels), verwijder die koppeling daar; de app heeft geen internet en kan dat niet zelf."
 }

@@ -26,27 +26,27 @@ enum class Stop(val tekst: String, val advies: String) {
     AAGUID_NOT_ALLOWED("Dit sleuteltype staat niet op de lijst van toegestane YubiKeys.", "Gebruik een YubiKey Bio (hoofdsleutel) of YubiKey 5 (noodsleutel)."),
     CLASS_MISMATCH("Dit sleuteltype past niet bij de gekozen rol.", "Kies de juiste rol of sluit de juiste sleutel aan."),
     MAX_PIN_LENGTH_UNKNOWN("De sleutel meldt niet hoe lang een PIN mag zijn.", "Niet doorgaan tot dit op de testsleutel is gemeten (open vraag 4)."),
-    MAX_PIN_LENGTH_TOO_SHORT("De sleutel accepteert geen PIN van 63 tekens.", "Bij een Bio Multi-protocol: zet PIV uit na een reset buiten de app, of gebruik een FIDO Edition."),
+    MAX_PIN_LENGTH_TOO_SHORT("De sleutel accepteert geen PIN van 63 tekens.", "Bij een Bio Multi-protocol: zet PIV uit met Yubico Authenticator of ykman, of gebruik een FIDO Edition."),
 
     // Nieuw-sleutelgate / hervatten
-    PIN_ALREADY_SET("Op deze sleutel staat al een PIN.", "Gebruik \"PIN wijzigen\", \"Inrichting hervatten\", of reset de testsleutel buiten de app."),
-    BIO_ALREADY_ENROLLED("Op deze sleutel staan al vingers.", "Reset de sleutel buiten de app (alleen bij de testsleutel)."),
-    FORCE_PIN_CHANGE("De sleutel eist eerst een PIN-wijziging.", "Reset de sleutel buiten de app (alleen bij de testsleutel)."),
+    PIN_ALREADY_SET("Op deze sleutel staat al een PIN.", "Gebruik \"PIN wijzigen\" of \"Inrichting hervatten\". Of kies \"Sleutel wissen\" om opnieuw te beginnen; alles erop gaat verloren."),
+    BIO_ALREADY_ENROLLED("Op deze sleutel staan al vingers.", "Kies \"Sleutel wissen\" als je deze sleutel opnieuw wilt inrichten; alles erop gaat verloren."),
+    FORCE_PIN_CHANGE("De sleutel eist eerst een PIN-wijziging.", "Kies \"Sleutel wissen\" als je deze sleutel opnieuw wilt inrichten; alles erop gaat verloren."),
     RESUME_NOT_ALLOWED("Deze sleutel komt niet in aanmerking voor hervatten.", "Controleer met \"Keuren zonder PIN\" wat er op de sleutel staat."),
-    KEY_ALREADY_USED("De sleutel is al gebruikt of gemanipuleerd (resident credentials of vingers aanwezig).", "Gebruik deze sleutel niet; reset alleen als het de testsleutel is."),
+    KEY_ALREADY_USED("De sleutel is al gebruikt of gemanipuleerd (resident credentials of vingers aanwezig).", "Is het je eigen sleutel, kies dan \"Sleutel wissen\"; alles erop gaat verloren. Anders: gebruik deze sleutel niet."),
     /** Toegevoegd in de flow-fase (A-5): herstart vóór setPin; de PIN van deze poging is waardeloos. */
     RESTART_BEFORE_PIN("De app werd herstart voordat de PIN op de sleutel stond; er is niets op de sleutel gezet.", "Vernietig het formulier van deze poging en begin opnieuw; de app maakt dan een nieuwe PIN."),
     /** Review: setPin kreeg een herstelbare fout (time-out) en bij opnieuw proberen bleek er al een PIN te staan. */
     PIN_STATE_UNKNOWN("Het antwoord op \"PIN zetten\" ging verloren; bij opnieuw proberen stond er al een PIN op de sleutel. Dat is waarschijnlijk de PIN van dit formulier.", "Bewaar dit formulier. Kies \"Inrichting hervatten\" en voer de PIN van dit papier in; vernietig een eventueel ouder formulier."),
     /** Review: een YubiKey 5 zonder PIN met alwaysUv aan wijkt af van de fabrieksstand. */
-    YK5_ALWAYS_UV_PRESET("Op deze YubiKey 5 staat alwaysUv al aan terwijl er nog geen PIN is; de sleutel is dus al eerder ingesteld.", "Gebruik deze sleutel niet als nieuwe noodsleutel; reset hem buiten de app (alleen als het de testsleutel is)."),
+    YK5_ALWAYS_UV_PRESET("Op deze YubiKey 5 staat alwaysUv al aan terwijl er nog geen PIN is; de sleutel is dus al eerder ingesteld.", "Is het je eigen sleutel, kies dan \"Sleutel wissen\" en richt hem daarna opnieuw in."),
     PROCESS_RESTARTED("De app is opnieuw gestart na het zetten van de PIN.", "Kies \"Inrichting hervatten\" met de PIN van papier; vernietig een eventueel ouder formulier."),
 
     // PIN
-    PIN_POLICY_MPE_PIV("De sleutel weigert een PIN van 63 tekens; dit is waarschijnlijk een Bio Multi-protocol met PIV aan (PIN maximaal 8 tekens).", "Zet PIV uit na een reset buiten de app."),
+    PIN_POLICY_MPE_PIV("De sleutel weigert een PIN van 63 tekens; dit is waarschijnlijk een Bio Multi-protocol met PIV aan (PIN maximaal 8 tekens).", "Zet PIV uit met Yubico Authenticator of ykman (wissen in de app zet PIV niet uit)."),
     PIN_READBACK_FAILED("Na het zetten van de PIN klopt de teruglezing niet.", "Niet verder gaan; bekijk op dit scherm wat al op de sleutel staat."),
     PIN_RETRIES_LOW("Er zijn nog maar 3 of minder PIN-pogingen over.", "Controleer eerst het papier met \"Oefenen\"; steek de sleutel opnieuw in."),
-    PIN_BLOCKED("De PIN is geblokkeerd.", "De sleutel moet buiten de app gereset worden; alle gegevens erop gaan verloren."),
+    PIN_BLOCKED("De PIN is geblokkeerd.", "Kies \"Sleutel wissen\" (start de app zo nodig opnieuw); alle gegevens erop gaan verloren."),
     /** Toegevoegd in de flow-fase (kritiek 16): complexiteitsbeleid weigert de PIN vóór setPin; er staat nog niets op de sleutel. */
     PIN_POLICY_COMPLEXITY("De sleutel weigert deze PIN door zijn complexiteitsbeleid; er is nog niets op de sleutel gezet.", "Vernietig het formulier van deze poging en begin opnieuw; de app maakt dan een nieuwe PIN."),
 
@@ -68,7 +68,12 @@ enum class Stop(val tekst: String, val advies: String) {
     UV_BLOCKED("De vingerpogingen zijn op en konden niet met de PIN worden hersteld.", "Steek de sleutel opnieuw in en probeer het opnieuw; lukt het niet, kies dan \"Vingers beheren\" of \"Inrichting hervatten\"."),
     /** Review: F6 alleen voor de hoofdsleutel; een noodsleutel-Bio mag geen vinger krijgen. */
     RECOVERY_KEY_NO_FINGERS("Dit is de noodsleutel (of de app kan niet vaststellen dat het de hoofdsleutel is); daarop hoort geen vinger.", "Gebruik \"Vingers beheren\" alleen met de hoofdsleutel. Is dit wel de hoofdsleutel, keur hem dan eerst met \"Keuren zonder PIN\" als hoofdsleutel."),
-    RECOVERY_BIO_HAS_FINGER("Op de noodsleutel-Bio staat een vinger, of dat is niet vast te stellen.", "Reset de sleutel buiten de app en richt hem opnieuw in."),
+    RECOVERY_BIO_HAS_FINGER("Op de noodsleutel-Bio staat een vinger, of dat is niet vast te stellen.", "Kies \"Sleutel wissen\" en richt hem daarna opnieuw in."),
+
+    // Wissen (F8, 0.3.1)
+    RESET_NO_SERIAL("De app kan het serienummer van deze sleutel niet lezen en dus niet controleren dat straks dezelfde sleutel gewist wordt.", "Er is niets gewist. Wis deze sleutel met Yubico Authenticator of ykman fido reset."),
+    RESET_OTHER_KEY("Na opnieuw insteken kwam er een andere sleutel dan je bevestigde; er is niets gewist.", "Begin opnieuw met \"Sleutel wissen\" en houd alleen de juiste sleutel bij de hand."),
+    RESET_READBACK_FAILED("Na het wissen staat er nog een PIN of een vinger op de sleutel.", "Gebruik deze sleutel niet; wis hem met Yubico Authenticator of ykman en keur hem daarna."),
 
     // Keuren
     KEY_SWAPPED("Dit is niet dezelfde sleutel als in het vorige rapport.", "Controleer welke sleutel je in handen hebt; meld een onverwachte wissel."),
@@ -77,4 +82,13 @@ enum class Stop(val tekst: String, val advies: String) {
     CANCELLED("Je hebt de bewerking afgebroken.", "Bekijk op dit scherm wat al op de sleutel staat; staat er al een PIN, kies dan later \"Inrichting hervatten\"."),
 
     INTERNAL_ERROR("Interne fout in de app.", "Sluit de app af en begin opnieuw; er is niets opgeslagen."),
+    ;
+
+    companion object {
+        /** Stops waarbij M11 "Sleutel wissen" aanbiedt (alleen als er in dit proces nog geen geheim was). */
+        val WIPE_OFFERED: Set<Stop> = setOf(
+            PIN_ALREADY_SET, BIO_ALREADY_ENROLLED, FORCE_PIN_CHANGE, KEY_ALREADY_USED, YK5_ALWAYS_UV_PRESET,
+            PIN_BLOCKED, RECOVERY_BIO_HAS_FINGER, RESUME_NOT_ALLOWED,
+        )
+    }
 }

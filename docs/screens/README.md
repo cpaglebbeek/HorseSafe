@@ -1,6 +1,6 @@
 # docs/screens/ — HorseSafe schermen-referentie
 
-> Per scherm uit `UI_DESIGN.md` (S1-S16; S14-S16 sinds v0.2.0-Koblitz; Android-app M0-M12 sinds v0.3.0-Miller): doel + key-messages + CTA + screenshot (vanaf Fase 2 frontend POC).
+> Per scherm uit `UI_DESIGN.md` (S1-S16; S14-S16 sinds v0.2.0-Koblitz; Android-app M0-M12 sinds v0.3.0-Miller, M13 sinds v0.3.1): doel + key-messages + CTA + screenshot (vanaf Fase 2 frontend POC).
 
 ## Conventie
 
@@ -73,5 +73,6 @@ Placeholders worden bij Fase 2-start ingevuld; screenshots na elk schermbouw-com
 | M10 | Rapport | `M10_report.md` | — |
 | M11 | Stop | `M11_stop.md` | — |
 | M12 | Over | `M12_about.md` | — |
+| M13 | Sleutel wissen | `M13_reset.md` | — |
 
 Alle Android-schermen hebben FLAG_SECURE; screenshots alleen uit een emulator-debugbuild (nog niet gemaakt).

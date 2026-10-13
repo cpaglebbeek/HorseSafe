@@ -95,6 +95,7 @@ Uitgebreide tabel: `docs/HARDWARE_KEYS.md` §9. Samengevat:
 | R19 | Gecompromitteerde telefoon (root, malware, a11y-dienst, overlay) leest de PIN of vervalst het oordeel | FLAG_SECURE, overlays verborgen, a11y/multi-window/DeX/opname/ontwikkelaarsopties blokkeren de PIN-schermen, geen INTERNET, vliegtuigmodus; server verifieert attestation bij het koppelen zelf. Root-malware met geheugentoegang: buiten scope | Miller deel 1 |
 | R20 | Hoofd- en noodsleutel-PIN niet tussen sessies te vergelijken | Elke inrichting een nieuwe willekeurige PIN; papierregel + oranje melding | Miller deel 1 |
 | R21 | Platform-crashbuffer (`logcat -b crash`) bevat bij een crash type en stapnaam | Geen PIN-data in exception-berichten (canary-test), geen logging, `CrashGuard` voorkomt dropbox | Miller deel 1 |
+| R22 | Wissen in de app (0.3.1): per ongeluk de verkeerde of de enige gekoppelde sleutel wissen, of een a11y-dienst/aanvaller met telefoon én sleutel wist hem (denial of service; geen toegang tot de kluis) | Bevestiging met de laatste 4 cijfers van het serienummer + 3 s vasthouden; reset alleen kort na opnieuw insteken en met aanraking (YubiKey zelf); zelfde-sleutelcontrole serienummer + AAGUID; omgevingsbewaking blokkeert wissen; waarschuwing "enige sleutel = buitengesloten"; noodsleutel apart bewaard. Kon al met `ykman` | Miller 0.3.1 |
 | R7, R8, R11 | Telefoondiefstal met toestel-PIN, `sk_c` kort in app-RAM, Doze-vertraging | Zie `docs/HARDWARE_KEYS.md` §9 | Miller deel 2 |
 
 ## Vault-content vs. metadata
@@ -130,7 +131,7 @@ Uitgebreide tabel: `docs/HARDWARE_KEYS.md` §9. Samengevat:
 5. **Hardware-sleutels alleen in Chrome/Edge op de laptop** (v0.2.0-Koblitz). Safari en iOS worden fail-closed geweigerd; telefoon volgt in Miller. FIDO2 als account-MFA (los van de vault-laag) staat nog op de roadmap (Rogaway).
 6. **Mail via één SMTP-provider** (v0.2.0: generieke mailer, info@icthorse.nl via 587 STARTTLS; Gmail alleen fallback). Bij storing: TOTP voor login; noodsleutel-vrijgave is dan bewust uitgeschakeld (R13).
 7. **Single-device locking in v0.0.x.** Gelijktijdige edits op twee devices → conflict-merge in v0.1.x.
-8. **Android-app deel 1 (v0.3.0-Miller) richt in en keurt alleen.** Ontgrendelen op de telefoon, koppelen en meldingen volgen in deel 2. Reset kan alleen buiten de app (Yubico Authenticator / `ykman`).
+8. **Android-app deel 1 (v0.3.0-Miller) richt in en keurt alleen.** Ontgrendelen op de telefoon, koppelen en meldingen volgen in deel 2. Sinds v0.3.1 kan de app een sleutel wissen (R22); de koppeling in HorseSafe moet je daarna zelf verwijderen.
 
 ## Dreigingen waar HorseSafe NIET tegen beschermt
 

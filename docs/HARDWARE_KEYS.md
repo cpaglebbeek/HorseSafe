@@ -114,8 +114,9 @@ Een blokkade blijft staan tot er expliciet wordt gedeblokkeerd (besluit 3). Er i
 ### 4.1 YubiKey inrichten (app, Miller deel 1 — GEBOUWD in v0.3.0-Miller)
 
 Inrichten gebeurt sinds v0.3.0-Miller **in de Android-app** (`android/`, zie §7 en `android/README.md`),
-niet meer met Yubico Authenticator / `ykman`. Die blijven alleen nodig voor een **reset** (de app kan niet
-resetten) en eventueel om applets uit te zetten. De app heeft geen INTERNET en praat niet met de server.
+niet meer met Yubico Authenticator / `ykman`. Sinds v0.3.1 kan de app ook **wissen** (FIDO-reset, M13; zie
+`android/README.md` §Wissen); Yubico Authenticator / `ykman` blijven nodig om applets (PIV) uit te zetten en als
+terugval zonder leesbaar serienummer. De app heeft geen INTERNET en praat niet met de server.
 
 **Profielen:** `BIO_MAIN` (hoofdsleutel, YubiKey Bio, 2-3 vingers), `RECOVERY_YK5` (noodsleutel, YubiKey 5
 NFC, geen vinger), `RECOVERY_BIO` (noodsleutel op een Bio zonder vinger). Inrichten alleen via USB (de 5 NFC
@@ -307,14 +308,14 @@ beëindigt het proces.
 | `pin/` | `Alphabet` (29 tekens), `PinGenerator` (`SecureRandom`), `GroupCheck` (controleteken mod 29), `PinCompare` (constante tijd), `SecretBuffer` |
 | `yubikey/` | `RawInfo`, `Inspector`, `MgmtOps`, `Tokens`, yubikit-adapters voor PIN, Config, BioEnroll, CredMgmt en attestation; `transport/` (`YubiKitKeyDiscovery`, `YubiKeyLink`, `ConnectionRunner`: één fase per `requestConnection`, buiten de main thread) |
 | `attest/` | `AttestationVerifier` (Kotlin-port van `webauthn_service.py` stap 5-8), `AaguidAllowlist`, `TrustRoots`, `AuthDataParser` — ankers `yubico_fido_roots.pem` + `aaguids.json` bij de build uit `../backend/data` gekopieerd |
-| `flow/` | `DefaultSetupMachine` (nieuw + hervatten), `KeuringFlow`, `ChangePinFlow`, `FingerFlow`, `PracticeFlow`, `Policy`/`Checks` (gates), `Stop` (Nederlandse reden + advies) |
+| `flow/` | `DefaultSetupMachine` (nieuw + hervatten), `KeuringFlow`, `ChangePinFlow`, `FingerFlow`, `PracticeFlow`, `ResetFlow` (0.3.1), `Policy`/`Checks` (gates), `Stop` (Nederlandse reden + advies) |
 | `report/` | `Report` + `ReportSchema` (whitelist, faalt op onbekend veld), `ReportStore` (app-privé, `baselineFor`), `ReportCompare`, `SafReportIo` (export/import), `SerialHasher` (HMAC van het serienummer, Keystore-sleutel) |
 | `ui/` | Schermen M0..M12 (zie `UI_DESIGN.md` en `docs/screens/M00..M12`), `PinKeypad`, `GroupReveal`, `HorseSafeViewModel` |
 
 **Niet in deel 1:** INTERNET en elke servercommunicatie, telefoon-credential en Keystore-sleutels
 (K_wrap/K_dev/K_biosig), `StrongGate`/`USE_BIOMETRIC`, koppelen (QR + SAS), device-API, migratie 006,
-meldingen (polling), in-app update (updates via de HorseAPK-app), reset/`deleteCredential`/
-`updateDeviceConfig`/`setMode`, applets of NFC uitzetten, test-emulator `hb-horsesafe`, CI-job `android`.
+meldingen (polling), in-app update (updates via de HorseAPK-app), `deleteCredential`/
+`updateDeviceConfig`/`setMode` (reset wel sinds 0.3.1, alleen via `ResetFlow`), applets of NFC uitzetten, test-emulator `hb-horsesafe`, CI-job `android`.
 
 ### 7.2 Deel 2 en verder (v0.3.x-Miller) — gepland
 

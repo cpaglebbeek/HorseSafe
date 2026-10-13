@@ -3,7 +3,28 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.3.1-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+- v0.3.2-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+
+## [0.3.1-Miller] — 2026-10-13 (sleutel wissen in de app)
+
+Aanleiding: een al ingerichte sleutel werd (terecht) afgewezen en kon alleen buiten de app gewist worden.
+WhatIf + akkoord Christian 13-10. Backend en web wijzigen functioneel niet (alleen versiestring).
+
+### Added — `android/` (versionCode 301)
+- **Sleutel wissen** (M13, flow F8 `ResetFlow`): uitlezen wat erop staat → laatste 4 cijfers van het
+  serienummer overtypen → 3 s ingedrukt houden → opnieuw insteken (USB) of opnieuw tegen de telefoon (NFC,
+  YubiKey 5) → zelfde-sleutelcontrole op serienummer + AAGUID → `authenticatorReset` + aanraking → nalezen
+  (geen PIN, geen vingers) → direct opnieuw inrichten. Ook als knop op M11 bij de afwijzings-stops.
+- Nieuwe stops `RESET_NO_SERIAL`, `RESET_OTHER_KEY`, `RESET_READBACK_FAILED`; `KeyError.ResetWindowPassed`
+  (CTAP NOT_ALLOWED bij reset = te laat na insteken → opnieuw insteken, bevestiging blijft geldig).
+- Tests: `ResetFlowTest` (12) en 4 ViewModel-tests; nep-YubiKey met resetvenster. 267/267 groen.
+
+### Changed
+- Bronbeleid: reset alleen in `yubikey/YubikitResetOps.kt` en alleen aangeroepen door `flow/ResetFlow.kt`
+  (`YubikeyFlowSourcePolicyTest.resetAlleenInYubikitResetOps`); `deleteCredential`, `deviceReset`,
+  `updateDeviceConfig` en `setMode` blijven verboden.
+- Adviesteksten van de afwijzings-stops verwijzen naar "Sleutel wissen" i.p.v. "reset buiten de app".
+- Wissen is geblokkeerd door dezelfde omgevingsbewaking als de PIN-schermen (a11y, ADB, opname, …).
 
 ## [0.3.0-Miller] — 2026-10-12 (Miller deel 1; repo, APK nog niet gepubliceerd)
 

@@ -17,7 +17,7 @@ import nl.icthorse.horsesafe.ui.components.Secondary
 import nl.icthorse.horsesafe.ui.components.Small
 import nl.icthorse.horsesafe.ui.theme.HsColors
 
-/** M0 Start: versie, omgevingsoordeel en menukaarten. Geen reset. */
+/** M0 Start: versie, omgevingsoordeel en menukaarten. "Sleutel wissen" staat bewust onderaan (0.3.1). */
 @Composable
 fun M0Start(u: UiState, vm: HorseSafeViewModel, appVersion: String) {
     val pick = u.pickProfileFor
@@ -50,6 +50,7 @@ private fun ScreenFrame0(u: UiState, vm: HorseSafeViewModel, appVersion: String)
         MenuCard("PIN wijzigen", "Nieuwe PIN van 63 tekens; minimum en alwaysUv blijven ongemoeid") { vm.choose(Purpose.PIN_CHANGE) }
         MenuCard("Vingers beheren", "Hoofdsleutel: toevoegen, hernoemen, verwijderen, testaanraking") { vm.choose(Purpose.FINGERS) }
         MenuCard("Oefenen", "PIN-groepen van papier controleren met de controletekens, zonder sleutel") { vm.choose(Purpose.PRACTICE) }
+        MenuCard("Sleutel wissen", "Al ingerichte sleutel helemaal wissen (FIDO-reset); onomkeerbaar") { vm.choose(Purpose.RESET) }
         MenuCard("Rapporten", "Bekijken, exporteren en importeren (opslagkiezer)") { vm.openReports() }
         MenuCard("Over HorseSafe", "Licenties, vertrouwensankers en ondertekening") { vm.openAbout() }
     }

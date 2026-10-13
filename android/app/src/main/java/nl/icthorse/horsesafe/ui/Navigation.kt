@@ -20,6 +20,7 @@ enum class Screen(val code: String, val titel: String, val holdsSecret: Boolean 
     M10_REPORT("M10", "Rapport"),
     M11_STOP("M11", "Stop"),
     M12_ABOUT("M12", "Over"),
+    M13_RESET("M13", "Sleutel wissen"),
     BUSY("—", "Bezig"),
 }
 
@@ -32,6 +33,7 @@ enum class Purpose(val nl: String, val available: Boolean = true) {
     PIN_CHANGE("PIN wijzigen"),
     FINGERS("Vingers beheren"),
     PRACTICE("Oefenen"),
+    RESET("Sleutel wissen"),
 }
 
 /**

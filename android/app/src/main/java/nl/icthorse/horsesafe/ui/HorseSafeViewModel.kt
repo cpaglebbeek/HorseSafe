@@ -27,6 +27,8 @@ import nl.icthorse.horsesafe.flow.Gates
 import nl.icthorse.horsesafe.flow.KeuringFlow
 import nl.icthorse.horsesafe.flow.Notice
 import nl.icthorse.horsesafe.flow.Profile
+import nl.icthorse.horsesafe.flow.ResetFlow
+import nl.icthorse.horsesafe.flow.ResetOutcome
 import nl.icthorse.horsesafe.flow.SetupMachine
 import nl.icthorse.horsesafe.flow.SetupMode
 import nl.icthorse.horsesafe.flow.State
@@ -61,6 +63,23 @@ data class RevealUi(val seen: Set<Int> = emptySet(), val pressed: Int? = null)
 enum class MaintStep { CONNECT, NEW_PIN_REVEAL, NEW_PIN_COPY, NEW_PIN_RETYPE, PIN_ENTRY, FINGERS, BUSY, RESULT }
 
 enum class CodeTarget { SEAL, PAPER }
+
+/** F8 Sleutel wissen: stappen op M13. */
+enum class ResetStep { CONNECT, CONFIRM, REPLUG, WIPING, DONE }
+
+/**
+ * M13. [serialLast4] = laatste 4 cijfers van het serienummer (staat ook op de sleutel; geen geheim),
+ * [typed] = wat de gebruiker overtypte. Het volledige serienummer staat alleen in [ResetFlow].
+ */
+data class ResetUi(
+    val step: ResetStep = ResetStep.CONNECT,
+    val serialLast4: String? = null,
+    val typed: String = "",
+    val typedOk: Boolean = false,
+    val typedWrong: Boolean = false,
+    val notice: String? = null,
+    val attempts: Int = 0,
+)
 
 /**
  * Alles wat de Compose-schermen tonen. Bevat NOOIT een geheim: geen PIN, geen controletekens, geen
@@ -116,6 +135,8 @@ data class UiState(
     val sealCode: String = "",
     val paperLocationCode: String = "",
     val codeTarget: CodeTarget? = null,
+    /** F8 Sleutel wissen (M13); null buiten die flow. */
+    val reset: ResetUi? = null,
 )
 
 /**
@@ -157,6 +178,7 @@ class HorseSafeViewModel(
     private var practicePin: SecretBuffer? = null
     private var maintJob: Job? = null
     private var maintInterrupted = false
+    private var resetFlow: ResetFlow? = null
 
     private val wiper = SecretRegistry.register { wipeAllSecrets() }
 
@@ -197,6 +219,7 @@ class HorseSafeViewModel(
                 openEntry(EntryMode.PAPER, Screen.M8_PIN_ENTRY)
             }
             Purpose.FINGERS -> start(purpose, Profile.BIO_MAIN)
+            Purpose.RESET -> startReset()
             else -> _ui.update { it.copy(pickProfileFor = purpose, message = null) }
         }
     }
@@ -548,6 +571,8 @@ class HorseSafeViewModel(
         practicePin?.wipe()
         practicePin = null
         maintLink = null
+        resetFlow?.forget()
+        resetFlow = null
     }
 
     private fun maintHoldsSecret(): Boolean =
@@ -1000,7 +1025,9 @@ class HorseSafeViewModel(
     fun onStart() {
         started = true
         val u = _ui.value
-        if (machine != null || u.maint == MaintStep.CONNECT || u.maint == MaintStep.PIN_ENTRY || u.maint == MaintStep.FINGERS) startDiscovery()
+        if (machine != null || u.maint == MaintStep.CONNECT || u.maint == MaintStep.PIN_ENTRY || u.maint == MaintStep.FINGERS ||
+            (u.purpose == Purpose.RESET && u.reset?.step != ResetStep.DONE)
+        ) startDiscovery()
         if (stoppedWhileHoldingPin) {
             stoppedWhileHoldingPin = false
             send(FlowEvent.Recreated)
@@ -1059,13 +1086,126 @@ class HorseSafeViewModel(
         practicePin = null
     }
 
+    // ================================================================== F8 Sleutel wissen (M13)
+
+    private fun startReset() {
+        disposeMaint()
+        resetFlow = services.resetFlow()
+        _ui.update {
+            it.copy(purpose = Purpose.RESET, profile = null, maint = null, screen = Screen.M13_RESET, reset = ResetUi(), facts = null, message = null)
+        }
+        startDiscovery()
+    }
+
+    /** Vanaf M11 (stop bij een al ingerichte sleutel): terug naar start en meteen wissen. */
+    fun wipeFromStop() {
+        val u = _ui.value
+        if (u.secretsTouched || u.busy) return
+        val stop = (u.machine as? State.Stopped)?.stop ?: u.localStop ?: return
+        if (stop !in Stop.WIPE_OFFERED) return
+        backToStart()
+        choose(Purpose.RESET)
+    }
+
+    private fun onResetKeyConnected(link: KeyLink) {
+        val u = _ui.value
+        val r = u.reset ?: return
+        if (u.busy) return
+        when (r.step) {
+            ResetStep.CONNECT -> {
+                maintLink = link
+                runReset({ it.inspect(link) })
+            }
+            ResetStep.REPLUG -> if (link !== maintLink) {
+                maintLink = link
+                _ui.update { it.copy(reset = r.copy(step = ResetStep.WIPING, notice = null, attempts = r.attempts + 1)) }
+                runReset({ it.wipe(link) })
+            }
+            else -> Unit
+        }
+    }
+
+    private fun runReset(block: suspend (ResetFlow) -> ResetOutcome) {
+        val f = resetFlow ?: return
+        _ui.update { it.copy(busy = true, message = null) }
+        maintJob = viewModelScope.launch {
+            val out = try {
+                withContext(work) { block(f) }
+            } catch (c: CancellationException) {
+                _ui.update { it.copy(busy = false) }
+                throw c
+            } catch (e: Throwable) {
+                ResetOutcome.Blocked(Stop.INTERNAL_ERROR)
+            }
+            _ui.update { it.copy(busy = false) }
+            onResetOutcome(out)
+        }
+    }
+
+    private fun onResetOutcome(out: ResetOutcome) {
+        val f = resetFlow
+        when (out) {
+            is ResetOutcome.Ready -> _ui.update {
+                it.copy(facts = out.facts, reset = (it.reset ?: ResetUi()).copy(step = ResetStep.CONFIRM, serialLast4 = out.serialLast4, notice = null))
+            }
+            is ResetOutcome.Wiped -> {
+                f?.forget()
+                _ui.update { it.copy(facts = out.facts, reset = (it.reset ?: ResetUi()).copy(step = ResetStep.DONE, notice = null)) }
+                stopDiscovery()
+            }
+            is ResetOutcome.Retry -> _ui.update {
+                val step = if (f?.isConfirmed == true) ResetStep.REPLUG else ResetStep.CONNECT
+                it.copy(reset = (it.reset ?: ResetUi()).copy(step = step, notice = out.notice.text))
+            }
+            is ResetOutcome.Blocked -> {
+                f?.forget()
+                toLocalStop(out.stop)
+            }
+        }
+    }
+
+    fun resetDigit(c: Char) {
+        if (c !in '0'..'9') return
+        val r = _ui.value.reset ?: return
+        if (r.step != ResetStep.CONFIRM || r.typedOk || r.typed.length >= 4) return
+        val typed = r.typed + c
+        if (typed.length < 4) {
+            _ui.update { it.copy(reset = r.copy(typed = typed, typedWrong = false)) }
+            return
+        }
+        val ok = resetFlow?.confirm(typed) == true
+        _ui.update { it.copy(reset = r.copy(typed = if (ok) typed else "", typedOk = ok, typedWrong = !ok)) }
+    }
+
+    fun resetDeleteDigit() {
+        val r = _ui.value.reset ?: return
+        if (r.step != ResetStep.CONFIRM || r.typedOk) return
+        _ui.update { it.copy(reset = r.copy(typed = r.typed.dropLast(1), typedWrong = false)) }
+    }
+
+    /** M13: knop 3 s ingedrukt gehouden (de UI meet de tijd). Daarna: opnieuw insteken. */
+    fun resetHoldComplete() {
+        val u = _ui.value
+        val r = u.reset ?: return
+        if (r.step != ResetStep.CONFIRM || !r.typedOk || u.busy || u.env.blocksSecrets) return
+        if (resetFlow?.isConfirmed != true) return
+        _ui.update { it.copy(reset = r.copy(step = ResetStep.REPLUG, notice = null)) }
+    }
+
+    /** M13 na wissen: meteen inrichten met dit profiel. */
+    fun setupAfterReset(profile: Profile) {
+        if (_ui.value.reset?.step != ResetStep.DONE) return
+        backToStart()
+        start(Purpose.SETUP_NEW, profile)
+    }
+
     // ================================================================== sleuteldetectie
 
     private fun startDiscovery() {
         if (!started) return
         val d = discovery ?: services.createDiscovery().also { discovery = it }
         val p = _ui.value.purpose
-        val allowNfc = p == Purpose.KEURING_ZONDER_PIN
+        val allowNfc = p == Purpose.KEURING_ZONDER_PIN || p == Purpose.RESET
         try {
             d.start(allowNfc)
         } catch (e: Exception) {
@@ -1094,7 +1234,9 @@ class HorseSafeViewModel(
             KeyLinkEvent.None -> _ui.update { it.copy(key = KeyPresence.NONE) }
             is KeyLinkEvent.Connected -> {
                 _ui.update { it.copy(key = KeyPresence.CONNECTED) }
-                if (machine != null) {
+                if (u.purpose == Purpose.RESET && machine == null) {
+                    onResetKeyConnected(ev.link)
+                } else if (machine != null) {
                     if (ev.link !== lastLink) {
                         lastLink = ev.link
                         send(FlowEvent.KeyConnected(ev.link))
@@ -1109,11 +1251,17 @@ class HorseSafeViewModel(
             KeyLinkEvent.Multiple -> {
                 _ui.update { it.copy(key = KeyPresence.MULTIPLE) }
                 if (machine != null) send(FlowEvent.MultipleKeys)
-                else if (maintLink != null && u.maint != MaintStep.RESULT) toLocalStop(Stop.MULTIPLE_KEYS)
+                else if (u.purpose == Purpose.RESET) {
+                    if (u.reset?.step != ResetStep.DONE) {
+                        maintJob?.cancel()
+                        toLocalStop(Stop.MULTIPLE_KEYS)
+                    }
+                } else if (maintLink != null && u.maint != MaintStep.RESULT) toLocalStop(Stop.MULTIPLE_KEYS)
             }
             KeyLinkEvent.Removed -> {
                 _ui.update { it.copy(key = KeyPresence.NONE) }
                 if (machine != null) send(FlowEvent.KeyRemoved)
+                else if (u.purpose == Purpose.RESET) Unit // los en weer in is hier juist de bedoeling
                 else if (maintLink != null && u.maint != MaintStep.RESULT && u.maint != MaintStep.CONNECT) {
                     maintJob?.cancel()
                     toLocalStop(Stop.KEY_REMOVED)

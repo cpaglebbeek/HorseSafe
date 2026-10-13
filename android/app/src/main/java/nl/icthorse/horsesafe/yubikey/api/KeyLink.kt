@@ -41,6 +41,8 @@ interface CtapPhase {
     val bio: BioEnrollOps
     val credMgmt: CredMgmtOps
     val attest: AttestOps
+    /** Wissen (0.3.1); alleen via ResetFlow. */
+    val reset: ResetOps
 
     /** VERSE `Ctap2Session.getInfo()` (nooit `getCachedInfo`), te gebruiken na elke schrijfactie (A-19). */
     suspend fun freshInfo(): CtapInfo

@@ -14,6 +14,7 @@ import nl.icthorse.horsesafe.ui.screens.M0Start
 import nl.icthorse.horsesafe.ui.screens.M10Report
 import nl.icthorse.horsesafe.ui.screens.M11Stop
 import nl.icthorse.horsesafe.ui.screens.M12About
+import nl.icthorse.horsesafe.ui.screens.M13Reset
 import nl.icthorse.horsesafe.ui.screens.M1Checklist
 import nl.icthorse.horsesafe.ui.screens.M2Connect
 import nl.icthorse.horsesafe.ui.screens.M3Judgement
@@ -57,6 +58,7 @@ fun HorseSafeRoot(vm: HorseSafeViewModel, services: AppServices, signerSha256: S
                 Screen.M10_REPORT -> M10Report(u, vm, actions.export, actions.import)
                 Screen.M11_STOP -> M11Stop(u, vm)
                 Screen.M12_ABOUT -> M12About(vm, services.appVersion, services.trust, signerSha256, services.isDebugBuild)
+                Screen.M13_RESET -> M13Reset(u, vm)
                 Screen.BUSY -> BusyScreen(u, vm)
             }
         }

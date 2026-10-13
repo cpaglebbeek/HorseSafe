@@ -69,3 +69,10 @@ linked_actions: [Miller deel 1]
 - Christian: "zorg dat deze ook op de fairphone staat" → WhatIf → "akkoord".
 - HorseAPK-prod: ProjectGrant `HorseSafe` voor `cglebbeek+residio@gmail.com` (Fairphone 6) via server-shell; auditregel `grant_added` (via=server-shell); wekbericht `grants_changed` synchroon afgeleverd (ntfy ok).
 - Installeren gebeurt door Christian in HorseAPK op de Fairphone. Ontwikkelaarsopties aan ⇒ PIN-schermen geblokkeerd.
+
+## 13-10 — 0.3.1-Miller: sleutel wissen in de app
+- Christian: "een bestaande ingerichte sleutel wordt nu afgewezen. deze moet ook gewist kunnen worden" → WhatIf (M13, bevestiging laatste 4 cijfers serienummer + 3 s vasthouden, opnieuw insteken, zelfde-sleutelcontrole, nalezen, R-nummer) → "akkoord".
+- Gebouwd: `yubikey/api/ResetOps.kt`, `yubikey/YubikitResetOps.kt` (enige reset-aanroep; NOT_ALLOWED → `KeyError.ResetWindowPassed`), `flow/ResetFlow.kt` (F8), `ui/screens/ResetScreens.kt` (M13), ViewModel-koppeling, knop "Sleutel wissen" op M11 bij afwijzings-stops, M0-menukaart. Stops `RESET_NO_SERIAL`, `RESET_OTHER_KEY`, `RESET_READBACK_FAILED`; adviesteksten verwijzen naar "Sleutel wissen". Wissen geblokkeerd door de omgevingsbewaking.
+- Gemeten: 267/267 JVM-tests (build-box), lint 0 errors/16 warnings (lint moest geforceerd: `lintAnalyzeRelease` stond onterecht UP-TO-DATE), release-APK HC55 vc 301 sha256 `4dcfd09a…2250`, `verify_apk.sh` GROEN, emulator-smoke Android 16 + 14 groen incl. M13.
+- Docs: CHANGELOG, android/README §Wissen, HARDWARE_KEYS, THREAT_MODEL R22 + §8, UI_DESIGN, docs/screens/M13_reset.md.
+- Niet getest: echte sleutel. Grootste onzekerheid: het resetvenster (± 5 s na insteken) met de Android-USB-toestemmingsvraag ertussen.

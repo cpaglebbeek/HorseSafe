@@ -17,6 +17,7 @@ import nl.icthorse.horsesafe.yubikey.api.CtapPhase
 import nl.icthorse.horsesafe.yubikey.api.KeyError
 import nl.icthorse.horsesafe.yubikey.api.Permission
 import nl.icthorse.horsesafe.yubikey.api.PinOps
+import nl.icthorse.horsesafe.yubikey.api.ResetOps
 import nl.icthorse.horsesafe.yubikey.api.Transport
 
 /**
@@ -85,6 +86,7 @@ internal class YubikitCtapPhase(
     override val bio: BioEnrollOps = YubikitBioEnrollOps(this)
     override val credMgmt: CredMgmtOps = YubikitCredMgmtOps(this)
     override val attest: AttestOps = YubikitAttestOps(this)
+    override val reset: ResetOps = YubikitResetOps(this)
 
     /** Protocol voor deze fase (eerste keer gekozen op de verse getInfo). */
     internal val protocol: PinUvAuthProtocol

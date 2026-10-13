@@ -6,6 +6,7 @@ import nl.icthorse.horsesafe.flow.FingerFlow
 import nl.icthorse.horsesafe.flow.KeuringFlow
 import nl.icthorse.horsesafe.flow.PracticeFlow
 import nl.icthorse.horsesafe.flow.Profile
+import nl.icthorse.horsesafe.flow.ResetFlow
 import nl.icthorse.horsesafe.flow.ReportFactory
 import nl.icthorse.horsesafe.flow.SetupMachine
 import nl.icthorse.horsesafe.flow.SetupMode
@@ -56,4 +57,7 @@ interface AppServices {
 
     /** F7. */
     fun practiceFlow(env: EnvironmentProbe): PracticeFlow = PracticeFlow(env)
+
+    /** F8 Sleutel wissen (0.3.1). */
+    fun resetFlow(): ResetFlow = ResetFlow(inspector)
 }

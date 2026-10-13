@@ -32,6 +32,8 @@ sealed class KeyError(message: String) : Exception(message) {
     class UvInvalid(val retriesLeft: Int?) : KeyError("Vinger niet herkend.")
     /** UV_BLOCKED: vingerpogingen op. */
     class UvBlocked : KeyError("Vingerherkenning is geblokkeerd.")
+    /** Reset: NOT_ALLOWED (0x30) — te laat na insteken of tegen de telefoon houden. */
+    class ResetWindowPassed : KeyError("Te laat na het insteken.")
     /** OPERATION_DENIED / NOT_ALLOWED. */
     class OperationDenied : KeyError("De sleutel weigert de bewerking.")
     /** Token heeft de verkeerde permissie of is gewist/verlopen. */

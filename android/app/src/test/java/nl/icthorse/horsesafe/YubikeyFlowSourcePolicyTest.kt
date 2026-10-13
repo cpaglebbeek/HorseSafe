@@ -45,7 +45,23 @@ class YubikeyFlowSourcePolicyTest {
             .flatMap { d -> d.walkTopDown().filter { it.isFile && it.extension in setOf("kt", "java") }.toList() }
         assertTrue("yubikey/ en flow/ bevatten bronbestanden (${files.size})", files.size >= 25)
         val h = files.flatMap { f -> hits(f.relativeTo(pkgRoot).path, code(f.readText())) }
+            .filterNot { it == RESET_ALLOWED + ": reset" }
         assertTrue("bronbeleid yubikey/flow geschonden:\n" + h.joinToString("\n"), h.isEmpty())
+    }
+
+    /** 0.3.1: de reset staat in precies één bestand, en alleen ResetFlow gebruikt [ResetOps]. */
+    @Test fun resetAlleenInYubikitResetOps() {
+        val all = pkgRoot.walkTopDown().filter { it.isFile && it.extension in setOf("kt", "java") }.toList()
+        val resetRe = forbidden.first { it.first == "reset" }.second
+        val withReset = all.filter { resetRe.containsMatchIn(code(it.readText())) }.map { it.relativeTo(pkgRoot).path.replace(File.separatorChar, '/') }
+        assertEquals(listOf(RESET_ALLOWED), withReset)
+        val users = all.filter { Regex("\\.wipeFido\\s*\\(").containsMatchIn(code(it.readText())) }
+            .map { it.relativeTo(pkgRoot).path.replace(File.separatorChar, '/') }
+        assertEquals(listOf("flow/ResetFlow.kt"), users)
+    }
+
+    private companion object {
+        const val RESET_ALLOWED = "yubikey/YubikitResetOps.kt"
     }
 
     @Test fun domeinAlleenInConfigOps() {

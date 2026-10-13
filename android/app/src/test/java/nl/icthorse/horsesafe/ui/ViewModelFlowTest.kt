@@ -383,4 +383,109 @@ class ViewModelFlowTest {
         vm.key('c') // na het wissen wordt niets meer aangenomen
         assertNull(vm.ui.value.entry)
     }
+
+    // ---------------------------------------------------------------- F8 Sleutel wissen (0.3.1)
+
+    /** Zelfde fysieke sleutel, nieuwe link (zoals na opnieuw insteken). */
+    private class Relink(k: FakeYubiKey) : nl.icthorse.horsesafe.yubikey.api.KeyLink by k
+
+    private suspend fun configuredBio(): FakeYubiKey {
+        val d = nl.icthorse.horsesafe.flow.fake.SetupDriver(FakeYubiKey(KeyProfiles.bioFido574()), Profile.BIO_MAIN)
+        assertTrue(d.runNew() is State.ReportReady)
+        return d.key
+    }
+
+    @Test fun wissenViaDeUi() = runTest(dispatcher) {
+        val key = configuredBio()
+        val s = Services()
+        val vm = vm(s)
+        vm.choose(Purpose.RESET)
+        assertEquals(Screen.M13_RESET, vm.ui.value.screen)
+        assertEquals(ResetStep.CONNECT, vm.ui.value.reset?.step)
+        s.discovery.flow.value = KeyLinkEvent.Connected(key)
+        advanceUntilIdle()
+        val r = vm.ui.value.reset!!
+        assertEquals(ResetStep.CONFIRM, r.step)
+        assertEquals("0001", r.serialLast4)
+        // vasthouden zonder juiste cijfers doet niets
+        vm.resetHoldComplete()
+        assertEquals(ResetStep.CONFIRM, vm.ui.value.reset?.step)
+        "1234".forEach { vm.resetDigit(it) }
+        assertTrue(vm.ui.value.reset!!.typedWrong)
+        assertEquals("", vm.ui.value.reset!!.typed)
+        "0001".forEach { vm.resetDigit(it) }
+        assertTrue(vm.ui.value.reset!!.typedOk)
+        vm.resetHoldComplete()
+        assertEquals(ResetStep.REPLUG, vm.ui.value.reset?.step)
+        // dezelfde link opnieuw gemeld = niet opnieuw ingestoken: niets gebeurt
+        s.discovery.flow.value = KeyLinkEvent.None
+        s.discovery.flow.value = KeyLinkEvent.Connected(key)
+        advanceUntilIdle()
+        assertEquals(ResetStep.REPLUG, vm.ui.value.reset?.step)
+        assertNotNull(key.pin)
+        // los en weer in
+        s.discovery.flow.value = KeyLinkEvent.Removed
+        key.unplug(); key.reinsert()
+        s.discovery.flow.value = KeyLinkEvent.Connected(Relink(key))
+        advanceUntilIdle()
+        assertEquals(ResetStep.DONE, vm.ui.value.reset?.step)
+        assertNull(key.pin)
+        assertEquals(0, key.fingerCount)
+        assertFalse(vm.ui.value.secretsTouched)
+        assertFalse(vm.ui.value.toString().contains("31000001"))
+        vm.setupAfterReset(Profile.BIO_MAIN)
+        assertEquals(Screen.M1_CHECKLIST, vm.ui.value.screen)
+        assertEquals(Purpose.SETUP_NEW, vm.ui.value.purpose)
+    }
+
+    @Test fun wissenTeLaatTerugNaarOpnieuwInsteken() = runTest(dispatcher) {
+        val key = configuredBio()
+        val s = Services()
+        val vm = vm(s)
+        vm.choose(Purpose.RESET)
+        s.discovery.flow.value = KeyLinkEvent.Connected(key)
+        advanceUntilIdle()
+        "0001".forEach { vm.resetDigit(it) }
+        vm.resetHoldComplete()
+        key.closeResetWindow()
+        s.discovery.flow.value = KeyLinkEvent.Connected(Relink(key))
+        advanceUntilIdle()
+        val r = vm.ui.value.reset!!
+        assertEquals(ResetStep.REPLUG, r.step)
+        assertEquals(nl.icthorse.horsesafe.flow.ResetFlow.NOTICE_TOO_LATE.text, r.notice)
+        assertNotNull(key.pin)
+        key.reinsert()
+        s.discovery.flow.value = KeyLinkEvent.Connected(Relink(key))
+        advanceUntilIdle()
+        assertEquals(ResetStep.DONE, vm.ui.value.reset?.step)
+    }
+
+    @Test fun wissenGeblokkeerdDoorOmgeving() = runTest(dispatcher) {
+        val key = configuredBio()
+        val s = Services()
+        val vm = vm(s)
+        vm.choose(Purpose.RESET)
+        s.discovery.flow.value = KeyLinkEvent.Connected(key)
+        advanceUntilIdle()
+        "0001".forEach { vm.resetDigit(it) }
+        vm.onEnvironment(EnvReport(listOf(Stop.ENV_ACCESSIBILITY), emptyList()))
+        vm.resetHoldComplete()
+        assertEquals(ResetStep.CONFIRM, vm.ui.value.reset?.step)
+    }
+
+    @Test fun stopBijIngerichteSleutelBiedtWissenAan() = runTest(dispatcher) {
+        val key = configuredBio()
+        val s = Services()
+        val vm = vm(s)
+        vm.start(Purpose.SETUP_NEW, Profile.BIO_MAIN)
+        checklist(vm)
+        s.discovery.flow.value = KeyLinkEvent.Connected(key)
+        advanceUntilIdle()
+        assertEquals(Screen.M11_STOP, vm.ui.value.screen)
+        val stop = (vm.ui.value.machine as? State.Stopped)?.stop ?: vm.ui.value.localStop
+        assertTrue("$stop", stop in Stop.WIPE_OFFERED)
+        vm.wipeFromStop()
+        assertEquals(Screen.M13_RESET, vm.ui.value.screen)
+        assertEquals(Purpose.RESET, vm.ui.value.purpose)
+    }
 }

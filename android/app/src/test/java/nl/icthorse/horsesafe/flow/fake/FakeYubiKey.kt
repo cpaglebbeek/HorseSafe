@@ -29,6 +29,7 @@ import nl.icthorse.horsesafe.yubikey.api.PinOps
 import nl.icthorse.horsesafe.yubikey.api.PinRetries
 import nl.icthorse.horsesafe.yubikey.api.RawGetInfo
 import nl.icthorse.horsesafe.yubikey.api.RawPresence
+import nl.icthorse.horsesafe.yubikey.api.ResetOps
 import nl.icthorse.horsesafe.yubikey.api.SampleFeedback
 import nl.icthorse.horsesafe.yubikey.api.SensorFacts
 import nl.icthorse.horsesafe.yubikey.api.TemplateId
@@ -119,6 +120,10 @@ class FakeYubiKey(val spec: KeySpec) : KeyLink {
     var timeoutAfterSetPin = false
     /** Testhulp: zet de vingerpogingen (bv. 0 = UV_BLOCKED). */
     fun setUvRetries(n: Int) { uvRetries = n }
+    /** Resetvenster (CTAP: alleen kort na insteken): open bij aanmaken en na [reinsert]; [closeResetWindow] = te laat. */
+    var resetWindowOpen = true
+        private set
+    fun closeResetWindow() { resetWindowOpen = false }
     /** De volgende testaanraking mislukt en zet uvRetries op 0 (UV_BLOCKED); eenmalig. */
     var uvBlockOnNextTouch = false
 
@@ -156,6 +161,7 @@ class FakeYubiKey(val spec: KeySpec) : KeyLink {
         powerCycleRequired = false
         consecutiveFails = 0
         crashAfter = null
+        resetWindowOpen = true
     }
 
     fun writes(): List<String> = log.filter { it in WRITE_OPS || it.startsWith("enroll") || it.startsWith("rename") || it.startsWith("remove") }
@@ -446,6 +452,30 @@ class FakeYubiKey(val spec: KeySpec) : KeyLink {
             }
         }
 
+        override val reset: ResetOps = object : ResetOps {
+            override suspend fun wipeFido(): Unit = op("reset") {
+                if (!resetWindowOpen) throw KeyError.ResetWindowPassed()
+                touch()
+                this@FakeYubiKey.pin?.fill('\u0000')
+                this@FakeYubiKey.pin = null
+                pinRetries = 8
+                consecutiveFails = 0
+                powerCycleRequired = false
+                minPinLength = 4
+                minPinRpIds = emptyList()
+                forcePinChange = false
+                templates.clear()
+                residentCredentials = 0
+                uvRetries = 3
+                alwaysUv = spec.alwaysUv
+                versions.clear()
+                versions.addAll(spec.versions)
+                liveTokens.forEach { it.wipe() }
+                tokenEpoch++
+                Unit
+            }
+        }
+
         override val attest: AttestOps = object : AttestOps {
             override suspend fun keuringCredential(token: AuthToken?): AttestationEvidence = op(if (token == null) "makeCredential:up" else "makeCredential:token") {
                 if (token == null) {
@@ -471,7 +501,7 @@ class FakeYubiKey(val spec: KeySpec) : KeyLink {
     }
 
     companion object {
-        val WRITE_OPS = setOf("setPin", "changePin", "setMinPinLength", "toggleAlwaysUv", "enroll", "rename", "remove")
+        val WRITE_OPS = setOf("setPin", "changePin", "setMinPinLength", "toggleAlwaysUv", "enroll", "rename", "remove", "reset")
 
         fun uuidBytes(a: Aaguid): ByteArray {
             val hex = a.uuid.replace("-", "")

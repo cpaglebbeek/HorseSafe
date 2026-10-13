@@ -159,7 +159,10 @@ fun M11Stop(u: UiState, vm: HorseSafeViewModel) {
     val stop = st?.stop ?: u.localStop ?: Stop.INTERNAL_ERROR
     ScreenFrame(Screen.M11_STOP, "Gestopt", bottom = {
         if (u.secretsTouched) Primary("Afsluiten") { vm.quit() }
-        else Primary("Terug naar start") { vm.backToStart() }
+        else {
+            if (stop in Stop.WIPE_OFFERED) Secondary("Sleutel wissen") { vm.wipeFromStop() }
+            Primary("Terug naar start") { vm.backToStart() }
+        }
     }) {
         Panel(border = HsColors.Red, background = HsColors.RedSurface) {
             SectionTitle("Waarom")
@@ -174,7 +177,7 @@ fun M11Stop(u: UiState, vm: HorseSafeViewModel) {
             w.forEach { Body("• " + Texts.written(it)) }
             if ((st?.fingers ?: 0) > 0) Small("Vingers op de sleutel: ${st?.fingers}")
         }
-        Small("Een reset buiten de app (Yubico Authenticator of ykman) wist alles op de sleutel. Doe dat alleen bij de testsleutel. Na een stop doet de app niets meer op de sleutel.")
+        Small("\"Sleutel wissen\" wist alles op de sleutel en vraagt eerst een bevestiging met het serienummer. Na een stop doet de app zelf niets meer op de sleutel.")
         if (u.secretsTouched) Small(Texts.QUIT_INFO)
         if (u.checks.isNotEmpty()) {
             SectionTitle("Beoordeling")

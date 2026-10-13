@@ -9,10 +9,11 @@ Ontwerp en eisen: `docs/HARDWARE_KEYS.md` (§4.1, §7) en het bouwplan Miller de
 - Hoofdsleutel (YubiKey Bio) en noodsleutel (YubiKey 5 NFC, of een Bio zonder vinger) inrichten:
   PIN van 63 tekens, attestation-keuring, minimum PIN-lengte 63, alwaysUv, vingers (alleen hoofdsleutel).
 - Inrichting hervatten, keuren zonder en met PIN, PIN wijzigen, vingers beheren, oefenen.
+- Sleutel wissen (sinds 0.3.1): FIDO-reset met bevestiging (laatste 4 cijfers serienummer + 3 s
+  vasthouden) en zelfde-sleutelcontrole na opnieuw insteken.
 - Rapport zonder geheimen (whitelist), in de app en via de opslagkiezer te exporteren en te importeren.
 
-Niet in deel 1: ontgrendelen, koppelen, de device-API, Keystore-sleutels, reset (doe je buiten de app,
-alleen bij de testsleutel), applets of NFC uitzetten.
+Niet in deel 1: ontgrendelen, koppelen, de device-API, Keystore-sleutels, applets of NFC uitzetten.
 
 ## Bouwen
 
@@ -47,8 +48,8 @@ cd android
   - attestation (positief en negatief), rapport-whitelist, import en vergelijkingsbasis, ViewModel-flows,
     omgevingsbewaking, lektest met een sentinel-PIN (`FlowCanaryTest`, `ReportCanaryTest`).
 - **Bronbeleid:** `SourcePolicyTest` en `YubikeyFlowSourcePolicyTest` (geen `DEVICE_CREDENTIAL`, geen
-  logging, geen netwerk/bestanden in `yubikey/` en `flow/`, geen reset/`deleteCredential`/
-  `updateDeviceConfig`/`setMode`, geen `getCachedInfo`; `icthorsecloud.nl` alleen in `ConfigOps.kt` en
+  logging, geen netwerk/bestanden in `yubikey/` en `flow/`, reset alleen in `yubikey/YubikitResetOps.kt`
+  (aangeroepen door `flow/ResetFlow.kt`), geen `deleteCredential`/`updateDeviceConfig`/`setMode`, geen `getCachedInfo`; `icthorsecloud.nl` alleen in `ConfigOps.kt` en
   gelijk aan `backend/config.py`).
 - **Release-manifest:** `ReleaseManifestTest` leest de merged release-manifest (AGP
   `SingleArtifact.MERGED_MANIFEST`) en eist de exacte permissieset, geen provider/service en precies één
@@ -153,9 +154,21 @@ Volgorde is verplicht: **eerst een wisbare testsleutel**, pas daarna de echte sl
 - Elke sleutel een eigen formulier en een eigen PIN; nooit het papier van de andere sleutel hergebruiken.
 - Een formulier van een afgebroken poging (vóór de PIN op de sleutel stond) vernietigen.
 
-## Reset
+## Wissen (reset)
 
-De app kan en mag een sleutel **niet** resetten (geen reset, `deleteCredential`, `updateDeviceConfig` of
-`setMode`; bewaakt door de bronbeleidstest). Reset doe je buiten de app met Yubico Authenticator of
-`ykman fido reset`, **alleen bij de testsleutel** of bij een sleutel die de app als gebruikt of
-gemanipuleerd afwijst. Een reset wist alle credentials, de PIN, de vingers en het minimum.
+Sinds 0.3.1 kan de app een sleutel wissen: M0 "Sleutel wissen", of de knop op M11 als een al ingerichte
+sleutel wordt afgewezen. Een reset wist alle FIDO-credentials (ook voor andere sites), de PIN, de vingers,
+het minimum en alwaysUv; PIV, OATH en OpenPGP blijven. Volgorde:
+
+1. aansluiten; de app leest uit wat erop staat en toont de laatste 4 cijfers van het serienummer;
+2. die 4 cijfers overtypen (vergelijk met de achterkant van de sleutel) en 3 s ingedrukt houden;
+3. sleutel eruit en meteen weer in (bij USB direct OK op de toestemmingsvraag), of bij een YubiKey 5 opnieuw
+   tegen de telefoon: een YubiKey accepteert reset alleen in de eerste seconden na het aansluiten;
+4. de app controleert serienummer + AAGUID (andere sleutel = `RESET_OTHER_KEY`, niets gewist), stuurt de
+   reset en vraagt een aanraking (Bio: sensor);
+5. nalezen: geen PIN en geen vingers meer; daarna direct inrichten. Verwijder de oude koppeling in HorseSafe (S14).
+
+Te laat, geen aanraking of los tijdens het wissen: terug naar stap 3, de bevestiging blijft geldig. Zonder
+leesbaar serienummer (`RESET_NO_SERIAL`) wis je buiten de app met Yubico Authenticator of `ykman fido reset`.
+Alleen `yubikey/YubikitResetOps.kt` roept de reset aan (bronbeleidstest). Hardwaretest: venster na insteken
+op de Fold6/Fairphone met de USB-toestemmingsvraag ertussen; NFC-reset op de YubiKey 5.

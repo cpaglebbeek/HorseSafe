@@ -107,7 +107,7 @@
 - Magic-link only-toggle
 - Verwijder mijn account (rood, vereist re-auth + typ "VERWIJDER MIJN DATA")
 
-## Android-app (v0.3.0-Miller deel 1) — schermen M0..M12
+## Android-app (v0.3.0-Miller deel 1, M13 sinds v0.3.1) — schermen M0..M13
 
 Eén activity met Compose (`android/`, `ui/Navigation.kt`); per scherm een korte referentie in
 `docs/screens/M<NN>_*.md`. Teksten in het Nederlands (`ui/Texts.kt`). Schermen met een geheim
@@ -128,8 +128,9 @@ invoer gewist) en slikken hardwaretoetsen; bij verlaten van het venster wordt de
 | M8 | PIN invoeren | PIN van papier per groep met controleteken (fout controleteken kost geen poging); banner PIN-pogingen x/8, geblokkeerd bij ≤ 3; ook voor Oefenen | ja |
 | M9 | Keuring | rapport met vergelijking met de vorige basis (verschil = rood; geen basis = oranje) | — |
 | M10 | Rapport | whitelist-velden, zelfgekozen codes (zak, papierlocatie), exporteren/importeren, "Afsluiten" (wist PIN, beëindigt app), verwijzing naar S14 | — |
-| M11 | Stop | reden, wat je nu doet, wat al op de sleutel staat; reset alleen buiten de app (testsleutel) | — |
+| M11 | Stop | reden, wat je nu doet, wat al op de sleutel staat; knop "Sleutel wissen" bij afwijzings-stops (0.3.1) | — |
 | M12 | Over | versie, SHA-256 van de vertrouwensankers, signer-digest, licenties (yubikit Apache-2.0) | — |
+| M13 | Sleutel wissen | wat erop staat en verloren gaat, laatste 4 cijfers serienummer overtypen + 3 s vasthouden, opnieuw aansluiten, aanraken, nagelezen; daarna inrichten | — |
 
 Flow nieuwe sleutel: M0 → M1 → M2 → M3 → M4 → M5 → M6 → (bezig: attestation/setPin/tellen) → M6b →
 (bezig: minimum, alwaysUv) → [hoofdsleutel: M7] → M10. Hervatten: M0 → M1 → M2 → M3 → M8 → (rest van de
