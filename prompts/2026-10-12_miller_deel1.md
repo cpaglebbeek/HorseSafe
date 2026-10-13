@@ -2,8 +2,8 @@
 date: 2026-10-12
 repo: HorseSafe
 session: miller_deel1
-status: open
-resume: "verder met HorseSafe Miller deel 1: commit, emulator-smoke, hardwaretest testsleutel, publicatie HorseAPK"
+status: pending
+resume: "verder met HorseSafe: hardwaretest 0.3.3 hoofdsleutel inrichten na wissen; daarna Miller deel 2 (0.3.4)"
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 linked_actions: [Miller deel 1]
@@ -88,3 +88,12 @@ linked_actions: [Miller deel 1]
 - RCA: enige route zonder PIN = nieuw-sleutelgate `gate_pin_retries` (retries == null || < 8 → KEY_ALREADY_USED). Een gewiste Bio meldt zonder PIN geen/ander aantal; nooit eerder op echte hardware geraakt (eerder stopte de app al op PIN of 0x1D). Tweede gebrek: gate-regels kwamen niet in M11 "Beoordeling" (alleen Detected-regels) → oorzaak niet af te lezen.
 - WhatIf → "akkoord". Fix: zonder PIN oranje (setPin-readback 8 blijft), M11 toont alle regels (rood eerst), sleutelgegevens en stopcode.
 - Gemeten: 272/272, lint 0 errors, release vc 303 sha256 `cc24e2de…7b8e`, verify_apk GROEN, smoke Android 16 + 14 groen.
+
+## OEU 13-10-2026
+
+Sessie afgesloten met "oeu". Stand: 0.3.3-Miller gepubliceerd (versionCode 303, 272 tests groen).
+Open voor Christian: app bijwerken, hoofdsleutel inrichten met de gewiste Bio, bij een stop de "Code:"-regel van M11
+doorgeven, oude koppeling in HorseSafe (S14) verwijderen, `gh auth refresh -s workflow`.
+Open vraag: blokkade bij ontwikkelaarsopties zo houden of alleen bij USB-debugging (advies: zo houden).
+Later, elk met eigen WhatIf: server-side minPinLength/MPE-patch, Android-CI, androidTest, /ModelArchDSL,
+Miller deel 2 (0.3.4), besluit release-keystore (R4).
