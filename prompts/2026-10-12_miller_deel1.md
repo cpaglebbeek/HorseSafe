@@ -64,3 +64,8 @@ linked_actions: [Miller deel 1]
 - Hardwaretest door Christian met eerst de wisbare testsleutel (checklist in `android/README.md`).
 - Publicatie via HorseAPK na akkoord; server-side minPinLength/credProtect/MPE-patch; Miller deel 2.
 - Zie `ACTIONS.md` § "2026-10-12 — v0.3.0-Miller deel 1".
+
+## 13-10 — Toegewezen aan Fairphone 6
+- Christian: "zorg dat deze ook op de fairphone staat" → WhatIf → "akkoord".
+- HorseAPK-prod: ProjectGrant `HorseSafe` voor `cglebbeek+residio@gmail.com` (Fairphone 6) via server-shell; auditregel `grant_added` (via=server-shell); wekbericht `grants_changed` synchroon afgeleverd (ntfy ok).
+- Installeren gebeurt door Christian in HorseAPK op de Fairphone. Ontwikkelaarsopties aan ⇒ PIN-schermen geblokkeerd.
