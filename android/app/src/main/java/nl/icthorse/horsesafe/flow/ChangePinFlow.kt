@@ -27,7 +27,7 @@ class ChangePinFlow(
     private val reports: ReportFactory,
     private val generator: PinGenerator = PinGenerator(),
     private val env: EnvironmentProbe = EnvironmentProbe.NONE,
-    private val maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.STOP,
+    private val maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.ASSUME_CTAP21_MAX,
 ) {
     private var link: KeyLink? = null
     private var facts: KeyFacts? = null

@@ -44,8 +44,11 @@ object KeyProfiles {
     /** Bio zonder 0x1D (onzekerheid 1). */
     fun bioNo1D() = bioFido574().copy(name = "Bio zonder 0x1D", maxPinReported = false)
 
+    /** CTAP 2.2-achtige sleutel die 0x1D = 63 wel meldt. */
+    fun bioWith1D() = bioFido574().copy(name = "Bio met 0x1D", maxPinReported = true)
+
     /** Bio MPE met PIV: maximaal 8 tekens, gemeld in 0x1D. */
-    fun bioMpeMax8() = bioFido574().copy(name = "Bio MPE max 8", aaguid = BIO_MPE, maxPinActual = 8)
+    fun bioMpeMax8() = bioFido574().copy(name = "Bio MPE max 8", aaguid = BIO_MPE, maxPinActual = 8, maxPinReported = true)
 
     /** Bio MPE met PIV zonder 0x1D: setPin(63) faalt met PIN_POLICY_VIOLATION. */
     fun bioMpeHidden() = bioMpeMax8().copy(name = "Bio MPE zonder 0x1D", maxPinReported = false)

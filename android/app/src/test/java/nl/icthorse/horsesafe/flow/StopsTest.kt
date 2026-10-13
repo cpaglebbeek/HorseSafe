@@ -15,7 +15,7 @@ import org.junit.Test
 /** Elke harde stop op het juiste moment, en na een stop geen schrijfactie meer. */
 class StopsTest {
 
-    private suspend fun stopOf(spec: KeySpec, profile: Profile, policy: MaxPinLengthPolicy = MaxPinLengthPolicy.STOP,
+    private suspend fun stopOf(spec: KeySpec, profile: Profile, policy: MaxPinLengthPolicy = MaxPinLengthPolicy.ASSUME_CTAP21_MAX,
                                prep: (FakeYubiKey) -> Unit = {}): Pair<State.Stopped, FakeYubiKey> {
         val key = FakeYubiKey(spec).also(prep)
         val d = SetupDriver(key, profile, policy = policy)
@@ -79,15 +79,28 @@ class StopsTest {
         assertEquals(Stop.MAX_PIN_LENGTH_TOO_SHORT, s.stop); assertNoWrites(key)
     }
 
-    @Test fun maxPinLengthAfwezigIsStandaardStop() = runBlocking {
-        assertEquals(Stop.MAX_PIN_LENGTH_UNKNOWN, stopOf(KeyProfiles.bioNo1D(), Profile.BIO_MAIN).first.stop)
-        // Ook met het voorstel van open vraag 4: MPE blijft STOP.
-        assertEquals(Stop.MAX_PIN_LENGTH_UNKNOWN, stopOf(KeyProfiles.bioMpeHidden(), Profile.BIO_MAIN, MaxPinLengthPolicy.ALLOW_IF_FIDO).first.stop)
+    @Test fun maxPinLengthAfwezigAlleenStopBijStrengBeleid() = runBlocking {
+        assertEquals(Stop.MAX_PIN_LENGTH_UNKNOWN, stopOf(KeyProfiles.bioNo1D(), Profile.BIO_MAIN, MaxPinLengthPolicy.STOP).first.stop)
+        // 0.3.2: MPE zonder 0x1D gaat door tot setPin; met PIV aan (max 8) weigert die, er staat niets op de sleutel.
+        val (s, key) = stopOf(KeyProfiles.bioMpeHidden(), Profile.BIO_MAIN)
+        assertEquals(Stop.PIN_POLICY_MPE_PIV, s.stop)
+        assertEquals(emptySet<Written>(), s.written)
+        assertNull(key.pin)
+    }
+
+    @Test fun klasseFoutNoemtTypeEnRol() = runBlocking {
+        val (s, _) = stopOf(KeyProfiles.bioFido574(), Profile.RECOVERY_YK5)
+        assertEquals(Stop.CLASS_MISMATCH, s.stop)
+        val d = SetupDriver(FakeYubiKey(KeyProfiles.bioFido574()), Profile.RECOVERY_YK5)
+        d.detect()
+        val det = d.machine.history.filterIsInstance<State.Detected>().last()
+        val line = det.checks.first { it.id == "klasse" }
+        assertTrue(line.detail, line.detail.contains("Aangesloten: ") && line.detail.contains("Gekozen rol: Noodsleutel (YubiKey 5)") && line.detail.contains("bio"))
     }
 
     @Test fun setPinIsDeVeiligeProef() = runBlocking {
         // FIDO-AAGUID maar stil max 8: setPin(63) faalt, er staat niets op de sleutel.
-        val (s, key) = stopOf(KeyProfiles.bioFidoHiddenMax8(), Profile.BIO_MAIN, MaxPinLengthPolicy.ALLOW_IF_FIDO)
+        val (s, key) = stopOf(KeyProfiles.bioFidoHiddenMax8(), Profile.BIO_MAIN)
         assertEquals(Stop.PIN_POLICY_MPE_PIV, s.stop)
         assertEquals(emptySet<Written>(), s.written)
         assertNull(key.pin)
@@ -95,7 +108,7 @@ class StopsTest {
     }
 
     @Test fun complexiteitsbeleidGeeftEigenStop() = runBlocking {
-        val (s, _) = stopOf(KeyProfiles.bioFidoHiddenMax8().copy(pinComplexity = true), Profile.BIO_MAIN, MaxPinLengthPolicy.ALLOW_IF_FIDO)
+        val (s, _) = stopOf(KeyProfiles.bioFidoHiddenMax8().copy(pinComplexity = true), Profile.BIO_MAIN)
         assertEquals(Stop.PIN_POLICY_COMPLEXITY, s.stop)
     }
 

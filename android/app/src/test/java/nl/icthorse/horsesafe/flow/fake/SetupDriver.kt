@@ -23,7 +23,7 @@ class SetupDriver(
     val key: FakeYubiKey,
     val profile: Profile,
     val mode: SetupMode = SetupMode.NEW,
-    policy: MaxPinLengthPolicy = MaxPinLengthPolicy.STOP,
+    policy: MaxPinLengthPolicy = MaxPinLengthPolicy.ASSUME_CTAP21_MAX,
     source: RandomSource = CyclicSource(intArrayOf(9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 3, 5, 7)),
 ) {
     val machine = DefaultSetupMachine(

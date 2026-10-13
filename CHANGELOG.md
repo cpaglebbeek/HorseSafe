@@ -3,7 +3,26 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.3.2-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+- v0.3.3-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+
+## [0.3.2-Miller] — 2026-10-13 (bugfix: echte YubiKeys onterecht afgewezen)
+
+Gemeld door Christian bij de eerste echte sleutel: "melding over pin lengte" en daarna "sleutel past niet bij
+type rol". WhatIf + akkoord 13-10.
+
+### Fixed — `android/` (versionCode 302)
+- **`MAX_PIN_LENGTH_UNKNOWN` bij elke echte YubiKey 5.7:** `maxPINLength` (getInfo 0x1D) bestaat pas sinds
+  CTAP 2.2; firmware 5.7 is CTAP 2.1 en meldt het nooit (yubikit vult zelf 63 in). Het standaardbeleid
+  (`MaxPinLengthPolicy.ASSUME_CTAP21_MAX`) neemt nu het CTAP 2.1-maximum 63 aan met een oranje regel, ook voor
+  Multi-protocol; setPin(63) is de atomaire proef (weigert de sleutel, dan `PIN_POLICY_MPE_PIV`, niets op de
+  sleutel). Geldt voor inrichten, hervatten, keuren en PIN wijzigen. Een gemeld maximum < 63 blijft STOP.
+  Open vraag 4 gesloten.
+- **`CLASS_MISMATCH` zei niet wat er mis was:** de regel noemt nu het aangesloten type en de gekozen rol, M11
+  toont beide, en het advies zegt welke menukeuze bij welke sleutel hoort.
+
+### Tests
+- Nep-YubiKey meldt 0x1D standaard niet (zoals echte 5.7); nieuwe tests YK5 zonder 0x1D, gemeld 63 = groen,
+  MPE zonder 0x1D stopt pas bij setPin zonder schrijfactie, klassefout noemt type + rol. 270/270 groen.
 
 ## [0.3.1-Miller] — 2026-10-13 (sleutel wissen in de app)
 

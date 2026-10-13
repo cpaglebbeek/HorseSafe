@@ -24,8 +24,9 @@ enum class Stop(val tekst: String, val advies: String) {
     FIRMWARE_TOO_OLD_BIO("De firmware van deze YubiKey Bio is ouder dan 5.7.2 (YSA-2024-03).", "Deze sleutel is niet bruikbaar; schaf een nieuwe YubiKey Bio aan."),
     FIRMWARE_TOO_OLD_YK5("De firmware van deze YubiKey 5 is ouder dan 5.7.0 (YSA-2024-03).", "Deze sleutel is niet bruikbaar; schaf een nieuwe YubiKey 5 aan."),
     AAGUID_NOT_ALLOWED("Dit sleuteltype staat niet op de lijst van toegestane YubiKeys.", "Gebruik een YubiKey Bio (hoofdsleutel) of YubiKey 5 (noodsleutel)."),
-    CLASS_MISMATCH("Dit sleuteltype past niet bij de gekozen rol.", "Kies de juiste rol of sluit de juiste sleutel aan."),
-    MAX_PIN_LENGTH_UNKNOWN("De sleutel meldt niet hoe lang een PIN mag zijn.", "Niet doorgaan tot dit op de testsleutel is gemeten (open vraag 4)."),
+    CLASS_MISMATCH("Dit sleuteltype past niet bij de gekozen rol.", "Hoofdsleutel = YubiKey Bio via \"Nieuwe hoofdsleutel\". Noodsleutel: YubiKey 5 via \"Nieuwe noodsleutel\" → YubiKey 5, of een tweede Bio via \"Nieuwe noodsleutel\" → Bio zonder vinger. Hieronder staat welk type is aangesloten."),
+    /** Alleen nog bij MaxPinLengthPolicy.STOP (sinds 0.3.2 niet meer de standaard). */
+    MAX_PIN_LENGTH_UNKNOWN("De sleutel meldt niet hoe lang een PIN mag zijn.", "Werk de app bij; sinds 0.3.2 geldt dan het CTAP 2.1-maximum van 63 tekens."),
     MAX_PIN_LENGTH_TOO_SHORT("De sleutel accepteert geen PIN van 63 tekens.", "Bij een Bio Multi-protocol: zet PIV uit met Yubico Authenticator of ykman, of gebruik een FIDO Edition."),
 
     // Nieuw-sleutelgate / hervatten

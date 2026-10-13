@@ -167,6 +167,10 @@ fun M11Stop(u: UiState, vm: HorseSafeViewModel) {
         Panel(border = HsColors.Red, background = HsColors.RedSurface) {
             SectionTitle("Waarom")
             Body(stop.tekst)
+            if (stop == Stop.CLASS_MISMATCH) {
+                u.facts?.let { Small("Aangesloten: ${it.aaguidDescription ?: "onbekend type"}", HsColors.OnSurface) }
+                u.profile?.let { Small("Gekozen rol: ${it.nl}", HsColors.OnSurface) }
+            }
             SectionTitle("Wat je nu doet")
             Body(stop.advies)
         }

@@ -44,7 +44,7 @@ class DefaultSetupMachine(
     private val judge: AttestationJudge,
     private val reports: ReportFactory,
     private val generator: PinGenerator = PinGenerator(),
-    private val maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.STOP,
+    private val maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.ASSUME_CTAP21_MAX,
     private val enrollTimeoutMs: Int? = null,
 ) : SetupMachine {
 

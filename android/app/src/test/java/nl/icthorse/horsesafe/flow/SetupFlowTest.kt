@@ -188,12 +188,28 @@ class SetupFlowTest {
         assertTrue("na retry: $s2", s2 is State.CountsOk)
     }
 
-    @Test fun maxPinLengthOnbekendMetBeleidAllowIfFido() = runBlocking {
-        val d = SetupDriver(FakeYubiKey(KeyProfiles.bioNo1D()), Profile.BIO_MAIN, policy = MaxPinLengthPolicy.ALLOW_IF_FIDO)
+    /** 0.3.2: echte 5.7-sleutels melden 0x1D niet; standaardbeleid = CTAP 2.1-maximum 63, oranje, doorgaan. */
+    @Test fun maxPinLengthNietGemeldIsStandaardDoorgaan() = runBlocking {
+        val d = SetupDriver(FakeYubiKey(KeyProfiles.bioNo1D()), Profile.BIO_MAIN)
         val end = d.runNew()
         assertTrue("eind: $end", end is State.ReportReady)
         val r = (end as State.ReportReady).report
         assertTrue(r.checks.any { it.id == "max_pin_length" && it.verdict == Verdict.ORANGE })
         assertNull(r.maxPinLength)
+    }
+
+    @Test fun noodsleutelYk5ZonderMaxPinLength() = runBlocking {
+        val d = SetupDriver(FakeYubiKey(KeyProfiles.yk5_57()), Profile.RECOVERY_YK5)
+        val end = d.runNew()
+        assertTrue("eind: $end", end is State.ReportReady)
+        assertTrue((end as State.ReportReady).report.checks.any { it.id == "max_pin_length" && it.verdict == Verdict.ORANGE })
+    }
+
+    @Test fun maxPinLengthGemeld63IsGroen() = runBlocking {
+        val end = SetupDriver(FakeYubiKey(KeyProfiles.bioWith1D()), Profile.BIO_MAIN).runNew()
+        assertTrue("eind: $end", end is State.ReportReady)
+        val r = (end as State.ReportReady).report
+        assertTrue(r.checks.any { it.id == "max_pin_length" && it.verdict == Verdict.GREEN })
+        assertEquals(63, r.maxPinLength)
     }
 }

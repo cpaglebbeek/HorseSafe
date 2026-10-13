@@ -22,7 +22,7 @@ class KeuringFlow(
     private val judge: AttestationJudge,
     private val reports: ReportFactory,
     private val env: EnvironmentProbe = EnvironmentProbe.NONE,
-    private val maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.STOP,
+    private val maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.ASSUME_CTAP21_MAX,
 ) {
     /** Regels die de keuring zelf scherper beoordeelt dan de detectie. */
     private val detectionOnlyIds = setOf("client_pin", "always_uv")

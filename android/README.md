@@ -125,8 +125,9 @@ Volgorde is verplicht: **eerst een wisbare testsleutel**, pas daarna de echte sl
 2. Op de testsleutel meten en noteren (resultaten in `version.json` → `test_results`):
    - [ ] **minimum 63:** accepteert de sleutel `setMinPinLength(63)` (gelijk aan het maximum)? Leest
          de app daarna `minPinLength=63` terug?
-   - [ ] **`maxPINLength` (0x1D):** meldt de sleutel het veld? Zonder dat veld stopt de app nu altijd
-         (`MAX_PIN_LENGTH_UNKNOWN`, open vraag 4).
+   - [x] **`maxPINLength` (0x1D):** gemeten 13-10-2026: de sleutel (firmware 5.7, CTAP 2.1) meldt het veld
+         niet (het bestaat pas sinds CTAP 2.2). Sinds 0.3.2: CTAP 2.1-maximum 63 aangenomen (oranje), setPin(63)
+         is de proef; weigert de sleutel, dan `PIN_POLICY_MPE_PIV` en staat er niets op.
    - [ ] **firmware:** Bio ≥ **5.7.2**, YubiKey 5 ≥ **5.7.0** (YSA-2024-03; daaronder STOP). Klopt de
          firmware die de app via Management toont met Yubico Authenticator?
    - [ ] **USB op de Fold6:** wordt de Bio direct in USB-C herkend (ook als hij al vóór het openen van de

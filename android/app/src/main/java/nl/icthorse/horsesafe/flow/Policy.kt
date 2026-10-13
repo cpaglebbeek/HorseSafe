@@ -19,12 +19,19 @@ object Limits {
     const val DEFAULT_FRIENDLY_NAME_BYTES: Int = 15
 }
 
-/** Wat te doen als 0x1D (maxPINLength) ontbreekt (open vraag 4). */
+/**
+ * Wat te doen als 0x1D (maxPINLength) ontbreekt (open vraag 4, gesloten 13-10-2026 in 0.3.2).
+ *
+ * 0x1D bestaat pas sinds CTAP 2.2; YubiKey-firmware 5.7 is CTAP 2.1 en meldt het nooit (gemeten op een echte
+ * sleutel, en yubikit vult zelf 63 in). In CTAP 2.1 is het maximum vast 63 = onze lengte. setPin(63) is de
+ * echte proef en is atomair: weigert de sleutel (bv. Bio MPE met PIV aan), dan PIN_POLICY_MPE_PIV en staat
+ * er niets op de sleutel.
+ */
 enum class MaxPinLengthPolicy {
-    /** Standaard tot meting 1 op de testsleutel: altijd STOP (kritiek 21). */
+    /** Standaard: afwezig = CTAP 2.1-maximum 63, oranje melding, setPin is de proef (FIDO en MPE). */
+    ASSUME_CTAP21_MAX,
+    /** Streng (alleen nog voor tests/terugval): afwezig = STOP. */
     STOP,
-    /** Voorstel open vraag 4: oranje "onbekend" en doorgaan, alleen bij variant FIDO (MPE of onbekend = STOP). */
-    ALLOW_IF_FIDO,
 }
 
 /** Uitkomst van een beoordeling: regels voor M2/M9/rapport en de eerste harde stop (of null). */
@@ -51,7 +58,7 @@ private class CheckList {
  */
 object DetectionPolicy {
 
-    fun evaluate(facts: KeyFacts, profile: Profile, maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.STOP): Evaluation {
+    fun evaluate(facts: KeyFacts, profile: Profile, maxPinPolicy: MaxPinLengthPolicy = MaxPinLengthPolicy.ASSUME_CTAP21_MAX): Evaluation {
         val c = CheckList()
 
         // AAGUID en klasse.
@@ -60,7 +67,11 @@ object DetectionPolicy {
         } else {
             c.green("aaguid", "Sleuteltype toegestaan (${facts.keyClass.jsonName}, variant ${facts.variant.name.lowercase()}).")
             if (facts.keyClass != profile.keyClass) {
-                c.red("klasse", "Sleuteltype past niet bij de rol ${profile.nl}.", Stop.CLASS_MISMATCH)
+                c.red(
+                    "klasse",
+                    "Aangesloten: ${facts.aaguidDescription ?: facts.keyClass.jsonName} (klasse ${facts.keyClass.jsonName}). Gekozen rol: ${profile.nl} (verwacht klasse ${profile.keyClass.jsonName}).",
+                    Stop.CLASS_MISMATCH,
+                )
             } else {
                 c.green("klasse", "Sleuteltype past bij de rol.")
             }
@@ -105,10 +116,12 @@ object DetectionPolicy {
         when {
             max != null && max < Limits.PIN_LENGTH -> c.red("max_pin_length", "De sleutel accepteert maximaal $max tekens.", Stop.MAX_PIN_LENGTH_TOO_SHORT)
             max != null -> c.green("max_pin_length", "Maximale PIN-lengte $max.")
-            facts.variant == KeyVariant.MPE -> c.red("max_pin_length", "Maximale PIN-lengte onbekend bij een Multi-protocol-sleutel.", Stop.MAX_PIN_LENGTH_UNKNOWN)
-            maxPinPolicy == MaxPinLengthPolicy.ALLOW_IF_FIDO && facts.variant == KeyVariant.FIDO ->
-                c.orange("max_pin_length", "Maximale PIN-lengte onbekend; setPin met 63 tekens is de proef.")
-            else -> c.red("max_pin_length", "Maximale PIN-lengte onbekend.", Stop.MAX_PIN_LENGTH_UNKNOWN)
+            maxPinPolicy == MaxPinLengthPolicy.STOP -> c.red("max_pin_length", "Maximale PIN-lengte onbekend.", Stop.MAX_PIN_LENGTH_UNKNOWN)
+            facts.variant == KeyVariant.MPE -> c.orange(
+                "max_pin_length",
+                "Niet gemeld (CTAP 2.1); volgens CTAP 2.1 is het maximum 63. Multi-protocol: met PIV aan weigert de sleutel 63 tekens bij het zetten van de PIN; er komt dan niets op de sleutel.",
+            )
+            else -> c.orange("max_pin_length", "Niet gemeld (CTAP 2.1); volgens CTAP 2.1 is het maximum 63. Het zetten van de PIN van 63 tekens is de proef.")
         }
 
         // Alleen tonen (geen stop).

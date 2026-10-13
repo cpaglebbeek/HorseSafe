@@ -76,3 +76,9 @@ linked_actions: [Miller deel 1]
 - Gemeten: 267/267 JVM-tests (build-box), lint 0 errors/16 warnings (lint moest geforceerd: `lintAnalyzeRelease` stond onterecht UP-TO-DATE), release-APK HC55 vc 301 sha256 `4dcfd09a…2250`, `verify_apk.sh` GROEN, emulator-smoke Android 16 + 14 groen incl. M13.
 - Docs: CHANGELOG, android/README §Wissen, HARDWARE_KEYS, THREAT_MODEL R22 + §8, UI_DESIGN, docs/screens/M13_reset.md.
 - Niet getest: echte sleutel. Grootste onzekerheid: het resetvenster (± 5 s na insteken) met de Android-USB-toestemmingsvraag ertussen.
+
+## 13-10 — 0.3.2-Miller: bugfix na eerste echte sleutel
+- Christian: "eest melding over pin lengte wordt niet gemeld daarna sletel past niet bij type rol".
+- RCA: (1) `MAX_PIN_LENGTH_UNKNOWN` — getInfo 0x1D maxPINLength bestaat pas sinds CTAP 2.2 (yubikit `RESULT_MAX_PIN_LENGTH = 0x1D`, standaard 63 als afwezig); YubiKey 5.7 = CTAP 2.1 meldt het nooit; mijn gate (open vraag 4 = STOP tot meting) blokkeerde dus elke echte sleutel. (2) `CLASS_MISMATCH` — wordt vóór de PIN-lengte gecontroleerd, dus bij de tweede poging een andere rol gekozen; melding noemde type en rol niet.
+- WhatIf → "akkoord". Fix: `MaxPinLengthPolicy.ASSUME_CTAP21_MAX` standaard (oranje, setPin(63) is de proef, ook MPE); typemelding met aangesloten type + gekozen rol (check + M11 + advies). Nep-YubiKey meldt 0x1D standaard niet.
+- Gemeten: 270/270, lint 0 errors, release vc 302 sha256 `496c431f…b71e`, verify_apk GROEN, smoke Android 16 + 14 groen.

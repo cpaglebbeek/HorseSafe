@@ -51,8 +51,8 @@ data class KeySpec(
     val maxRpids: Int = 1,
     /** Werkelijk maximum dat setPin accepteert (MPE met PIV: 8). */
     val maxPinActual: Int = 63,
-    /** 0x1D in de ruwe getInfo. */
-    val maxPinReported: Boolean = true,
+    /** 0x1D in de ruwe getInfo. Standaard false: YubiKey-firmware 5.7 (CTAP 2.1) meldt het niet (gemeten 13-10-2026). */
+    val maxPinReported: Boolean = false,
     val managementAvailable: Boolean = true,
     val pinComplexity: Boolean = false,
     val attFmt: String = "packed",
