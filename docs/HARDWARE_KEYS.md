@@ -39,7 +39,7 @@ Christian wil de keyfile op een USB-stick vervangen door iets dat alleen met zij
   - publicatie via HorseAPK (`/APKDeploy`)
   - update in de app
   - ondertekend met de debug-keystore (SHA-256 `32:49:1E:0F…3F:17`)
-- **E9.** Webversie op de laptop: ontgrendelen met de YubiKey Bio (WebAuthn PRF/hmac-secret, BE=0) of (Montgomery) met goedkeuring via de vingerafdruk in de telefoon-app.
+- **E9.** Webversie op de laptop: ontgrendelen met de YubiKey Bio (WebAuthn PRF/hmac-secret, BE=0) of (Montgomery) met goedkeuring via de vingerafdruk in de telefoon-app na het overtypen van een code van 6 cijfers (§11.2).
 
 **Principe-aanpassing (besluit 1):** nieuw principe **P-CRYPT-09**:
 
@@ -205,6 +205,11 @@ Zie §12.6.2. Eén `credentials.get` (één vinger) → `POST …/unlock` met de
 - Native kluis in de app: v0.5.0-Lange, gepland na de veldtest van v0.4 (besluit 7).
 
 ## 5. Goedkeuring via de telefoon (Montgomery — niet in Koblitz)
+
+> **Herzien 14-10-2026 (§11.2):** de QR-code in stap 2-3 vervalt. In plaats daarvan toont de laptop een code van
+> 6 cijfers die de gebruiker op de telefoon intypt (BB-001-stijl), met een commitment-SAS zodat de server
+> `epk_L` niet ongemerkt kan verwisselen. Het schema hieronder wordt in fase Montgomery herschreven; tot dan
+> geldt §11.2 waar het afwijkt.
 
 ```
 Laptop-tab (JWT+MFA, sid)                 Server (alleen doorgifte)                Telefoon (app)
@@ -473,6 +478,35 @@ Keuzes die bij de bouw/review zijn gemaakt en nog een bevestiging van Christian 
 - restrisico's R4 (debug-keystore) en R16 (B-17) bewust aanvaarden of anders oplossen (open vragen 13 en kritiek 13).
 
 ---
+
+### 11.2 Akkoord 14-10-2026: telefoon-ontgrendelen naar voren (Miller deel 2 + Montgomery)
+
+Christian wil HorseSafe in de laptopbrowser openen **zonder YubiKey, alleen met de vingerafdruk op de telefoon**.
+Besluiten (WhatIf + "akkoord" per vraag, 14-10-2026):
+
+1. **Volgorde omgedraaid:** Miller deel 2 (0.3.4) en daarna Montgomery (0.4.0) gaan vóór de Bio-veldtest
+   (Koblitz-acceptatie 7). De Bio-route blijft ongewijzigd. Elke fase blijft een eigen akkoord voor bouwen, deploy
+   en publicatie vragen.
+2. **Eén app:** de telefoonfunctie komt in de bestaande app `nl.icthorse.horsesafe`; INTERNET alleen naar
+   `icthorsecloud.nl` (network-security-config, pins ISRG Root X1/X2, geen cleartext). Advies was een aparte app
+   (inrichtingsapp zonder netwerk); Christian koos bewust voor één app. Nieuw restrisico: de PIN-schermen van
+   deel 1 draaien in een app met netwerkrechten (THREAT_MODEL, nieuw R-nummer bij de bouw).
+3. **Ontgrendelen zoals ClaudeWeb (BB-001), maar zero-knowledge:** geen QR-scan; de laptop toont een code, de
+   gebruiker typt die op de telefoon en legt de vinger op de sensor. Afwijkingen van BB-001:
+   - code van **6 cijfers** (BB-001: 2), omdat hier ook de server de aanvaller kan zijn;
+   - de **telefoon** controleert de code, de server ziet hem nooit;
+   - **commitment-SAS:** laptop stuurt eerst `C = H(epk_L ‖ r)`; telefoon antwoordt met eigen `n_P` (32 B); pas
+     daarna onthult de laptop `epk_L, r` en toont `SAS = trunc6(H("HSv2 sas" ‖ epk_L ‖ r ‖ n_P ‖ R))`. De server
+     legt zich vast vóór hij `n_P` kent, dus kan hij geen `epk` met dezelfde code zoeken (kans ≤ 10^-6 per poging,
+     één poging);
+   - foute code → verzoek `denied`, melding, geen tweede poging; geen PIN-terugval (E2);
+   - meldingen: pollen, ntfy als versnelling (past binnen besluit 6: geen FCM).
+   Exacte hash-invoer, domeinscheiding en testvectoren (JS = Kotlin = Python) worden in het Montgomery-contract
+   vastgelegd.
+4. **Telefoon koppelen** (§4.5) blijft: eenmalig QR + SAS van 6 cijfers.
+
+Nog te beslissen vóór livegang van fase A: release-keystore (R4) — de server gaat de telefoon vertrouwen op
+basis van het app-certificaat.
 
 ## 12. Koblitz API-contract (v0.2.0)
 
