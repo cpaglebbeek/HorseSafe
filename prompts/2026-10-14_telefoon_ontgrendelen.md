@@ -24,5 +24,14 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
 
 6. R4: "a" → eigen release-keystore (HARDWARE_KEYS §11.2 punt 5).
 
+7. Bouwplan fase A (A1–A12) → "akkoord" (deploy/publicatie A12 apart).
+
+## Voortgang fase A
+- A1 klaar: eigen release-keystore op HC55 (`~/.keystores/horsesafe-release.jks`, signer `fbd6b151…062e`),
+  back-up + env in ClaudeSecrets (commit 14565c8), Gradle tekent ermee, zonder env ongetekend (geen debug-terugval).
+- Contract `HARDWARE_KEYS.md` §13 + `specs/testvectors/pair_v1.json`. Aanscherping t.o.v. §4.5: koppelgeheim in de
+  browser (k_srv naar server, k_web blijft in browser) — anders kan de server de telefoonsleutels verwisselen.
+- Backend, app en web worden parallel gebouwd tegen §13 (niet gecommit tot integratie en review).
+
 ## Open
 - Bouwplan fase A (Miller deel 2, 0.3.4) als WhatIf + akkoord.
