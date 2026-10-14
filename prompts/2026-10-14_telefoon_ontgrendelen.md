@@ -44,6 +44,17 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
    zonder `.env` raakte een losse repo-DB — opnieuw met env gedraaid, runbook + deploy-script gerepareerd; oude
    `devserver.py`/`README.md` uit webroot verwijderd (`--delete-excluded`). HorseAPK: vc 304 gepubliceerd.
 
+9. "procedure laptop?" → stappen koppelen uitgelegd (kluis open, Sleutels, Telefoon koppelen, step-up, QR, 2× vinger, SAS).
+10. "heeft cglebbeek@gmail.com al een login?" → ja; geen TOTP en geen Bio → step-up `stepup_unavailable`: eerst TOTP instellen.
+    Onbekend account `cglebbeek+gs@gmail.com` (14-10 15:29 UTC) gemeld.
+11. Vertrouwde browser: eerst voorstel software-ontgrendelen met code; Christian corrigeert: vertrouwde browser = alleen
+    herkennen/koppelen (met OTP), ontsleutelen altijd met telefoonvinger → WhatIf Montgomery-ombouw (koppelbewijs
+    HMAC(vault-afgeleid, pk_browser), inloggen e-mail+OTP op vertrouwde browser). WACHT OP AKKOORD.
+12. Account-ww → secret-kanaal `horsesafe_login`; kluis-ww → `horsesafe_vault_wachtwoord`.
+13. Kluis moet de keyfile-only `database1` zijn → akkoord: herbouwd (consolidate.py, 342 entries, verify2: 18 bijlagen =
+    geroteerde bronnen), backup oude blob, PUT via app-API, live in Chromium geopend met alleen keyfile (342 rijen).
+
 ## Open
-- Christian: app op Fold/Fairphone opnieuw installeren (nieuwe keystore), daarna veldtest op echte telefoon.
+- Akkoord Montgomery-ombouw (vertrouwde browser + vinger).
+- Christian: TOTP instellen; app op Fold/Fairphone opnieuw installeren (nieuwe keystore), daarna veldtest op echte telefoon.
 - Bouwplan fase A (Miller deel 2, 0.3.4) als WhatIf + akkoord.
