@@ -1160,3 +1160,150 @@ pytest (`backend/tests/test_vault_keys.py`, `test_webauthn.py`, `test_stepup.py`
 ### 12.15 Bewust niet in Koblitz
 
 `kind='phone'`, `devices`-endpoints, pairing, `/device/v1/*`, `/app/*`, approvals, de JWT-claim `sid`, `relay`-purpose, FCM, native kluis. De tabellen `devices` en de `phone`-waarden in de CHECKs staan er alleen zodat Miller zonder table-rebuild kan bouwen; de Koblitz-API weigert `kind:"phone"` (422 via het `Literal`-type).
+
+## 13. Miller deel 2 API-contract (v0.3.4) — telefoon koppelen
+
+Bindend voor backend, web en app (akkoord bouwplan fase A, 14-10-2026, §11.2). Afwijkingen = bug of contractwijziging.
+
+### 13.0 Wijziging t.o.v. §4.5 (aanscherping)
+
+In §4.5 maakte de **server** het QR-geheim. Een kwaadwillende server kan dan de telefoonsleutels verwisselen en
+met rekenkracht een SAS van 6 cijfers laten kloppen (zelfde gat als §11.2.3). Daarom maakt nu de **browser** het
+geheim `s` (16 B). De server krijgt alleen `k_srv`; de browser houdt `k_web`. De telefoon MAC't het transcript met
+beide. De browser controleert `mac_web` zelf: de server kan geen andere `pk_c` laten verzegelen zonder dat de
+browser het merkt. De SAS blijft als zichtbare controle voor de gebruiker (verkeerd toestel gescand).
+
+### 13.1 Afleidingen (testvectoren `specs/testvectors/pair_v1.json`, generator `gen_pair_v1.py`)
+
+```
+s            = 16 willekeurige bytes (browser, crypto.getRandomValues; nooit naar de server)
+k_srv        = HKDF-SHA256(ikm=s, salt=32 nulbytes, info=UTF-8("HSv2 pair srv"), L=32)
+k_web        = HKDF-SHA256(ikm=s, salt=32 nulbytes, info=UTF-8("HSv2 pair web"), L=32)
+QR           = "hs1p:" + pairing_id + "." + b64u(s)                       (b64u = base64url zonder '=')
+att_challenge= SHA-256( UTF-8("HSv2 pair att") || 0x00 || UTF-8(pairing_id) || 0x00 || k_srv )
+transcript   = UTF-8( "HSv2 pair" ‖ "\0" ‖ pairing_id ‖ "\0" ‖ pk_c ‖ "\0" ‖ k_dev_pub ‖ "\0" ‖ k_biosig_pub
+                      ‖ "\0" ‖ label ‖ "\0" ‖ model ‖ "\0" ‖ app_version )
+               (alle velden als de strings die in het claim-request staan; geen enkel veld bevat "\0")
+mac_srv      = HMAC-SHA256(k_srv, transcript)      mac_web = HMAC-SHA256(k_web, transcript)
+sas          = ( uint32_be( SHA-256( UTF-8("HSv2 pair sas") || 0x00 || transcript )[0..4] ) mod 10^6 ),
+               6 cijfers met voorloopnullen
+sig_biosig   = ECDSA-P256-SHA256 (DER) met K_biosig over transcript
+```
+Coderingen: `pk_c` = b64u van 32 B X25519; `k_dev_pub`/`k_biosig_pub` = b64u van X.509 SubjectPublicKeyInfo (DER,
+EC P-256); certificaatketens = lijst b64u-DER, leaf eerst; MAC's en handtekening b64u.
+
+### 13.2 Telefoonsleutels (app)
+
+| Sleutel | Type | Eigenschappen |
+|---|---|---|
+| K_dev | EC P-256 sign | geen UV, `setUnlockedDeviceRequired(true)`, attestation met `att_challenge`, StrongBox eerst |
+| K_biosig | EC P-256 sign | `setUserAuthenticationParameters(0, AUTH_BIOMETRIC_STRONG)`, `setInvalidatedByBiometricEnrollment(true)`, attestation met `att_challenge`, StrongBox eerst |
+| K_wrap | AES-256-GCM | zelfde UV-eisen als K_biosig, `setUnlockedDeviceRequired(true)`; wikkelt `sk_c` (32 B random X25519) |
+
+Alleen `BiometricPrompt` met `CryptoObject` en `BIOMETRIC_STRONG`; nooit `DEVICE_CREDENTIAL`. Koppelen kost twee
+aanrakingen (wikkelen `sk_c`, ondertekenen transcript). `KeyPermanentlyInvalidatedException` → alles lokaal wissen,
+scherm "Opnieuw koppelen".
+
+### 13.3 Flow
+
+1. **Web** (vault open, CK in RAM): `POST /devices/pairings` (SU) `{vault_id, k_srv}` → `{pairing_id, expires_at}`;
+   toont QR. Eén open koppeling per gebruiker (nieuwe = oude `cancelled`), max 10 per uur → 429.
+2. **App**: QR scannen → `canAuthenticate(BIOMETRIC_STRONG) == SUCCESS` (anders blokkerend scherm) → sleutels
+   maken → `sk_c` wikkelen (vinger 1) → transcript ondertekenen (vinger 2) → `POST /devices/pairings/{id}/claim`.
+   Antwoord `{device_id, sas}`; app toont de SAS en "Vergelijk met je laptop".
+3. **Web** pollt `GET /devices/pairings/{id}` (S, 1 s) tot `claimed`; controleert `mac_web` (fout → afbreken,
+   `DELETE`, melding "Koppeling vertrouwd niet — mogelijk gemanipuleerd"); rekent de SAS; toont hem met
+   "Klopt" / "Klopt niet".
+4. **Klopt** → web `Seal_v2(pk_c, CK, "store", vault_id, key_id)` (terug-openen kan niet zonder `sk_c`; alleen vormcontrole) → `POST /devices/pairings/{id}/confirm {sealed}`. **Klopt niet** → `DELETE`.
+5. **App** pollt `GET /device/v1/status` (D, 2 s, max 10 min) tot `active` → "Gekoppeld".
+6. **App** (optioneel, veldtest fase A): "Proef: kopie openen" → `GET /device/v1/keys/{kid}/sealed` → vinger →
+   `sk_c` → Seal_v2 openen (AAD met eigen vault_id/key_id) → alleen vormcontrole `{ph,kh}`, buffers wissen,
+   "Kopie klopt". Niets van de inhoud wordt getoond of bewaard.
+
+### 13.4 Endpoints (onder `/HorseSafe/api`)
+
+| Methode en pad | Auth | Kern |
+|---|---|---|
+| `POST /devices/pairings` | SU | body `{vault_id, k_srv:b64u 43}`; vault van gebruiker anders 404; 201 `{pairing_id, expires_at}` (TTL 300 s) |
+| `GET /devices/pairings/{id}` | S | eigenaar anders 404; `{status, expires_at, claim?:{device_id, key_id, pk_c, k_dev_pub, k_biosig_pub, label, model, app_version, mac_web, security_level, strongbox}}` |
+| `DELETE /devices/pairings/{id}` | S | `pending|claimed` → `cancelled`; claimed-device wordt verwijderd; 204 |
+| `POST /devices/pairings/{id}/claim` | publiek (mac) | rate-limit per IP 10/10 min; zie 13.5; 201 `{device_id, sas}` |
+| `POST /devices/pairings/{id}/confirm` | S | eigenaar, status `claimed`, binnen 600 s na start; `{sealed}` → `validate_sealed(sealed, key_id)`; één transactie: device `confirmed_at`, `vault_keys` (kind `phone`, `device_id`, `public_key = pk_c`, label = toestellabel) → 201 sleutelobject (12.6.3, met `device`) |
+| `GET /devices` | S | eigen toestellen, zonder ketens |
+| `DELETE /devices/{id}` | S | `revoked_at = nu`, bijbehorende `vault_keys`-rijen verwijderd (geen verzegelde kopie laten liggen); 204; audit + mail |
+| `GET /device/v1/status` | D | `{device_id, state: "pending"|"active"|"revoked", keys:[{key_id, vault_id, label}]}` (`revoked` → 200 met lege keys, zodat de app lokaal kan wissen) |
+| `GET /device/v1/keys/{kid}/sealed` | D | sleutel hoort bij dit toestel en is `active` → `{key_id, vault_id, sealed}`; anders 404 |
+
+`GET /vault/{vid}/keys` toont phone-sleutels met `device: {id, label, model}`.
+`POST /vault/{vid}/keys/{kid}/unlock` met een phone-sleutel blijft 404 (ontgrendelen = Montgomery).
+
+### 13.5 Claim-controles (volgorde; eerste fout wint; niets geschreven vóór stap 8)
+
+1. Pydantic: `pk_c` 43 b64u; `k_*_pub` ≤ 200 b64u; ketens 2-6 certificaten van ≤ 4096 b64u; `label` 1-64,
+   `model` ≤ 64, `app_version` ≤ 32, zonder `\0`/stuurtekens; MAC's 43 b64u; `sig_biosig` ≤ 120 b64u.
+2. Koppeling bestaat, `pending`, niet verlopen → anders 404 `pairing_not_found` (geen onderscheid).
+3. `mac_srv` timing-safe gelijk → anders 400 `pairing_mac_invalid` (koppeling blijft `pending`; na 3 fouten `cancelled`).
+4. Ketens beide: geldige handtekeningen, root in de gevendorde Google-roots (`backend/data/android_attestation_roots.pem`),
+   geen certificaat in de revocatielijst (`https://android.googleapis.com/attestation/status`, 24 u cache op schijf;
+   niet ophaalbaar en geen cache → 503 `attestation_status_unavailable`); leaf-publieke sleutel == `k_*_pub`.
+5. Key-description-extensie (OID 1.3.6.1.4.1.11129.2.1.17) van beide leafs: `attestationChallenge == att_challenge`;
+   `attestationSecurityLevel` en `keyMintSecurityLevel` ∈ {TrustedEnvironment, StrongBox}; RootOfTrust
+   `verifiedBootState == Verified` en `deviceLocked == true`; `attestationApplicationId`: package
+   `nl.icthorse.horsesafe` en signature-digest in `android_allowed_signers` (standaard alleen `fbd6b151…062e`).
+   K_biosig: `userAuthType` bevat biometrie (2), geen `noAuthRequired`, geen `authTimeout` (per-use).
+   K_dev: `unlockedDeviceRequired` aanwezig. → anders 400 `attestation_invalid` met `reason` (vaste codes).
+6. `sig_biosig` geldig met `k_biosig_pub` over het transcript → anders 400 `signature_invalid`.
+7. Aantal actieve toestellen per gebruiker ≤ 5 → 409 `too_many_devices`.
+8. Eén transactie: koppeling → `claimed`, `devices`-rij (zonder `confirmed_at`), claim-JSON + nieuw `key_id`
+   opgeslagen; audit `device_pairing_claim`.
+
+Mislukt 3-7: audit `device_pairing_rejected {pairing_id, reason}`. Testvlag `test_device_attestation` (alleen tests)
+staat software-attestation, package `nl.icthorse.horsesafe.debug` en willekeurige signer toe; `create_app()` weigert
+die vlag met de productie-rpId (zelfde patroon als `test_attestation`). `/health` toont `test_device_attestation`.
+
+### 13.6 Device-handtekening (D)
+
+Headers: `X-HS-Device: <device_id>`, `X-HS-Ts: <unix s>`, `X-HS-Nonce: <b64u 16 B>`, `X-HS-Sig: <b64u DER>`.
+Getekend met K_dev: `UTF-8("HSv2 dev" ‖ "\0" ‖ METHOD ‖ "\0" ‖ PATH ‖ "\0" ‖ ts ‖ "\0" ‖ nonce ‖ "\0" ‖ b64u(SHA-256(body)))`,
+PATH = pad vanaf `/api` inclusief querystring (bv. `/api/device/v1/status`). Controles: toestel bestaat en is niet
+`revoked` (uitzondering: `/device/v1/status`), `|nu − ts| ≤ 60`, nonce nog niet gezien (tabel `device_nonces`,
+opruimen na 120 s), handtekening geldig → anders 401 `device_auth_failed` (geen detail). Succes: `last_seen_at = nu`.
+
+### 13.7 Migratie 006
+
+```sql
+ALTER TABLE devices ADD COLUMN confirmed_at INTEGER;
+CREATE TABLE pairings (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vault_id TEXT NOT NULL REFERENCES vaults(id) ON DELETE CASCADE, k_srv TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending','claimed','confirmed','cancelled')),
+  mac_failures INTEGER NOT NULL DEFAULT 0, device_id TEXT REFERENCES devices(id) ON DELETE CASCADE,
+  key_id TEXT, claim_json TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL,
+  claimed_at INTEGER, confirmed_at INTEGER);
+CREATE INDEX idx_pairings_user ON pairings(user_id, created_at);
+CREATE TABLE device_nonces (device_id TEXT NOT NULL, nonce TEXT NOT NULL, created_at INTEGER NOT NULL,
+  PRIMARY KEY (device_id, nonce));
+INSERT OR REPLACE INTO schema_version (version) VALUES (6);
+```
+`k_srv` wordt bij `confirmed`/`cancelled` gewist (`''`).
+
+### 13.8 Audit en mail
+
+Audit: `device_pairing_start`, `device_pairing_claim`, `device_pairing_confirm`, `device_pairing_cancel`,
+`device_pairing_rejected {reason}`, `device_revoke`. Nooit `s`, `k_srv`, MAC's, sealed of ketens in audit.
+Mail (niet-blokkerend): "Nieuw toestel gekoppeld" bij confirm, "Toestel verwijderd" bij revoke.
+
+### 13.9 App-netwerk
+
+`INTERNET`; network-security-config: alleen `icthorsecloud.nl`, `cleartextTrafficPermitted=false`, pin-set op
+ISRG Root X1 + X2 (SPKI-SHA-256), vervaldatum pins 2028-12-31. Geen FCM. Basis-URL vast in BuildConfig.
+De PIN-schermen van deel 1 blijven zonder netwerkcode (bronbeleidstest: `yubikey/`, `pin/`, `flow/` importeren niets uit `net/`).
+
+### 13.10 Minimale tests
+
+- pytest: vectoren pair_v1; flow happy path met test-attestation; elke claim-fout uit 13.5 (incl. echte
+  attestation-fixtures: een vastgelegde echte keten mag, anders zelfgemaakte keten met eigen root in de test);
+  mac-fouten → cancelled na 3; verlopen; dubbele claim; confirm door andere gebruiker 404; device-handtekening
+  (verkeerde sig, oude ts, hergebruikte nonce, revoked); revoke verwijdert vault_keys; prod-guard testvlag.
+- `node --test`: pair_v1-vectoren (k_srv, k_web, mac_web, sas).
+- JVM: pair_v1- en seal_v2-vectoren (incl. openen), transcript-codering, bronbeleid (geen `DEVICE_CREDENTIAL`, geen `net/`-import in PIN-code).
+- Playwright: koppelflow met neptoestel (Python-helper die als app claimt met testvlag).
