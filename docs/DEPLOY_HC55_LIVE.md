@@ -41,7 +41,7 @@ curl -fsS https://icthorsecloud.nl/HorseSafe/api/health
 bash /opt/horsesafe/repo/scripts/post_deploy_smoke.sh
 
 # 7. Eerste admin (Christian registreert via UI, daarna promote)
-sudo -u horsesafe /opt/horsesafe/venv/bin/python -m backend.db.promote_admin christian@example.com
+sudo -u horsesafe bash -c 'set -a; . /opt/horsesafe/.env; set +a; /opt/horsesafe/venv/bin/python -m backend.db.promote_admin christian@example.com'
 ```
 
 ## Update-deploy (na git-push naar main) — sinds v0.2.1-Koblitz
@@ -58,9 +58,13 @@ sudo install -m 600 /opt/horsesafe/.env $B/env-$TS
 cd /opt/horsesafe/repo
 sudo -u horsesafe git pull
 sudo -u horsesafe /opt/horsesafe/venv/bin/pip install -r backend/requirements.txt
-sudo -u horsesafe /opt/horsesafe/venv/bin/python -m backend.db.migrate
-# Alleen de productie-frontend (geen tests/, npm-bestanden, devserver.py, README.md)
-sudo rsync -a --delete --chown=horsesafe:horsesafe \
+# Migrate MET de productie-env: zonder .env valt db_path terug op ./db/horsesafe.db (losse repo-DB,
+# productie blijft ongemigreerd — gebeurd bij de 0.3.4-deploy, 14-10). Controleer daarna schema_version.
+sudo -u horsesafe bash -c 'set -a; . /opt/horsesafe/.env; set +a; /opt/horsesafe/venv/bin/python -m backend.db.migrate'
+sudo sqlite3 /opt/horsesafe/db/horsesafe.db "select group_concat(version) from schema_version;"
+# Alleen de productie-frontend (geen tests/, npm-bestanden, devserver.py, README.md). --delete-excluded is nodig:
+# --delete alleen laat uitgesloten bestanden die al op de server staan juist staan.
+sudo rsync -a --delete --delete-excluded --chown=horsesafe:horsesafe \
   --exclude 'tests/' --exclude 'node_modules/' --exclude 'package.json' --exclude 'package-lock.json' \
   --exclude 'playwright.config.ts' --exclude 'devserver.py' --exclude 'README.md' --exclude 'test-results/' \
   frontend/ /opt/horsesafe/web/
@@ -86,7 +90,7 @@ sudo systemctl stop horsesafe
 cd /opt/horsesafe/repo
 sudo -u horsesafe git checkout <vorige-tag>
 sudo -u horsesafe /opt/horsesafe/venv/bin/pip install -r backend/requirements.txt
-sudo rsync -a --delete --chown=horsesafe:horsesafe \
+sudo rsync -a --delete --delete-excluded --chown=horsesafe:horsesafe \
   --exclude 'tests/' --exclude 'node_modules/' --exclude 'package.json' --exclude 'package-lock.json' \
   --exclude 'playwright.config.ts' --exclude 'devserver.py' --exclude 'README.md' --exclude 'test-results/' \
   frontend/ /opt/horsesafe/web/

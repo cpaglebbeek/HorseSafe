@@ -5,6 +5,9 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 ## [Unreleased]
 - v0.4.0-Montgomery: laptop ontgrendelen met code van 6 cijfers + telefoonvinger (HARDWARE_KEYS §11.2).
 - Later in Miller: noodsleutel blokkeren vanaf de telefoon, update in de app.
+- Deploy-runbook + `scripts/deploy_hc55.sh`: `backend.db.init/migrate/promote_admin` draaien met de productie-`.env`
+  (zonder env migreerde het een losse `./db/horsesafe.db` in de repo); frontend-rsync met `--delete-excluded`, zodat
+  `devserver.py`/`README.md` ook echt uit de webroot verdwijnen. Gevonden bij de 0.3.4-deploy (14-10).
 
 ## [0.3.4-Miller] — 2026-10-14 (deel 2 fase A: telefoon koppelen)
 

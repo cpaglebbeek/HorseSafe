@@ -3,7 +3,7 @@ date: 2026-10-14
 repo: HorseSafe
 session: telefoon_ontgrendelen
 status: pending
-resume: "verder met HorseSafe: akkoord A12 deploy + publicatie 0.3.4, dan veldtest koppelen; daarna fase B Montgomery"
+resume: "verder met HorseSafe: veldtest koppelen telefoon (0.3.4 live), daarna fase B Montgomery"
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 linked_actions: [telefoon-ontgrendelen]
@@ -40,6 +40,10 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
 - Eindmeting: pytest 269, node 87, Playwright 12, JVM 337, lint 0 errors; release vc 304 sha 3e0419c2…c20c,
   verify_apk GROEN; smoke Android 16+14 groen; emulator zonder vinger-HAL → M18 correct.
 
+8. A12 WhatIf → "akkoord". Deploy HC55: backup, migratie 006, health 0.3.4-Miller, smoke GROEN. Valkuil: migrate
+   zonder `.env` raakte een losse repo-DB — opnieuw met env gedraaid, runbook + deploy-script gerepareerd; oude
+   `devserver.py`/`README.md` uit webroot verwijderd (`--delete-excluded`). HorseAPK: vc 304 gepubliceerd.
+
 ## Open
-- A12 deploy + publicatie (apart akkoord), daarna veldtest op echte telefoon.
+- Christian: app op Fold/Fairphone opnieuw installeren (nieuwe keystore), daarna veldtest op echte telefoon.
 - Bouwplan fase A (Miller deel 2, 0.3.4) als WhatIf + akkoord.

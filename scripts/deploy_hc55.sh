@@ -113,16 +113,16 @@ else
   echo "→ .env bestaat al — niet overschreven"
 fi
 
-# 8. DB init + migrate
+# 8. DB init + migrate — met de productie-env, anders gebruikt config ./db/horsesafe.db in de repo
 echo "→ DB init + migrate"
 cd "$INSTALL_DIR/repo"
-sudo -u "$SERVICE_USER" "$INSTALL_DIR/venv/bin/python" -m backend.db.init
-sudo -u "$SERVICE_USER" "$INSTALL_DIR/venv/bin/python" -m backend.db.migrate
+sudo -u "$SERVICE_USER" bash -c "set -a; . \"$ENV_FILE\"; set +a; \"$INSTALL_DIR/venv/bin/python\" -m backend.db.init"
+sudo -u "$SERVICE_USER" bash -c "set -a; . \"$ENV_FILE\"; set +a; \"$INSTALL_DIR/venv/bin/python\" -m backend.db.migrate"
 
 # 9. Frontend kopie
 echo "→ frontend kopiëren naar $INSTALL_DIR/web/"
 # Alleen de productie-frontend: tests, dev-server en npm-bestanden horen niet op de webserver
-rsync -a --delete \
+rsync -a --delete --delete-excluded \
   --exclude 'tests/' --exclude 'node_modules/' --exclude 'package.json' --exclude 'package-lock.json' \
   --exclude 'playwright.config.ts' --exclude 'devserver.py' --exclude 'README.md' --exclude 'test-results/' \
   "$INSTALL_DIR/repo/frontend/" "$INSTALL_DIR/web/"
@@ -174,5 +174,5 @@ echo "       curl -fsS https://icthorsecloud.nl/HorseSafe/api/health"
 echo "       bash $INSTALL_DIR/repo/scripts/post_deploy_smoke.sh"
 echo ""
 echo "  6. Eerste admin (na registratie via UI):"
-echo "       sudo -u $SERVICE_USER $INSTALL_DIR/venv/bin/python -m backend.db.promote_admin <email>"
+echo "       sudo -u $SERVICE_USER bash -c 'set -a; . $ENV_FILE; set +a; $INSTALL_DIR/venv/bin/python -m backend.db.promote_admin <email>'"
 echo ""
