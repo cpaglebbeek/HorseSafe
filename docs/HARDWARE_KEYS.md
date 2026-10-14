@@ -505,8 +505,10 @@ Besluiten (WhatIf + "akkoord" per vraag, 14-10-2026):
    vastgelegd.
 4. **Telefoon koppelen** (§4.5) blijft: eenmalig QR + SAS van 6 cijfers.
 
-Nog te beslissen vóór livegang van fase A: release-keystore (R4) — de server gaat de telefoon vertrouwen op
-basis van het app-certificaat.
+5. **Release-keystore (R4): eigen keystore** (keuze a, 14-10). Nieuwe RSA/EC-keystore op HC55 buiten de repo,
+   wachtwoord + back-up in ClaudeSecrets; `verify_apk.sh`, HorseAPK-publicatie en de server-allowlist
+   (`attestationApplicationId`) krijgen de nieuwe digest. Eenmalig: app op Fold en Fairphone verwijderen en opnieuw
+   installeren (lokale keuringsrapporten eerst exporteren). Vervangt E8 "debug-keystore".
 
 ## 12. Koblitz API-contract (v0.2.0)
 

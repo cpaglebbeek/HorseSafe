@@ -7,7 +7,7 @@
 Doel Christian: HorseSafe op de laptop openen zonder YubiKey, alleen met de telefoonvinger. Besluiten: `docs/HARDWARE_KEYS.md` §11.2. Sessie: `prompts/2026-10-14_telefoon_ontgrendelen.md`.
 
 - [x] ~~**Besluiten** — volgorde omgedraaid, één app met INTERNET, code van 6 cijfers + commitment-SAS i.p.v. QR~~ ✅ 14-10
-- [ ] **Besluit R4 release-keystore** — vóór livegang fase A
+- [x] ~~**Besluit R4 release-keystore**~~ ✅ 14-10 — eigen keystore (a), uitvoering in fase A
 - [ ] **Fase A — Miller deel 2 (0.3.4)**: bouwplan (WhatIf) + akkoord; migratie 006, device-API, key-attestation, web "Telefoon koppelen", app INTERNET/QR/SAS/Keystore/Seal.kt, emulator `hb-horsesafe`
 - [ ] **Fase B — Montgomery (0.4.0)**: contract §5 herschrijven volgens §11.2 + akkoord; migratie 007, approvals, web "Ontgrendel met telefoon", app goedkeuringskaart; veldtest laptop + telefoon
 

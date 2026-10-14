@@ -3,7 +3,7 @@ date: 2026-10-14
 repo: HorseSafe
 session: telefoon_ontgrendelen
 status: pending
-resume: "verder met HorseSafe: besluit R4 release-keystore, daarna bouwplan fase A (Miller deel 2, 0.3.4)"
+resume: "verder met HorseSafe: bouwplan fase A (Miller deel 2, 0.3.4)"
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 linked_actions: [telefoon-ontgrendelen]
@@ -22,6 +22,7 @@ linked_actions: [telefoon-ontgrendelen]
 
 Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTIONS.md`.
 
+6. R4: "a" → eigen release-keystore (HARDWARE_KEYS §11.2 punt 5).
+
 ## Open
-- Besluit R4 release-keystore (volgende vraag).
 - Bouwplan fase A (Miller deel 2, 0.3.4) als WhatIf + akkoord.
