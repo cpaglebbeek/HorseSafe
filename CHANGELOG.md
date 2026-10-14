@@ -3,7 +3,32 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.3.4-Miller (deel 2): ontgrendelen op de telefoon, telefoon koppelen, telefoon-credential, blokkeren vanaf de telefoon, update in de app. Zie `ROADMAP.md`.
+- v0.4.0-Montgomery: laptop ontgrendelen met code van 6 cijfers + telefoonvinger (HARDWARE_KEYS §11.2).
+- Later in Miller: noodsleutel blokkeren vanaf de telefoon, update in de app.
+
+## [0.3.4-Miller] — 2026-10-14 (deel 2 fase A: telefoon koppelen)
+
+Christian wil HorseSafe op de laptop openen zonder YubiKey, alleen met de telefoonvinger. Besluiten en contract:
+`docs/HARDWARE_KEYS.md` §11.2 en §13 (WhatIf + akkoord 14-10). Ontgrendelen zelf volgt in Montgomery (0.4.0).
+
+### Added
+- **Backend:** migratie 006 (`pairings`, `device_nonces`, `devices.confirmed_at`); `/devices/pairings` (start SU,
+  claim, confirm, annuleren), `/devices`, device-API `/device/v1/status` en `/device/v1/keys/{kid}/sealed` met
+  K_dev-handtekening (ts ±60 s, nonce-cache). Android key-attestation tegen de gevendorde Google-roots
+  (RSA + EC CA1) met revocatielijst (24 u cache), TEE/StrongBox, verified boot + locked, package + signer,
+  K_biosig `userAuthType == 2` (geen PIN-terugval). Testvlag `test_device_attestation` met prod-guard.
+  Nieuwe dependency-pin `pyasn1==0.6.4`.
+- **Web:** "Telefoon koppelen" in het sleutelbeheer: QR (geheim `s` alleen in de browser; server krijgt `k_srv`),
+  `mac_web`-controle, SAS van 6 cijfers, Seal_v2 naar de telefoon; telefoons in de sleutellijst, toestel verwijderen.
+- **App:** INTERNET alleen naar icthorsecloud.nl (pins ISRG X1/X2/YE/YR), Keystore K_dev/K_biosig/K_wrap,
+  `StrongGate` (alleen BIOMETRIC_STRONG), QR-scanner (zxing, hash-gecontroleerd), SAS, status, proef "Kopie openen",
+  scherm "Opnieuw koppelen" (M14–M19). PIN-code importeert niets uit `net/` (bronbeleidstest).
+- **Testvectoren** `specs/testvectors/pair_v1.json` (Python = JS = Kotlin).
+
+### Changed
+- **Eigen release-keystore** (R4): signer `fbd6b151…062e` i.p.v. de debug-keystore. Eenmalig de app verwijderen en
+  opnieuw installeren.
+- Koppelgeheim in de browser i.p.v. op de server (aanscherping §4.5, §13.0).
 
 ## [0.3.3-Miller] — 2026-10-13 (bugfix: gewiste Bio onterecht "al gebruikt")
 

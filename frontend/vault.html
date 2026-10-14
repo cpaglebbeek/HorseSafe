@@ -134,10 +134,12 @@
             pas 24 uur na aanvraag. Je wachtwoord/keyfile blijft altijd werken — ook in KeePassXC.</p>
           <p id="notify-banner" class="error" hidden>Meldingen zijn niet ingesteld: vrijgave van de noodsleutel is
             uitgeschakeld tot de beheerder e-mail heeft ingesteld.</p>
-          <table>
-            <thead><tr><th>Naam</th><th>Soort</th><th>Gekoppeld</th><th>Laatst gebruikt</th><th>Status</th><th></th></tr></thead>
-            <tbody id="keys-body"><tr><td colspan="6" class="muted">Nog geen sleutels gekoppeld.</td></tr></tbody>
-          </table>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Naam</th><th>Soort</th><th>Gekoppeld</th><th>Laatst gebruikt</th><th>Status</th><th></th></tr></thead>
+              <tbody id="keys-body"><tr><td colspan="6" class="muted">Nog geen sleutels gekoppeld.</td></tr></tbody>
+            </table>
+          </div>
           <label for="key-label">Naam van de nieuwe sleutel</label>
           <input type="text" id="key-label" maxlength="64" placeholder="bijv. YubiKey Bio sleutelbos">
           <div class="actions">
@@ -151,6 +153,43 @@
             hoeft te pakken.</p>
           <div id="keys-error" class="error" hidden></div>
           <div id="keys-status" class="success" hidden></div>
+
+          <!-- v0.3.4-Miller: telefoon koppelen (S17, docs/HARDWARE_KEYS.md §13) -->
+          <h3>Telefoon</h3>
+          <p class="muted">Koppel je telefoon met de HorseSafe-app. De telefoon krijgt een verzegelde kopie van het
+            ontgrendelmateriaal die alleen hij met jouw vingerafdruk kan openen. Je wachtwoord/keyfile blijft gewoon werken.</p>
+          <div class="actions">
+            <button type="button" id="phone-pair">📱 Telefoon koppelen</button>
+          </div>
+          <div id="pair-section" class="pair-panel" role="region" aria-labelledby="pair-title" hidden>
+            <h3 id="pair-title">Telefoon koppelen</h3>
+            <div id="pair-step-qr" hidden>
+              <p>Open de HorseSafe-app op je telefoon, kies <strong>Koppelen</strong> en scan deze QR-code.
+                De app vraagt twee keer om je vingerafdruk.</p>
+              <div id="pair-qr" class="pair-qr" role="img" aria-label="QR-code om je telefoon te koppelen"></div>
+              <p class="muted">Nog <span id="pair-countdown" class="pair-countdown">5:00</span> geldig.
+                Laat niemand anders deze code scannen.</p>
+            </div>
+            <div id="pair-step-sas" hidden>
+              <p>Staat op je telefoon <strong>precies dezelfde code</strong>?</p>
+              <p id="pair-sas" class="pair-sas" aria-describedby="pair-sas-hint"></p>
+              <p id="pair-sas-hint" class="muted">Komt de code niet overeen, of heb je zelf geen telefoon gescand? Kies dan "Klopt niet".</p>
+              <dl class="detail-grid pair-device">
+                <dt>Toestel</dt><dd id="pair-device-label"></dd>
+                <dt>Model</dt><dd id="pair-device-model"></dd>
+                <dt>App-versie</dt><dd id="pair-device-app"></dd>
+              </dl>
+              <div class="actions">
+                <button type="button" id="pair-sas-ok">✓ Klopt</button>
+                <button type="button" id="pair-sas-bad" class="danger">✗ Klopt niet</button>
+              </div>
+            </div>
+            <div id="pair-status" class="muted" role="status" aria-live="polite"></div>
+            <div id="pair-error" class="error" role="alert" hidden></div>
+            <div class="actions">
+              <button type="button" id="pair-cancel" class="secondary">Annuleren</button>
+            </div>
+          </div>
 
           <h3>Wachtwoord of keyfile wijzigen</h3>
           <p class="muted">Wijzigt de kluis en werkt alle gekoppelde sleutels in één keer bij (ook de noodsleutel in
@@ -232,7 +271,7 @@
     </main>
 
     <footer>
-      HorseSafe v0.3.3-Miller — Zero-knowledge: server ziet alleen ciphertext
+      HorseSafe v0.3.4-Miller — Zero-knowledge: server ziet alleen ciphertext
     </footer>
   </div>
 
@@ -243,10 +282,13 @@
   <script src="js/crypto.js"></script>
   <script src="js/totp.js"></script>
   <script src="js/sharing.js"></script>
+  <script src="vendor/qrcode/qrcode.js"></script>
   <script src="js/hwkeys.js"></script>
+  <script src="js/pairing.js"></script>
   <script src="js/vault-ui.js"></script>
   <script src="js/main.js"></script>
   <script src="js/stepup.js"></script>
   <script src="js/hwkeys-ui.js"></script>
+  <script src="js/pairing-ui.js"></script>
 </body>
 </html>

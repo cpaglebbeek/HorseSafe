@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "HorseSafe"
-    app_version: str = "0.3.3-Miller"
+    app_version: str = "0.3.4-Miller"
 
     db_path: Path = Field(default=Path("./db/horsesafe.db"))
     vaults_dir: Path = Field(default=Path("./vaults"))
@@ -81,6 +81,32 @@ class Settings(BaseSettings):
     vault_keys_max: int = 10  # per vault, telt status != 'revoked'
     recovery_delay_hours: int = 24  # wachttijd voordat een noodsleutel bruikbaar is
     recovery_window_hours: int = 24  # zo lang blijft een vrijgegeven noodsleutel bruikbaar
+
+    # Telefoon koppelen — v0.3.4-Miller deel 2 (docs/HARDWARE_KEYS.md §13). Publiek materiaal.
+    android_attestation_roots_path: Path = Field(
+        default=_DATA_DIR / "android_attestation_roots.pem"
+    )
+    # SHA-256 (hex) van het APK-ondertekencertificaat; attestationApplicationId moet hierin vallen.
+    android_allowed_signers: list[str] = Field(
+        default=["fbd6b151ecfd202279d9ee1999b4bfce7f7eb9095b1a0a5bf5338151a64b062e"]
+    )
+    android_package: str = "nl.icthorse.horsesafe"
+    android_attestation_status_url: str = "https://android.googleapis.com/attestation/status"
+    # Schijfcache van de revocatielijst; leeg = naast de database (db_path.parent).
+    android_attestation_status_cache_path: Path | None = None
+    android_attestation_status_ttl_seconds: int = 24 * 3600
+    # Ophalen mislukt: een verouderde cache mag hooguit zo oud zijn; daarna 503
+    # attestation_status_unavailable (§13.5 stap 4).
+    android_attestation_status_max_stale_seconds: int = 7 * 24 * 3600
+    # ALLEEN tests: software-attestation, package <android_package>.debug en elke signer toegestaan.
+    # create_app() weigert dit met de productie-rpId (zelfde patroon als test_attestation).
+    test_device_attestation: bool = False
+    # Alleen met test_device_attestation: extra vertrouwensanker voor de nep-app
+    # (tests/fake_device.py), in de rol van de software-attestation-root; een onbereikbare
+    # revocatielijst telt dan als leeg.
+    android_attestation_test_roots_path: Path = Field(
+        default=Path(__file__).parent / "tests" / "fake_device_root.pem"
+    )
 
     log_level: str = "INFO"
 
