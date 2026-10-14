@@ -1,5 +1,5 @@
 {
-  "version": "0.3.4",
+  "version": "0.3.5",
   "codename": "Miller",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
@@ -30,11 +30,12 @@
     "0.3.1": "Miller-patch — Android-app: ingerichte sleutel wissen (FIDO-reset) met bevestiging serienummer + 3 s vasthouden, zelfde-sleutelcontrole na opnieuw insteken",
     "0.3.2": "Miller-bugfix — maxPINLength (0x1D, CTAP 2.2) ontbreekt op YubiKey 5.7: CTAP 2.1-maximum 63 aannemen (oranje), setPin is de proef; typemelding noemt aangesloten type en gekozen rol",
     "0.3.4": "Miller deel 2 — telefoon koppelen: QR (geheim in de browser, k_srv/k_web) + SAS, Android key-attestation (Google-roots, revocatie, userAuthType == biometrie), device-API met K_dev-handtekening, migratie 006, web 'Telefoon koppelen', app INTERNET (gepind) + Keystore K_dev/K_biosig/K_wrap + Seal_v2 openen; eigen release-keystore (R4)",
+    "0.3.5": "Miller — kluis: categorieboom (KDBX-groepen) + zoeken (titel/gebruiker/URL/notities/categorie, nooit wachtwoorden), nieuwe entry in gekozen categorie; HS-BUG-010 TOTP-QR in Instellingen 0×0 px",
     "0.3.3": "Miller-bugfix — gewiste/nieuwe Bio onterecht KEY_ALREADY_USED: PIN-pogingen zonder PIN niet meer als stop (oranje; 8 pogingen na setPin blijft de controle); M11 toont gate-regels, sleutelgegevens en stopcode"
   },
   "phase": "Phase 11 — Miller (YubiKey inrichten/keuren/wissen + telefoon koppelen, Android)",
   "released": "2026-10-11",
-  "built": "2026-10-14 (0.3.4-Miller: telefoon koppelen, deel 2 fase A)",
+  "built": "2026-10-14 (0.3.5-Miller: categorieën + zoeken, HS-BUG-010; APK blijft 0.3.4 vc 304)",
   "previous_release": {
     "version": "0.1.0",
     "codename": "Massey",
@@ -55,10 +56,10 @@
   "kdbx_format": 4,
   "kdf_in_use": "AES-KDF (KeePassXC-CLI-verified). Argon2id-default deferred v1.0-Bernstein.",
   "test_results": {
-    "backend_pytest": "269/269 passed (2026-10-14, 0.3.4-Miller; venv in scratchpad, incl. test_devices + pair_v1)",
+    "backend_pytest": "269/269 passed (2026-10-14, 0.3.5-Miller; venv in scratchpad)",
     "backend_coverage": "91,6% (2026-10-14, vóór review-fixes)",
-    "frontend_unit_node_test": "87/87 pass (2026-10-14, incl. pair_v1)",
-    "frontend_e2e_playwright": "12/12 groen (2026-10-14; incl. koppelflow met neptoestel tegen echte backend, geïsoleerd)",
+    "frontend_unit_node_test": "97/97 pass (2026-10-14, 0.3.5: incl. vault-index)",
+    "frontend_e2e_playwright": "13/13 groen (2026-10-14, 0.3.5; incl. vault-groups en QR-maat in mfa.spec)",
     "frontend_e2e_hwkeys_virtual_authenticator": "hwkeys 2/2 + magiclink 3/3 (CDP virtual authenticator)",
     "kdbx_oracle_ci": "te meten",
     "smtp_587_starttls_vanaf_hc55": "250 + afgeleverd in info@icthorse.nl-inbox (2026-10-11 00:32 UTC)",

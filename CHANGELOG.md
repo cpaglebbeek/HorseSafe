@@ -5,9 +5,27 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 ## [Unreleased]
 - v0.4.0-Montgomery: laptop ontgrendelen met code van 6 cijfers + telefoonvinger (HARDWARE_KEYS §11.2).
 - Later in Miller: noodsleutel blokkeren vanaf de telefoon, update in de app.
-- Deploy-runbook + `scripts/deploy_hc55.sh`: `backend.db.init/migrate/promote_admin` draaien met de productie-`.env`
-  (zonder env migreerde het een losse `./db/horsesafe.db` in de repo); frontend-rsync met `--delete-excluded`, zodat
-  `devserver.py`/`README.md` ook echt uit de webroot verdwijnen. Gevonden bij de 0.3.4-deploy (14-10).
+
+## [0.3.5-Miller] — 2026-10-14 (kluis: categorieën + zoeken)
+
+Gevraagd door Christian na het vervangen van de kluis door `database1` (342 entries, 9 categorieën): "ik mis de logische
+categorieën en een zoekfunctie" (WhatIf + akkoord 14-10). Alleen frontend; geen schema- of API-wijziging; APK blijft 0.3.4.
+
+### Added
+- **Categorieboom** (S7): KDBX-groepen met submappen en aantallen, "Alle entries" zonder prullenbak, prullenbak apart
+  onderaan; op schermen ≤ 1100 px een keuzelijst. Kolom "Categorie" in de lijst; vault-pagina breder (1440 px).
+- **Zoeken**: titel, gebruikersnaam, URL, notities en categorienaam; alle woorden, zonder hoofdletter-/accentgevoeligheid;
+  nooit in wachtwoorden of beveiligde velden; standaard de hele kluis, optioneel alleen de gekozen categorie; `/` en `Esc`.
+  Alleen in de browser (`js/vault-index.js`, pure functies + unittests).
+- "+ Nieuwe entry" landt in de gekozen categorie ("Komt in: …").
+
+### Fixed
+- **HS-BUG-010:** TOTP-QR in Instellingen was onzichtbaar (schaalbare SVG zonder maat in een `fit-content`-vak = 0×0 px),
+  sinds v0.0.3. `mfa.spec.ts` controleert nu de zichtbare maat.
+- Deploy-runbook + `deploy_hc55.sh`: migrate met productie-`.env`, rsync `--delete-excluded` (gevonden bij de 0.3.4-deploy).
+
+### Tests
+- node 97/97, Playwright 13/13 (nieuw `vault-groups.spec.ts`), pytest 269/269.
 
 ## [0.3.4-Miller] — 2026-10-14 (deel 2 fase A: telefoon koppelen)
 
