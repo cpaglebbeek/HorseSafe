@@ -53,8 +53,13 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
 12. Account-ww → secret-kanaal `horsesafe_login`; kluis-ww → `horsesafe_vault_wachtwoord`.
 13. Kluis moet de keyfile-only `database1` zijn → akkoord: herbouwd (consolidate.py, 342 entries, verify2: 18 bijlagen =
     geroteerde bronnen), backup oude blob, PUT via app-API, live in Chromium geopend met alleen keyfile (342 rijen).
+14. "ik mis in de db de logische categorieen en een zoek functie" → WhatIf 0.3.5 → "akkoord; qr code werkt niet".
+    QR = TOTP-QR in Instellingen (nginx-log 17:32 totp/setup): HS-BUG-010, SVG 0×0 px sinds v0.0.3 → CSS-maat + e2e-maatcontrole
+    (faalt zonder fix). Categorieboom + zoeken gebouwd (vault-index.js), node 97, Playwright 13, pytest 269.
+    Commits 5ca99bc (feat) + 19cd8f0 (versie). Account `+gs` = Christian zelf (zelfde IP). Deploy 0.3.5: apart akkoord.
 
 ## Open
+- Akkoord deploy 0.3.5-Miller (frontend + versie).
 - Akkoord Montgomery-ombouw (vertrouwde browser + vinger).
 - Christian: TOTP instellen; app op Fold/Fairphone opnieuw installeren (nieuwe keystore), daarna veldtest op echte telefoon.
 - Bouwplan fase A (Miller deel 2, 0.3.4) als WhatIf + akkoord.
