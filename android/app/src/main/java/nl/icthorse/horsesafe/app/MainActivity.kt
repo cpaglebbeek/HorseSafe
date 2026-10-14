@@ -6,9 +6,9 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -24,6 +24,7 @@ import nl.icthorse.horsesafe.secure.ScreenWatch
 import nl.icthorse.horsesafe.secure.SecureWindow
 import nl.icthorse.horsesafe.ui.HorseSafeRoot
 import nl.icthorse.horsesafe.ui.HorseSafeViewModel
+import nl.icthorse.horsesafe.ui.PairingViewModel
 import nl.icthorse.horsesafe.ui.RootActions
 
 /**
@@ -34,10 +35,13 @@ import nl.icthorse.horsesafe.ui.RootActions
  * - Omgeving ([nl.icthorse.horsesafe.secure.EnvironmentGuard]) bij elke hervatting, focuswissel,
  *   multi-window- of configuratiewissel en opname-melding.
  * - "Afsluiten" en het einde van een inrichting: [ProcessEnd] (finishAndRemoveTask + killProcess).
+ * - Deel 2: FragmentActivity (de systeem-vingerprompt van androidx.biometric heeft er een nodig);
+ *   "Telefoon koppelen" heeft een eigen [PairingViewModel].
  */
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private lateinit var vm: HorseSafeViewModel
+    private lateinit var pairing: PairingViewModel
     private val screenWatch = ScreenWatch()
 
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument(ReportStore.MIME_TYPE)) { uri ->
@@ -57,11 +61,13 @@ class MainActivity : ComponentActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         vm = ViewModelProvider(this, HorseSafeViewModel.factory(ServiceLocator))[HorseSafeViewModel::class.java]
+        pairing = ViewModelProvider(this, PairingViewModel.factory(ServiceLocator.pairing))[PairingViewModel::class.java]
         val signer = signerSha256()
 
         setContent {
             HorseSafeRoot(
                 vm = vm,
+                pairing = pairing,
                 services = ServiceLocator,
                 signerSha256 = signer,
                 actions = RootActions(
@@ -114,6 +120,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStop() {
         vm.onStop()
+        pairing.onStop()
         screenWatch.stop(this)
         super.onStop()
     }

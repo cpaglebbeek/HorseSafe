@@ -9,9 +9,11 @@
 #      lokaal op HC55 zinvol: in CI en op de build-box tekent een andere (wegwerp)sleutel (kritiek 23).
 #      Overslaan met HS_SKIP_SIGNER=1.
 #   2. aapt2 dump badging/xmltree: pakket nl.icthorse.horsesafe, versionName/versionCode uit
-#      version.json, geen INTERNET / REQUEST_INSTALL_PACKAGES / USE_BIOMETRIC, niet debuggable,
-#      allowBackup=false, geen OtpActivity/YubiKeyPromptActivity, geen USB-intent-filter, geen
-#      provider/service, precies één exported component (MainActivity).
+#      version.json, sinds deel 2 (0.3.4) wel INTERNET / USE_BIOMETRIC / CAMERA maar geen
+#      REQUEST_INSTALL_PACKAGES / USE_FINGERPRINT / ACCESS_NETWORK_STATE / POST_NOTIFICATIONS,
+#      networkSecurityConfig gezet, niet debuggable, allowBackup=false, geen OtpActivity/
+#      YubiKeyPromptActivity/CaptureActivity, geen USB-intent-filter, geen provider/service, precies
+#      één exported component (MainActivity).
 #   3. sha256 van het APK (voor HorseAPK en het rapport).
 set -euo pipefail
 
@@ -57,12 +59,16 @@ printf '%s\n' "$badging" | grep -q "package: name='nl.icthorse.horsesafe' " && o
 printf '%s\n' "$badging" | grep -q "versionCode='$want_code'" && ok "versionCode $want_code" || bad "versionCode != $want_code"
 printf '%s\n' "$badging" | grep -q "versionName='$want_version'" && ok "versionName $want_version" || bad "versionName != $want_version"
 
-for p in INTERNET REQUEST_INSTALL_PACKAGES USE_BIOMETRIC USE_FINGERPRINT ACCESS_NETWORK_STATE; do
+for p in REQUEST_INSTALL_PACKAGES USE_FINGERPRINT ACCESS_NETWORK_STATE POST_NOTIFICATIONS; do
   if printf '%s\n' "$badging" | grep -q "uses-permission: name='android.permission.$p'"; then bad "permissie $p aanwezig"; else ok "geen $p"; fi
 done
+for p in INTERNET USE_BIOMETRIC CAMERA; do
+  if printf '%s\n' "$badging" | grep -q "uses-permission: name='android.permission.$p'"; then ok "permissie $p (deel 2)"; else bad "permissie $p ontbreekt"; fi
+done
+if printf '%s\n' "$xml" | grep -qE 'networkSecurityConfig\(0x01010527\)=@0x'; then ok "networkSecurityConfig gezet"; else bad "networkSecurityConfig ontbreekt"; fi
 if printf '%s\n' "$badging" | grep -q "application-debuggable"; then bad "debuggable"; else ok "niet debuggable"; fi
 if printf '%s\n' "$xml" | grep -qE 'allowBackup\(0x01010280\)=(false|\(type 0x12\)0x0)$'; then ok "allowBackup=false"; else bad "allowBackup niet false"; fi
-for n in OtpActivity YubiKeyPromptActivity USB_DEVICE_ATTACHED NDEF_DISCOVERED TECH_DISCOVERED InitializationProvider ProfileInstallReceiver; do
+for n in OtpActivity YubiKeyPromptActivity CaptureActivity USB_DEVICE_ATTACHED NDEF_DISCOVERED TECH_DISCOVERED InitializationProvider ProfileInstallReceiver; do
   if printf '%s\n' "$xml" | grep -q "$n"; then bad "$n in manifest"; else ok "geen $n"; fi
 done
 for tag in provider service; do

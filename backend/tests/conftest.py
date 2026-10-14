@@ -123,3 +123,49 @@ def clock(monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
     state = {"t": 1_800_000_000}
     monkeypatch.setattr(svc, "now", lambda: state["t"])
     return state
+
+
+# ─────────────── v0.3.4-Miller deel 2: telefoon koppelen ───────────────
+
+
+@pytest.fixture(autouse=True)
+def _no_network_attestation(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Nooit netwerk in tests: de revocatielijst van Google wordt altijd gemockt."""
+    from backend.services import android_attestation
+
+    def _blocked(url: str, timeout: float = 10.0) -> dict[str, object]:
+        raise OSError("netwerk is uit in tests")
+
+    monkeypatch.setattr(android_attestation, "_fetch_status", _blocked)
+    monkeypatch.delenv("HORSESAFE_TEST_DEVICE_ATTESTATION", raising=False)
+
+
+@pytest.fixture
+def dev_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, hw_env):  # type: ignore[no-untyped-def]
+    """Eigen Android-test-root + gemockte revocatielijst (``env.revoked``; ``env.fetch_fail``)."""
+    from backend.services import android_attestation
+
+    from .fake_device import FakeAttestationCA
+
+    class Env:
+        ca = FakeAttestationCA()
+        revoked: dict[str, dict[str, str]] = {}
+        fetch_fail = False
+        fetches = 0
+        cache = tmp_path / "attstatus.json"
+
+    env = Env()
+    env.revoked = {}
+    roots = tmp_path / "android_roots.pem"
+    roots.write_bytes(env.ca.pem())
+    monkeypatch.setenv("HORSESAFE_ANDROID_ATTESTATION_ROOTS_PATH", str(roots))
+    monkeypatch.setenv("HORSESAFE_ANDROID_ATTESTATION_STATUS_CACHE_PATH", str(env.cache))
+
+    def _fetch(url: str, timeout: float = 10.0) -> dict[str, object]:
+        env.fetches += 1
+        if env.fetch_fail:
+            raise OSError("onbereikbaar")
+        return {"entries": dict(env.revoked)}
+
+    monkeypatch.setattr(android_attestation, "_fetch_status", _fetch)
+    return env

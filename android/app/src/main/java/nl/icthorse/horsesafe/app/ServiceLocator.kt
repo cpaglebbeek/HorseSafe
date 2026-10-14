@@ -2,12 +2,19 @@ package nl.icthorse.horsesafe.app
 
 import android.app.Activity
 import android.content.Context
+import android.os.Build
+import android.provider.Settings
+import androidx.fragment.app.FragmentActivity
+import java.io.File
 import java.lang.ref.WeakReference
 import nl.icthorse.horsesafe.BuildConfig
 import nl.icthorse.horsesafe.attest.AaguidAllowlist
 import nl.icthorse.horsesafe.attest.AttestationResult
 import nl.icthorse.horsesafe.attest.AttestationVerifier
 import nl.icthorse.horsesafe.attest.TrustRoots
+import nl.icthorse.horsesafe.biometric.BioAvailability
+import nl.icthorse.horsesafe.biometric.StrongGate
+import nl.icthorse.horsesafe.biometric.StrongGateFinger
 import nl.icthorse.horsesafe.flow.AttestOutcome
 import nl.icthorse.horsesafe.flow.AttestationJudge
 import nl.icthorse.horsesafe.flow.ChangePinFlow
@@ -20,11 +27,18 @@ import nl.icthorse.horsesafe.flow.ReportFactory
 import nl.icthorse.horsesafe.flow.SetupMachine
 import nl.icthorse.horsesafe.flow.SetupMode
 import nl.icthorse.horsesafe.flow.Stop
+import nl.icthorse.horsesafe.keystore.AndroidPhoneKeys
+import nl.icthorse.horsesafe.net.DeviceApi
+import nl.icthorse.horsesafe.net.HttpsTransport
+import nl.icthorse.horsesafe.pairing.DeviceInfo
+import nl.icthorse.horsesafe.pairing.DeviceStore
+import nl.icthorse.horsesafe.pairing.PairingFlow
 import nl.icthorse.horsesafe.report.AndroidKeystoreSerialKey
 import nl.icthorse.horsesafe.report.ReportStore
 import nl.icthorse.horsesafe.report.SerialHasher
 import nl.icthorse.horsesafe.secure.EnvironmentGuard
 import nl.icthorse.horsesafe.ui.AppServices
+import nl.icthorse.horsesafe.ui.PairingServices
 import nl.icthorse.horsesafe.ui.TrustInfo
 import nl.icthorse.horsesafe.yubikey.Inspector
 import nl.icthorse.horsesafe.yubikey.api.AttestOps
@@ -39,7 +53,8 @@ import nl.icthorse.horsesafe.yubikey.transport.YubiKitKeyDiscovery
  *   door aan `attest/` (kritiek 17). Mislukt dat, dan blijven roots en allowlist leeg: elke sleutel valt dan
  *   op AAGUID_NOT_ALLOWED of de attestation (fail-closed); M12 toont de fout.
  * - Serienummer: HMAC met een niet-exporteerbare sleutel in de Android Keystore (kritiek 8).
- * - Geen netwerk, geen logging.
+ * - Geen logging. Netwerk alleen in deel 2 (telefoon koppelen) via [pairing]: `net/` met de basis-URL uit
+ *   BuildConfig; de PIN-flows van deel 1 krijgen niets van het netwerk mee.
  */
 object ServiceLocator : AppServices {
 
@@ -152,6 +167,40 @@ object ServiceLocator : AppServices {
     val environmentGuard: EnvironmentGuard by lazy { EnvironmentGuard(adbIsStop = !BuildConfig.DEBUG) }
 
     override val isDebugBuild: Boolean get() = BuildConfig.DEBUG
+
+    // ============================================================== deel 2: telefoon koppelen
+
+    private val gate: StrongGate by lazy { StrongGate(appContext) { currentActivity() as? FragmentActivity } }
+
+    /** Koppel-diensten voor de PairingViewModel (HARDWARE_KEYS §13). */
+    val pairing: PairingServices by lazy {
+        object : PairingServices {
+            override val flow: PairingFlow by lazy {
+                PairingFlow(
+                    keys = AndroidPhoneKeys(),
+                    finger = StrongGateFinger(gate),
+                    api = DeviceApi(HttpsTransport(BuildConfig.API_BASE_URL)),
+                    store = DeviceStore(File(appContext.noBackupFilesDir, "device")),
+                )
+            }
+
+            override fun bioAvailability(): BioAvailability = gate.availability()
+
+            override fun deviceInfo(): DeviceInfo {
+                val name = try {
+                    Settings.Global.getString(appContext.contentResolver, Settings.Global.DEVICE_NAME)
+                } catch (e: RuntimeException) {
+                    null
+                }
+                val model = DeviceInfo.clean(Build.MODEL, 64, "onbekend")
+                return DeviceInfo(
+                    label = DeviceInfo.clean(name, 64, model),
+                    model = model,
+                    appVersion = DeviceInfo.clean(BuildConfig.VERSION_NAME, 32, "onbekend"),
+                )
+            }
+        }
+    }
 
     private const val ROOTS_ASSET = "trust/yubico_fido_roots.pem"
     private const val AAGUIDS_ASSET = "trust/aaguids.json"

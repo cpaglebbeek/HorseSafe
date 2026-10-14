@@ -24,6 +24,7 @@ import nl.icthorse.horsesafe.ui.screens.M6bIrreversible
 import nl.icthorse.horsesafe.ui.screens.M7Fingers
 import nl.icthorse.horsesafe.ui.screens.M7FingersManage
 import nl.icthorse.horsesafe.ui.screens.M9Keuring
+import nl.icthorse.horsesafe.ui.screens.PairingRoot
 import nl.icthorse.horsesafe.ui.screens.PinEntryScreen
 import nl.icthorse.horsesafe.ui.theme.HorseSafeTheme
 import nl.icthorse.horsesafe.ui.theme.HsColors
@@ -36,7 +37,7 @@ class RootActions(
 
 /** Wortel van de Compose-UI: kiest het scherm uit [UiState.screen]. */
 @Composable
-fun HorseSafeRoot(vm: HorseSafeViewModel, services: AppServices, signerSha256: String?, actions: RootActions) {
+fun HorseSafeRoot(vm: HorseSafeViewModel, pairing: PairingViewModel, services: AppServices, signerSha256: String?, actions: RootActions) {
     val u by vm.ui.collectAsState()
     HorseSafeTheme {
         Box(Modifier.fillMaxSize().background(HsColors.Background).safeDrawingPadding()) {
@@ -45,7 +46,10 @@ fun HorseSafeRoot(vm: HorseSafeViewModel, services: AppServices, signerSha256: S
                 if (u.pickProfileFor != null) vm.pickProfile(null) else vm.backToStart()
             }
             when (u.screen) {
-                Screen.M0_START -> M0Start(u, vm, services.appVersion)
+                Screen.M0_START -> M0Start(u, vm, services.appVersion) {
+                    vm.openPairing()
+                    pairing.open()
+                }
                 Screen.M1_CHECKLIST -> M1Checklist(u, vm)
                 Screen.M2_CONNECT -> M2Connect(u, vm)
                 Screen.M3_JUDGEMENT -> M3Judgement(u, vm)
@@ -59,6 +63,8 @@ fun HorseSafeRoot(vm: HorseSafeViewModel, services: AppServices, signerSha256: S
                 Screen.M11_STOP -> M11Stop(u, vm)
                 Screen.M12_ABOUT -> M12About(vm, services.appVersion, services.trust, signerSha256, services.isDebugBuild)
                 Screen.M13_RESET -> M13Reset(u, vm)
+                Screen.M14_PAIR, Screen.M15_PAIR_SCAN, Screen.M16_PAIR_SAS, Screen.M17_PAIRED, Screen.M18_BIO_REQUIRED, Screen.M19_REPAIR ->
+                    PairingRoot(pairing) { vm.backToStart() }
                 Screen.BUSY -> BusyScreen(u, vm)
             }
         }

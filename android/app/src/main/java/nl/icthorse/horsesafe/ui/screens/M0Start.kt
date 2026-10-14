@@ -19,19 +19,19 @@ import nl.icthorse.horsesafe.ui.theme.HsColors
 
 /** M0 Start: versie, omgevingsoordeel en menukaarten. "Sleutel wissen" staat bewust onderaan (0.3.1). */
 @Composable
-fun M0Start(u: UiState, vm: HorseSafeViewModel, appVersion: String) {
+fun M0Start(u: UiState, vm: HorseSafeViewModel, appVersion: String, openPairing: () -> Unit) {
     val pick = u.pickProfileFor
     if (pick != null) {
         ProfilePicker(pick, vm)
         return
     }
-    ScreenFrame0(u, vm, appVersion)
+    ScreenFrame0(u, vm, appVersion, openPairing)
 }
 
 @Composable
-private fun ScreenFrame0(u: UiState, vm: HorseSafeViewModel, appVersion: String) {
+private fun ScreenFrame0(u: UiState, vm: HorseSafeViewModel, appVersion: String, openPairing: () -> Unit) {
     nl.icthorse.horsesafe.ui.components.ScreenFrame(Screen.M0_START, "HorseSafe") {
-        Small("Versie $appVersion · alleen lokaal, geen internet")
+        Small("Versie $appVersion · YubiKey-functies lokaal, zonder netwerk")
         MessageBar(u.message) { vm.clearMessage() }
         Panel(border = if (u.env.blocksSecrets) HsColors.Red else null) {
             SectionTitle("Omgeving")
@@ -51,6 +51,7 @@ private fun ScreenFrame0(u: UiState, vm: HorseSafeViewModel, appVersion: String)
         MenuCard("Vingers beheren", "Hoofdsleutel: toevoegen, hernoemen, verwijderen, testaanraking") { vm.choose(Purpose.FINGERS) }
         MenuCard("Oefenen", "PIN-groepen van papier controleren met de controletekens, zonder sleutel") { vm.choose(Purpose.PRACTICE) }
         MenuCard("Sleutel wissen", "Al ingerichte sleutel helemaal wissen (FIDO-reset); onomkeerbaar") { vm.choose(Purpose.RESET) }
+        MenuCard("Telefoon koppelen", "Deze telefoon koppelen aan HorseSafe op de laptop: QR-code, vingerafdruk, 6 cijfers vergelijken") { openPairing() }
         MenuCard("Rapporten", "Bekijken, exporteren en importeren (opslagkiezer)") { vm.openReports() }
         MenuCard("Over HorseSafe", "Licenties, vertrouwensankers en ondertekening") { vm.openAbout() }
     }

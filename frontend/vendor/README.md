@@ -16,7 +16,12 @@ Vendored third-party libraries voor de HorseSafe-frontend. **Niet via npm in pro
 - **Bestanden:**
   - `qrcode.js` (55 KB — QR Code generator, exposeert globaal `qrcode`-functie)
   - `qrcode_UTF8.js` (793 B — UTF-8 encoding helper)
-- **Doel:** TOTP-otpauth-URL renderen als QR-code voor Authenticator-apps (Google Authenticator / Authy / etc.)
+- **Doel:** TOTP-otpauth-URL renderen als QR-code voor Authenticator-apps (Google Authenticator / Authy / etc.); sinds v0.3.4-Miller ook de koppel-QR `hs1p:<pairing_id>.<b64u s>` in S17 (`js/pairing-ui.js`, foutcorrectie M, als SVG-elementen opgebouwd via `getModuleCount`/`isDark` — geen innerHTML, geen inline script, past in CSP `script-src 'self'`)
+- **Controle (14-10-2026):** byte-gelijk aan `dist/` van npm `qrcode-generator@2.0.4` (`npm pack qrcode-generator@2.0.4`)
+- **SHA-256:**
+  - `qrcode.js` — `79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c`
+  - `qrcode_UTF8.js` — `e522d64003b332e29271fdce4993ed3ae2934c8947f41654bd324ddcfa2de301`
+  - `LICENSE.MIT` — `91a34af6a2dfe121adbc7ffe32c86d483d1d251d43be54b405d9ac3ca7d0bcb3`
 
 ## sheetjs/
 - **Versie:** xlsx (SheetJS Community Edition) 0.18.5

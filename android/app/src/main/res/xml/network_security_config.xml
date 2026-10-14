@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HorseSafe 0.3.4-Miller deel 2 — netwerkbeleid (HARDWARE_KEYS §13.9).
+  - base-config: geen cleartext en GEEN vertrouwensankers. Elke andere host dan icthorsecloud.nl faalt
+    daardoor al bij de TLS-handdruk ("alleen icthorsecloud.nl").
+  - icthorsecloud.nl (zonder subdomeinen): systeemankers + pin-set op de SPKI-SHA-256 van ISRG Root X1
+    en ISRG Root X2. Vervaldatum 2028-12-31; daarna vervalt de pin-controle (Android-gedrag), niet TLS.
+  - Pins berekend op 2026-10-14 uit de officiële certificaten van letsencrypt.org:
+      https://letsencrypt.org/certs/isrgrootx1.pem   (SHA-256 cert 96bcec06…bddf08c6)
+      https://letsencrypt.org/certs/isrg-root-x2.pem (SHA-256 cert 69729b8e…3ccb1470)
+    met: openssl x509 -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64
+  - Geen debug-overrides: ook de debug-build vertrouwt geen gebruikers-CA's.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors />
+    </base-config>
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">icthorsecloud.nl</domain>
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+        <pin-set expiration="2028-12-31">
+            <!-- ISRG Root X1 (RSA 4096) -->
+            <pin digest="SHA-256">C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=</pin>
+            <!-- ISRG Root X2 (ECDSA P-384) -->
+            <pin digest="SHA-256">diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=</pin>
+            <!-- ISRG Root YE (ECDSA) en Root YR (RSA): Gen-Y-keten; icthorsecloud.nl draait al op YE1 → Root YE.
+                 Nodig zodra Android Root YE als systeemanker opneemt (pins nagerekend 14-10-2026). -->
+            <pin digest="SHA-256">sCkq5UWXjg+7mKu9lMhhYF5bGLsy7VI/UNW3tccdR7w=</pin>
+            <pin digest="SHA-256">fk6IOKit1ild5647BH06ujSIq5XbCgqlbYl6ANhhi88=</pin>
+        </pin-set>
+    </domain-config>
+</network-security-config>

@@ -9,8 +9,8 @@ import org.junit.Test
  * package-tests (pin/, attest/, ui/). Commentaar telt niet mee.
  *
  * - DEVICE_CREDENTIAL komt nergens voor (A-16, nooit PIN-terugval);
- * - android.permission.INTERNET / Manifest.permission.INTERNET komt nergens voor, behalve als
- *   `tools:node="remove"`-regel in het bronmanifest;
+ * - android.permission.INTERNET / Manifest.permission.INTERNET komt nergens voor, behalve in precies één
+ *   `<uses-permission>`-regel in het bronmanifest (deel 2, HARDWARE_KEYS §13.9);
  * - geen android.util.Log, println, printStackTrace of System.out/err in productiecode, en in het
  *   bijzonder nooit een logregel waarin pin/token voorkomt (A-13).
  */
@@ -35,7 +35,7 @@ class SourcePolicyTest {
     private val logWithSecret = Regex("(?i)\\b(Log\\.\\w+|println|Timber\\.\\w+)\\s*\\([^)]*(pin|token)")
 
     private fun internetAllowed(f: File, line: String) =
-        f.name == "AndroidManifest.xml" && line.contains("tools:node=\"remove\"")
+        f.name == "AndroidManifest.xml" && line.trim() == INTERNET_LINE
 
     private fun hits(src: List<Pair<File, String>>): List<String> = src.flatMap { (f, code) ->
         val rel = f.relativeToOrSelf(main.absoluteFile).path
@@ -56,9 +56,17 @@ class SourcePolicyTest {
         assertTrue("bronbeleid geschonden:\n" + h.joinToString("\n"), h.isEmpty())
     }
 
-    @Test fun bronmanifestVerwijdertInternetExpliciet() {
-        val mf = File(main, "AndroidManifest.xml").readText()
-        assertTrue(Regex("android\\.permission\\.INTERNET\"\\s+tools:node=\"remove\"").containsMatchIn(mf))
+    /** Deel 2: INTERNET precies één keer gevraagd, met de network-security-config ernaast. */
+    @Test fun bronmanifestVraagtInternetEenKeerMetNetwerkbeleid() {
+        val mf = xmlCode(File(main, "AndroidManifest.xml").readText())
+        assertTrue("INTERNET-regel", mf.lines().count { it.trim() == INTERNET_LINE } == 1)
+        assertTrue("INTERNET elders", Regex("permission\\.INTERNET").findAll(mf).count() == 1)
+        assertTrue(mf.contains("android:networkSecurityConfig=\"@xml/network_security_config\""))
+        assertTrue(mf.contains("android:usesCleartextTraffic=\"false\""))
+    }
+
+    private companion object {
+        const val INTERNET_LINE = "<uses-permission android:name=\"android.permission.INTERNET\" />"
     }
 
     /** Zelftest: de regels vangen de verboden code echt. */

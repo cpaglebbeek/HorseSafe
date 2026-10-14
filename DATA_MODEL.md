@@ -2,7 +2,7 @@
 
 > Server-side datamodel (SQLite + filesystem). Client-side datamodel (KDBX4 in-memory) staat in KeePassXC-spec. Cross-ref: `ARCHITECTURE.md §2.2`, `THREAT_MODEL.md §vault-content vs metadata`, `docs/HARDWARE_KEYS.md` §12.9 (normatieve DDL van migratie 005).
 >
-> **Schema-versie: 5** (v0.2.0-Koblitz). De bron van waarheid is `backend/db/schema.sql` (fresh install = alle migraties) plus `backend/db/migrations/`. De DDL hieronder voor de oudere tabellen is een samenvatting; `shares` (004) en `users_backup_codes` (002) staan alleen in `schema.sql`.
+> **Schema-versie: 6** (v0.3.4-Miller deel 2). De bron van waarheid is `backend/db/schema.sql` (fresh install t/m schema 5) plus `backend/db/migrations/` (006 en later worden ook bij een verse installatie door `migrate.py` toegepast; `schema.sql` blijft op 5 omdat `init_db` het bij elke start opnieuw draait en `ALTER TABLE` niet idempotent is). De DDL hieronder voor de oudere tabellen is een samenvatting; `shares` (004) en `users_backup_codes` (002) staan alleen in `schema.sql`.
 
 ## Server-side
 
@@ -149,13 +149,50 @@ CREATE TABLE webauthn_challenges (
 CREATE INDEX idx_webauthn_challenges_user ON webauthn_challenges(user_id, expires_at);
 ```
 
-### devices (migratie 005, leeg tot v0.3.0-Miller)
+### devices (migratie 005; gevuld vanaf v0.3.4-Miller, `confirmed_at` uit 006)
 
-Staat er alleen voor de foreign key van `vault_keys.device_id`, zodat Miller zonder table-rebuild kan bouwen. Kolommen: `id`, `user_id`, `label`, `model`, `k_dev_pub`, `k_biosig_pub`, `att_chains`, `security_level`, `strongbox`, `app_version`, `created_at`, `last_seen_at`, `revoked_at`. De Koblitz-API schrijft hier niets in.
+Gekoppelde telefoons (`docs/HARDWARE_KEYS.md` §13). Kolommen: `id`, `user_id`, `label`, `model`, `k_dev_pub` en `k_biosig_pub` (b64u SPKI, EC P-256), `att_chains` (JSON `{"k_dev":[…],"k_biosig":[…]}`, b64u-DER, leaf eerst; publiek materiaal), `security_level` (`TrustedEnvironment` | `StrongBox`; `Software` alleen met de testvlag), `strongbox` (0/1: beide sleutels in StrongBox), `app_version`, `created_at` (claim), `confirmed_at` (006; NULL = koppeling nog niet bevestigd), `last_seen_at` (laatste geldige device-request), `revoked_at`.
+Een rij ontstaat bij de claim; wordt de koppeling geannuleerd vóór bevestigen, dan verdwijnt de rij. Intrekken zet `revoked_at` en verwijdert de `vault_keys` van het toestel (de rij blijft, zodat de app via `/device/v1/status` "revoked" ziet). Actieve toestellen = `confirmed_at IS NOT NULL AND revoked_at IS NULL`, max. 5 per gebruiker.
+
+### pairings (migratie 006, v0.3.4-Miller)
+
+```sql
+CREATE TABLE pairings (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vault_id TEXT NOT NULL REFERENCES vaults(id) ON DELETE CASCADE, k_srv TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending','claimed','confirmed','cancelled')),
+  mac_failures INTEGER NOT NULL DEFAULT 0, device_id TEXT REFERENCES devices(id) ON DELETE CASCADE,
+  key_id TEXT, claim_json TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL,
+  claimed_at INTEGER, confirmed_at INTEGER);
+CREATE INDEX idx_pairings_user ON pairings(user_id, created_at);
+```
+- `k_srv` = HKDF van het browsergeheim `s` (de server ziet `s` en `k_web` nooit); gewist (`''`) bij `confirmed`/`cancelled`.
+- `expires_at` = start + 300 s (claimen); bevestigen kan tot start + 600 s.
+- `claim_json` = `{device_id, key_id, pk_c, k_dev_pub, k_biosig_pub, label, model, app_version, mac_web, security_level, strongbox}` (alleen publiek materiaal; `mac_web` is voor de browsercontrole).
+- Eén open koppeling (`pending`/`claimed`) per gebruiker; max. 10 nieuwe per uur. Na 3 foute `mac_srv` → `cancelled`.
+
+### device_nonces (migratie 006, v0.3.4-Miller)
+
+```sql
+CREATE TABLE device_nonces (device_id TEXT NOT NULL, nonce TEXT NOT NULL, created_at INTEGER NOT NULL,
+  PRIMARY KEY (device_id, nonce));
+```
+Eenmalige nonces van getekende device-requests (§13.6); rijen ouder dan 120 s worden bij elk device-request opgeruimd.
+
+### vault_keys: phone-sleutels (v0.3.4-Miller)
+
+`kind = 'phone'`, `device_id` gezet, `credential_id`/`cose_public_key`/`prf_salt`/`aaguid` NULL, `public_key` = `pk_c` (X25519 van het toestel), `sealed` = Seal_v2 met `purpose "store"`, `label` = toestellabel. Ontstaat pas bij bevestigen van de koppeling (één transactie met `devices.confirmed_at`).
+
+### Revocatielijst-cache (bestand, geen tabel)
+
+`android_attestation_status.json` naast de database (of `HORSESAFE_ANDROID_ATTESTATION_STATUS_CACHE_PATH`): `{"fetched_at": <unix>, "entries": {…}}` uit `https://android.googleapis.com/attestation/status`, 24 u geldig. Publiek materiaal.
 
 ### JWT-claims (geen tabel)
 
 Sinds v0.2.0-Koblitz kan het sessie-JWT na een geslaagde step-up twee extra claims dragen: `stepup_until` (Unix-tijd) en `stepup_method` (`bio` | `totp`). Ze vervallen bij een gewone login of MFA-heruitgifte.
+
+### Audit-events v0.3.4-Miller deel 2
+
+`device_pairing_start` `{pairing_id, vault_id}`, `device_pairing_claim` `{pairing_id, device_id}`, `device_pairing_confirm` `{pairing_id, device_id, key_id, vault_id}`, `device_pairing_cancel` `{pairing_id, reason?}` (`superseded`, `mac_failures`), `device_pairing_rejected` `{pairing_id, reason, attestation_reason?}`, `device_revoke` `{device_id, keys}`. Nooit `s`, `k_srv`, MAC's, `sealed` of ketens.
 
 ### Audit-events v0.2.0-Koblitz
 
@@ -205,4 +242,4 @@ Sinds v0.2.0-Koblitz kan het sessie-JWT na een geslaagde step-up twee extra clai
 
 ## Schema-versionering
 
-Migrations in `backend/db/migrations/NNN_<naam>.sql`. Eerste migration: `001_initial.sql`. Schema-versie in tabel `schema_version (version INTEGER)`. Huidig: **5** (`005_vault_keys.sql`, herschreven in v0.2.0-Koblitz; de WIP-versie is nooit gedeployed). Migraties zetten de versie met `INSERT OR REPLACE INTO schema_version`, nooit met `DELETE FROM schema_version`. Gepland: 006 (Miller: `pairings`, `device_nonces`), 007 (Montgomery: `approvals`, `revoked_sessions`).
+Migrations in `backend/db/migrations/NNN_<naam>.sql`. Eerste migration: `001_initial.sql`. Schema-versie in tabel `schema_version (version INTEGER)`. Huidig: **6** (`006_devices_pairings.sql`, v0.3.4-Miller deel 2; daarvoor `005_vault_keys.sql`, herschreven in v0.2.0-Koblitz; de WIP-versie is nooit gedeployed). Migraties zetten de versie met `INSERT OR REPLACE INTO schema_version`, nooit met `DELETE FROM schema_version`. Gepland: 007 (Montgomery: `approvals`, `revoked_sessions`).

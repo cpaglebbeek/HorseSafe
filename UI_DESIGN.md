@@ -84,12 +84,13 @@
 
 ### S14. Sleutelbeheer (v0.2.0-Koblitz) — paneel `#keys-section` in S7
 - Openen via "🔑 Sleutels" (`#keys-open`) in de werkbalk van S7; alleen met een geopende kluis.
-- Tabel `#keys-body`: naam, soort (YubiKey Bio / Noodsleutel), gekoppeld, laatst gebruikt, status in gewone taal (klaar · in de kluis (klaar) · wacht nog 13 u 20 m (tot …) · vrijgegeven tot … · gebruikt · verlopen · geblokkeerd sinds … · "kopie verouderd") en per rij de acties.
+- Tabel `#keys-body` (horizontaal scrollbaar op smalle schermen): naam (bij een telefoon het toestellabel), soort (YubiKey Bio / Noodsleutel / Telefoon, met model eronder), gekoppeld, laatst gebruikt, status in gewone taal (klaar · in de kluis (klaar) · wacht nog 13 u 20 m (tot …) · vrijgegeven tot … · gebruikt · verlopen · geblokkeerd sinds … · "kopie verouderd") en per rij de acties.
 - Koppelen: naam (`#key-label`) + "+ YubiKey Bio koppelen" / "+ Noodsleutel koppelen"; uitleg in een bevestiging (Bio: vingerafdruk; noodsleutel: PIN van 63 tekens, PIN niet bij de sleutel, daarna in de fysieke kluis). Vanaf de tweede sleutel eerst S15.
 - "↻ Bijwerken" (`#keys-reseal`, S15): alle sleutels opnieuw verzegelen na een wachtwoord/keyfile-wijziging buiten HorseSafe.
 - Noodsleutel: blokkeren kan altijd (defensief, zonder S15); opheffen alleen met S15 via de YubiKey Bio.
 - Banner `#notify-banner` als meldingen niet zijn ingesteld.
 - Fouten (`#keys-error`) in gewone taal volgens `docs/HARDWARE_KEYS.md` §12.13.
+- **v0.3.4-Miller:** telefoonsleutels (kind `phone`) staan in dezelfde tabel; actie "Toestel verwijderen" (`data-device`) trekt na bevestiging het hele toestel in (`DELETE /devices/{id}`: het kan geen enkele kluis meer openen, de verzegelde kopieën op de server worden gewist). Onder de tabel het blok "Telefoon" met "📱 Telefoon koppelen" (`#phone-pair`) → S17.
 
 ### S15. Bevestig dat jij het bent — step-up-dialoog (v0.2.0-Koblitz) — `#stepup-section`
 - Verschijnt bij een 403 `stepup_required` (sleutel koppelen vanaf de tweede, bijwerken, S16, blokkade opheffen); na succes wordt de oorspronkelijke actie één keer herhaald.
@@ -99,6 +100,14 @@
 ### S16. Wachtwoord of keyfile wijzigen (v0.2.0-Koblitz) — `#rekey-form` in S14
 - Nieuw wachtwoord (2×) en/of nieuwe keyfile; een leeg veld behoudt dat onderdeel. Verwijderen alleen via een expliciet vinkje (`#rekey-pw-remove`, `#rekey-kf-remove`) met bevestiging.
 - Eerst S15; daarna worden de kluis en álle sleutelkopieën in één keer bijgewerkt (ook de noodsleutel in de kluis). Bij een onduidelijke uitkomst controleert de client of de wijziging is doorgevoerd en meldt hij welk wachtwoord geldt.
+
+### S17. Telefoon koppelen (v0.3.4-Miller deel 2) — paneel `#pair-section` in S14
+- Contract: `docs/HARDWARE_KEYS.md` §13 (flow §13.3). Code: `frontend/js/pairing.js` (crypto + API) en `frontend/js/pairing-ui.js` (scherm). Alleen met een geopende kluis.
+- "📱 Telefoon koppelen" (`#phone-pair`) → bij 403 `stepup_required` eerst S15 → **QR** (`#pair-qr`, SVG zonder inline script) met de tekst "Open de HorseSafe-app op je telefoon, kies Koppelen en scan deze QR-code" en een aftelling `#pair-countdown` (5:00 → 0:00). De QR bevat het browsergeheim `s`; de server krijgt alleen `k_srv`.
+- De browser pollt elke seconde. Zodra de telefoon claimt: QR weg, `mac_web` controleren. Fout → koppeling verwijderd (`DELETE`) en de melding **"Koppeling niet vertrouwd — mogelijk gemanipuleerd"** (`#pair-error`, `role="alert"`). Er wordt dan niets verzegeld.
+- Klopt `mac_web`: **SAS** groot en monospace (`#pair-sas`, "267 364"; schermlezer leest de cijfers los) met toestelnaam, model en app-versie, en de vraag "Staat op je telefoon precies dezelfde code?". Knoppen "✓ Klopt" (`#pair-sas-ok`, krijgt focus) en "✗ Klopt niet" (`#pair-sas-bad`), minimaal 44 px hoog; onder 480 px elk over de volle breedte.
+- **Klopt** → Seal_v2 naar de telefoonsleutel (`pk_c`) + vormcontrole, ontvanger vastgelegd in de kluis (zoals bij YubiKeys, R15), `POST …/confirm` → melding "✓ Telefoon "…" gekoppeld" en de lijst ververst. **Klopt niet**, **Annuleren**, verlopen, kluis vergrendeld of tab dicht → `DELETE` (bij tab dicht best effort).
+- Status in `#pair-status` (`role="status"`, `aria-live="polite"`; de aftelling meldt zich alleen per minuut). Na afloop: QR en SAS uit beeld, `s` en `k_web` gewist; de knop wordt "Sluiten".
 
 ### S12. Settings
 - E-mail wijzigen (vereist re-auth)
@@ -158,6 +167,7 @@ S6 unlock
 
 S7 content
   ├─→ S14 sleutelbeheer ─→ S15 step-up ─→ S16 wachtwoord/keyfile wijzigen
+  │                      └─→ S15 step-up ─→ S17 telefoon koppelen (QR → SAS → Klopt/Klopt niet)
   ├─→ S8 entry-edit (modal)
   ├─→ S9 import-flow
   ├─→ S10 export-flow

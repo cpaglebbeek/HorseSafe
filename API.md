@@ -212,13 +212,14 @@ Volledige request/response-schema's, controlevolgorde en foutcodes: `docs/HARDWA
 #### Sleutelobject (response van lijst-items, koppelen, release, cancel, block, unblock)
 ```json
 {
-  "id": "<uuid>", "kind": "bio" | "recovery", "label": "…", "status": "active" | "blocked",
+  "id": "<uuid>", "kind": "bio" | "recovery" | "phone", "label": "…", "status": "active" | "blocked",
   "credential_id": "<b64u>", "prf_salt": "<b64u 32>", "public_key": "<b64u 32>",
   "aaguid": "<uuid>", "authenticator": "YubiKey Bio Series - FIDO Edition" | null,
   "created_at": 0, "updated_at": 0, "last_used_at": null,
   "recovery": null | { "state": "idle|waiting|released|consumed|expired|blocked",
                        "release_requested_at": null, "release_at": null, "release_until": null,
-                       "release_consumed_at": null, "blocked_at": null, "blocked_by": null }
+                       "release_consumed_at": null, "blocked_at": null, "blocked_by": null },
+  "device": null | { "id": "<uuid>", "label": "…", "model": "…" }        // alleen kind "phone"
 }
 ```
 Nooit `sealed`, `cose_public_key` of `sign_count`. `GET /vault/{vid}/keys` geeft `{ "keys": [ … ], "notify_available": true, "stepup_until": null }`.
@@ -247,6 +248,45 @@ Client (reviewronde 2): `/keys/sealed` en `/rekey` verzegelen alleen naar publie
 - `DELETE …/block`: zonder step-up 403 `stepup_required`; step-up met TOTP → 403 `stepup_bio_required`; niet geblokkeerd → 409 `not_blocked`; Bio uit de step-up gekoppeld ná de blokkade → 403 `stepup_key_too_new` (audit `recovery_unblock_rejected`). Vanaf Miller ook toegestaan met telefoonvinger.
 - Elke actie: audit + mail (behalve de ongewijzigde 200-gevallen).
 
+### Telefoon koppelen (v0.3.4-Miller deel 2)
+
+Bindend contract: `docs/HARDWARE_KEYS.md` §13. De browser maakt het QR-geheim `s` (16 B) en stuurt alleen `k_srv = HKDF(s, "HSv2 pair srv")`; `k_web` blijft in de browser en controleert `mac_web` zelf. Alle binaire velden b64u.
+
+| Methode | Pad | Auth | Doel | Succes |
+|---|---|---|---|---|
+| POST | `/devices/pairings` | SU | Koppeling starten `{vault_id, k_srv}` → `{pairing_id, expires_at}` (TTL 300 s) | 201 |
+| GET | `/devices/pairings/{id}` | S | `{status, expires_at, claim}`; `claim` bij `claimed`/`confirmed` | 200 |
+| DELETE | `/devices/pairings/{id}` | S | Annuleren (`pending`/`claimed`); niet-bevestigd toestel wordt verwijderd | 204 |
+| POST | `/devices/pairings/{id}/claim` | publiek (mac) | Claim door de app | 201 `{device_id, sas}` |
+| POST | `/devices/pairings/{id}/confirm` | S | `{sealed}` (Seal_v2 naar `pk_c`, `kid` = `key_id`) → phone-sleutel | 201 sleutelobject |
+| GET | `/devices` | S | Eigen, niet-ingetrokken toestellen (zonder ketens/sleutels) | 200 `{devices:[…]}` |
+| DELETE | `/devices/{id}` | S | Toestel intrekken; zijn phone-sleutels worden verwijderd | 204 |
+| GET | `/device/v1/status` | D | `{device_id, state: pending\|active\|revoked, keys:[{key_id, vault_id, label}]}` | 200 |
+| GET | `/device/v1/keys/{kid}/sealed` | D | `{key_id, vault_id, sealed}` voor een actieve sleutel van dit toestel, anders 404 | 200 |
+
+**`POST /devices/pairings`** — fouten: 404 `not_found` (vault), 403 `stepup_required`, 429 `too_many_pairings` (> 10 per uur), 409 `too_many_keys` (vroege melding; phone-sleutels tellen mee). Een nieuwe koppeling zet een open koppeling van dezelfde gebruiker op `cancelled`.
+
+**`GET /devices/pairings/{id}`** — `cancelled` of verlopen `pending` → 404 `not_found` (zoals onbekend). Een `claimed` koppeling die 600 s na de start niet bevestigd is, wordt lui opgeruimd (`cancelled`, toestel-rij weg, `k_srv` gewist). `claim` = `{device_id, key_id, pk_c, k_dev_pub, k_biosig_pub, label, model, app_version, mac_web, security_level: "TrustedEnvironment"|"StrongBox", strongbox}`. Nooit `k_srv` of `mac_srv`.
+
+**`DELETE /devices/pairings/{id}`** — al `cancelled` → 204 (geen wijziging); `confirmed` → 409 `pairing_confirmed` (gebruik `DELETE /devices/{id}`).
+
+**`POST /devices/pairings/{id}/claim`** — body:
+```json
+{ "pk_c": "<b64u 32>", "k_dev_pub": "<b64u SPKI ≤200>", "k_biosig_pub": "<b64u SPKI ≤200>",
+  "k_dev_chain": ["<b64u DER, leaf eerst>", "…"], "k_biosig_chain": ["…"],
+  "label": "1-64", "model": "0-64", "app_version": "0-32",
+  "mac_srv": "<b64u 32>", "mac_web": "<b64u 32>", "sig_biosig": "<b64u DER ≤120>" }
+```
+Ketens 2-6 certificaten van ≤ 4096 tekens; tekstvelden zonder stuurtekens, Unicode-opmaaktekens (Cf), U+2028/U+2029 en losse surrogaten (anders 422) en niet getrimd (ze gaan letterlijk het transcript in). Controles in volgorde (eerste fout wint): 422 vorm; 404 `pairing_not_found` (onbekend, niet `pending` of verlopen); 400 `pairing_mac_invalid` (na 3 fouten `cancelled`); 400 `attestation_invalid` met `reason`; 503 `attestation_status_unavailable` (revocatielijst niet ophaalbaar en geen cache van hooguit 7 dagen); 400 `signature_invalid`; 409 `too_many_devices` (max. 5 actieve toestellen). Rate-limit 10 per 10 min per IP.
+
+`reason` bij `attestation_invalid`: `chain_invalid`, `root_untrusted`, `revoked`, `key_mismatch`, `key_type`, `extension_missing`, `extension_invalid`, `challenge_mismatch`, `security_level`, `root_of_trust_missing`, `boot_unverified`, `device_unlocked`, `app_id_missing`, `package_mismatch`, `signer_mismatch`, `no_biometric`, `no_auth_required`, `auth_timeout`, `unlocked_device_required_missing`.
+
+**`POST /devices/pairings/{id}/confirm`** — fouten: 404 `not_found`; 409 `pairing_not_claimed`; 409 `pairing_expired` (> 600 s na start); 400 `invalid_sealed`; 409 `too_many_keys`.
+
+**Device-handtekening (D, §13.6)** — headers `X-HS-Device: <device_id>`, `X-HS-Ts: <unix s>`, `X-HS-Nonce: <b64u 16 B>`, `X-HS-Sig: <b64u DER>`; ECDSA-P256-SHA256 met K_dev over `UTF-8("HSv2 dev" ‖ 0 ‖ METHOD ‖ 0 ‖ PATH ‖ 0 ‖ ts ‖ 0 ‖ nonce ‖ 0 ‖ b64u(SHA-256(body)))`, PATH = pad vanaf `/api` incl. querystring (bv. `/api/device/v1/status`). `|nu − ts| ≤ 60`, nonce eenmalig. Elke fout → 401 `device_auth_failed` zonder detail. Een ingetrokken toestel mag alleen `/device/v1/status` (antwoord `revoked`, lege `keys`).
+
+**Sleutelobject voor phone-sleutels** — `kind: "phone"`, `credential_id`/`prf_salt`/`aaguid`/`authenticator` = `null`, plus `device: {id, label, model}` (`null` bij bio/recovery). `POST /vault/{vid}/keys/{kid}/unlock` en de andere `…/keys/{kid}`-routes geven voor een phone-sleutel 404; verwijderen gaat via `DELETE /devices/{id}`. Phone-sleutels tellen mee voor `too_many_keys` en moeten in `PUT …/rekey` en `PUT …/keys/sealed` worden meegenomen.
+
 ## Rate-limits
 
 | Endpoint | Limiet |
@@ -259,6 +299,8 @@ Client (reviewronde 2): `/keys/sealed` en `/rekey` verzegelen alleen naar publie
 | `/vault/*` (incl. sleutels) | 60/min per IP (middleware) |
 | `/webauthn/options` | default 300/min + max. 10 open challenges per gebruiker |
 | `/auth/stepup` (TOTP) | max. 5 fouten per 15 min per gebruiker |
+| `POST /devices/pairings` | max. 10 per uur per gebruiker (429 `too_many_pairings`) |
+| `POST /devices/pairings/{id}/claim` | 10/10min per IP (middleware) |
 
 ## OpenAPI
 
@@ -266,4 +308,4 @@ Sinds v0.1.0 staan `/docs`, `/redoc` en `/openapi.json` in productie uit (`HORSE
 
 ## Health
 
-`GET /health` → o.a. `version` (`0.2.0-Koblitz`) en `"test_attestation": <bool>`. Geen mail- of sleutelinformatie.
+`GET /health` → o.a. `version`, `"test_attestation": <bool>` en (v0.3.4-Miller) `"test_device_attestation": <bool>`. Geen mail- of sleutelinformatie.

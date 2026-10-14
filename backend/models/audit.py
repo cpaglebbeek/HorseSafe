@@ -61,6 +61,14 @@ AuditEvent = Literal[
     "stepup",
     "stepup_fail",
     "notify_failed",
+    # v0.3.4-Miller deel 2 — telefoon koppelen (docs/HARDWARE_KEYS.md §13.8). Detail bevat nooit
+    # s, k_srv, MAC's, sealed of attestatieketens.
+    "device_pairing_start",
+    "device_pairing_claim",
+    "device_pairing_confirm",
+    "device_pairing_cancel",
+    "device_pairing_rejected",
+    "device_revoke",
 ]
 
 

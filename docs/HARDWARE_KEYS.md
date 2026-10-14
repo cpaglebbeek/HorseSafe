@@ -38,7 +38,9 @@ Christian wil de keyfile op een USB-stick vervangen door iets dat alleen met zij
 - **E8.** De Android-APK staat in deze repo (`android/`, Miller):
   - publicatie via HorseAPK (`/APKDeploy`)
   - update in de app
-  - ondertekend met de debug-keystore (SHA-256 `32:49:1E:0F…3F:17`)
+  - ondertekend met de eigen release-keystore op HC55, buiten de repo (signer-SHA-256
+    `fbd6b151ecfd202279d9ee1999b4bfce7f7eb9095b1a0a5bf5338151a64b062e`, §11.2.5); vervangt sinds 0.3.4 de
+    debug-keystore (`32:49:1E:0F…3F:17`, t/m 0.3.3)
 - **E9.** Webversie op de laptop: ontgrendelen met de YubiKey Bio (WebAuthn PRF/hmac-secret, BE=0) of (Montgomery) met goedkeuring via de vingerafdruk in de telefoon-app na het overtypen van een code van 6 cijfers (§11.2).
 
 **Principe-aanpassing (besluit 1):** nieuw principe **P-CRYPT-09**:
@@ -274,7 +276,8 @@ Bouwen, testen, publiceren en de hardwarechecklist: `android/README.md`.
 **Basis:** `nl.icthorse.horsesafe` (debug `.debug`); één Gradle-module `:app`; Gradle 8.10.2, AGP 8.7.3,
 Kotlin 2.0.21, Compose BOM 2024.11.00; minSdk 33, compile/target 35; `versionName`/`versionCode` uit
 `../version.json` (`X.Y.Z-Codenaam`, `X*10000+Y*100+Z`, patch < 100). Release: niet-debuggable,
-geminificeerd (R8), ondertekend met `~/.android/debug.keystore` op HC55 (signer `32491e0f…3f17`, E8).
+geminificeerd (R8), ondertekend met `~/.android/debug.keystore` op HC55 (signer `32491e0f…3f17`; sinds 0.3.4
+de eigen release-keystore `fbd6b151…062e`, E8).
 
 **Bibliotheken:** alleen `com.yubico.yubikit:android|core|fido|management:3.0.1` (3.1/3.2.x vragen Kotlin 2.2),
 AndroidX core/lifecycle/activity-compose, Compose Material3 en kotlinx-coroutines. **Geen**
@@ -1207,25 +1210,42 @@ scherm "Opnieuw koppelen".
 ### 13.3 Flow
 
 1. **Web** (vault open, CK in RAM): `POST /devices/pairings` (SU) `{vault_id, k_srv}` → `{pairing_id, expires_at}`;
-   toont QR. Eén open koppeling per gebruiker (nieuwe = oude `cancelled`), max 10 per uur → 429.
+   toont QR. Eén open koppeling per gebruiker (nieuwe = oude `cancelled`), max 10 per uur → 429 `too_many_pairings`.
+   Een verlopen (`pending` na `expires_at`) of geannuleerde koppeling geeft bij GET 404 `not_found`. Een `claimed`
+   koppeling die 600 s na de start niet bevestigd is, ruimt de server lui op (bij de eerstvolgende web- of
+   device-aanroep van die gebruiker/dat toestel, of bij een nieuwe koppeling): `cancelled`, `k_srv = ''`,
+   toestel-rij weg, audit `device_pairing_cancel {reason: "not_confirmed"}`.
 2. **App**: QR scannen → `canAuthenticate(BIOMETRIC_STRONG) == SUCCESS` (anders blokkerend scherm) → sleutels
    maken → `sk_c` wikkelen (vinger 1) → transcript ondertekenen (vinger 2) → `POST /devices/pairings/{id}/claim`.
    Antwoord `{device_id, sas}`; app toont de SAS en "Vergelijk met je laptop".
 3. **Web** pollt `GET /devices/pairings/{id}` (S, 1 s) tot `claimed`; controleert `mac_web` (fout → afbreken,
-   `DELETE`, melding "Koppeling vertrouwd niet — mogelijk gemanipuleerd"); rekent de SAS; toont hem met
+   `DELETE`, melding "Koppeling niet vertrouwd — mogelijk gemanipuleerd"); rekent de SAS; toont hem met
    "Klopt" / "Klopt niet".
-4. **Klopt** → web `Seal_v2(pk_c, CK, "store", vault_id, key_id)` (terug-openen kan niet zonder `sk_c`; alleen vormcontrole) → `POST /devices/pairings/{id}/confirm {sealed}`. **Klopt niet** → `DELETE`.
-5. **App** pollt `GET /device/v1/status` (D, 2 s, max 10 min) tot `active` → "Gekoppeld".
+4. **Klopt** → web weigert eerst een `key_id` die al in de sleutellijst van de kluis staat of al vastgelegd is
+   (`key_id` komt van de server en valt niet onder de MAC; `pinKey` overschrijft nooit een bestaande pin met een
+   andere publieke sleutel) → web `Seal_v2(pk_c, CK, "store", vault_id, key_id)` (terug-openen kan niet zonder `sk_c`; alleen vormcontrole); `pk_c` vastleggen in de kluis zoals bij een YubiKey
+   (anders later `key_not_pinned` bij Bijwerken/rekey; mislukt dat → `DELETE`) → `POST /devices/pairings/{id}/confirm {sealed}`. **Klopt niet** → `DELETE`.
+5. **App** pollt `GET /device/v1/status` (D, 2 s, max 10 min) tot `active` → "Gekoppeld". Alleen een 200 met
+   `state: "revoked"` laat de app lokaal wissen (koppelbestand + Keystore-sleutels). 401, 404 en netwerkfouten zijn
+   tijdelijk: foutmelding, niets wissen; bij 401 met een `Date`-header die > 60 s van de toestelklok afwijkt, meldt
+   de app dat de klok van de telefoon niet klopt (§13.6 eist `|nu − ts| ≤ 60`). Een nieuwe claim maakt de sleutels
+   onder tijdelijke aliassen en wisselt pas na 201 om; mislukt de claim, dan blijft de oude koppeling staan.
 6. **App** (optioneel, veldtest fase A): "Proef: kopie openen" → `GET /device/v1/keys/{kid}/sealed` → vinger →
    `sk_c` → Seal_v2 openen (AAD met eigen vault_id/key_id) → alleen vormcontrole `{ph,kh}`, buffers wissen,
    "Kopie klopt". Niets van de inhoud wordt getoond of bewaard.
+
+**Noot voor Montgomery.** `vault_id` en `key_id` van een kopie komen van de server; de telefoon kan ze niet zelf
+verifiëren (ze staan niet in het transcript en de proef in stap 6 opent met wat de server opgeeft). De MAC's binden
+alleen de telefoonkant. Het Montgomery-contract moet `vault_id`/`key_id` cryptografisch binden aan iets wat de
+telefoon of de gebruiker controleert (bv. in de commitment-SAS of in een door de browser ge-MAC'te bevestiging na
+het verzegelen), anders kan een kwaadwillende server kopieën van kluizen verwisselen.
 
 ### 13.4 Endpoints (onder `/HorseSafe/api`)
 
 | Methode en pad | Auth | Kern |
 |---|---|---|
 | `POST /devices/pairings` | SU | body `{vault_id, k_srv:b64u 43}`; vault van gebruiker anders 404; 201 `{pairing_id, expires_at}` (TTL 300 s) |
-| `GET /devices/pairings/{id}` | S | eigenaar anders 404; `{status, expires_at, claim?:{device_id, key_id, pk_c, k_dev_pub, k_biosig_pub, label, model, app_version, mac_web, security_level, strongbox}}` |
+| `GET /devices/pairings/{id}` | S | eigenaar anders 404; `cancelled` of verlopen `pending` → 404 (13.3); `{status, expires_at, claim?:{device_id, key_id, pk_c, k_dev_pub, k_biosig_pub, label, model, app_version, mac_web, security_level, strongbox}}` |
 | `DELETE /devices/pairings/{id}` | S | `pending|claimed` → `cancelled`; claimed-device wordt verwijderd; 204 |
 | `POST /devices/pairings/{id}/claim` | publiek (mac) | rate-limit per IP 10/10 min; zie 13.5; 201 `{device_id, sas}` |
 | `POST /devices/pairings/{id}/confirm` | S | eigenaar, status `claimed`, binnen 600 s na start; `{sealed}` → `validate_sealed(sealed, key_id)`; één transactie: device `confirmed_at`, `vault_keys` (kind `phone`, `device_id`, `public_key = pk_c`, label = toestellabel) → 201 sleutelobject (12.6.3, met `device`) |
@@ -1240,17 +1260,23 @@ scherm "Opnieuw koppelen".
 ### 13.5 Claim-controles (volgorde; eerste fout wint; niets geschreven vóór stap 8)
 
 1. Pydantic: `pk_c` 43 b64u; `k_*_pub` ≤ 200 b64u; ketens 2-6 certificaten van ≤ 4096 b64u; `label` 1-64,
-   `model` ≤ 64, `app_version` ≤ 32, zonder `\0`/stuurtekens; MAC's 43 b64u; `sig_biosig` ≤ 120 b64u.
+   `model` ≤ 64, `app_version` ≤ 32, zonder `\0`/stuurtekens (Cc), Unicode-opmaaktekens (Cf, bv. U+202E, U+200B),
+   U+2028/U+2029 (Zl/Zp) en losse surrogaten (Cs) → anders 422; MAC's 43 b64u; `sig_biosig` ≤ 120 b64u.
+   Dezelfde tekenregel geldt in het web (claim weigeren vóór tonen van label/model) en in de app (label/model
+   worden bij het opbouwen ontdaan van deze tekens).
 2. Koppeling bestaat, `pending`, niet verlopen → anders 404 `pairing_not_found` (geen onderscheid).
 3. `mac_srv` timing-safe gelijk → anders 400 `pairing_mac_invalid` (koppeling blijft `pending`; na 3 fouten `cancelled`).
 4. Ketens beide: geldige handtekeningen, root in de gevendorde Google-roots (`backend/data/android_attestation_roots.pem`),
    geen certificaat in de revocatielijst (`https://android.googleapis.com/attestation/status`, 24 u cache op schijf;
-   niet ophaalbaar en geen cache → 503 `attestation_status_unavailable`); leaf-publieke sleutel == `k_*_pub`.
+   niet ophaalbaar → verouderde cache tot hooguit 7 dagen oud (`android_attestation_status_max_stale_seconds`); geen
+   of oudere cache → 503 `attestation_status_unavailable`); leaf-publieke sleutel == `k_*_pub`.
 5. Key-description-extensie (OID 1.3.6.1.4.1.11129.2.1.17) van beide leafs: `attestationChallenge == att_challenge`;
    `attestationSecurityLevel` en `keyMintSecurityLevel` ∈ {TrustedEnvironment, StrongBox}; RootOfTrust
    `verifiedBootState == Verified` en `deviceLocked == true`; `attestationApplicationId`: package
    `nl.icthorse.horsesafe` en signature-digest in `android_allowed_signers` (standaard alleen `fbd6b151…062e`).
-   K_biosig: `userAuthType` bevat biometrie (2), geen `noAuthRequired`, geen `authTimeout` (per-use).
+   K_biosig: `userAuthType == 2` (alleen biometrie; 3 = ook PIN → geweigerd, E2), geen `noAuthRequired`, geen `authTimeout` (per-use).
+   `userAuthType` en `rootOfTrust` tellen alleen uit de hardware-afgedwongen lijst; `unlockedDeviceRequired` en
+   `attestationApplicationId` mogen in beide lijsten staan.
    K_dev: `unlockedDeviceRequired` aanwezig. → anders 400 `attestation_invalid` met `reason` (vaste codes).
 6. `sig_biosig` geldig met `k_biosig_pub` over het transcript → anders 400 `signature_invalid`.
 7. Aantal actieve toestellen per gebruiker ≤ 5 → 409 `too_many_devices`.
@@ -1258,8 +1284,15 @@ scherm "Opnieuw koppelen".
    opgeslagen; audit `device_pairing_claim`.
 
 Mislukt 3-7: audit `device_pairing_rejected {pairing_id, reason}`. Testvlag `test_device_attestation` (alleen tests)
-staat software-attestation, package `nl.icthorse.horsesafe.debug` en willekeurige signer toe; `create_app()` weigert
+staat software-attestation, package `nl.icthorse.horsesafe.debug`, willekeurige signer, de test-root
+`backend/tests/fake_device_root.pem` en een onbereikbare revocatielijst (= leeg) toe; `create_app()` weigert
 die vlag met de productie-rpId (zelfde patroon als `test_attestation`). `/health` toont `test_device_attestation`.
+
+Veldnamen claim: `k_dev_chain`, `k_biosig_chain`. Overige foutcodes: 409 `pairing_not_claimed`, 409 `pairing_expired`
+(confirm na 600 s), 409 `pairing_confirmed` (annuleren na bevestigen), 409 `too_many_keys` al bij start, 404 `not_found`
+(eigendom). `GET /devices` → `{devices:[…]}`; `security_level` ∈ `TrustedEnvironment|StrongBox|Software`.
+Phone-sleutels gaan niet via `/vault/{vid}/keys/{kid}` (unlock/release/block/delete → 404); wel meegenomen in rekey/reseal.
+`schema.sql` blijft op 5; 006 komt altijd via `migrate.py`.
 
 ### 13.6 Device-handtekening (D)
 
@@ -1295,7 +1328,7 @@ Mail (niet-blokkerend): "Nieuw toestel gekoppeld" bij confirm, "Toestel verwijde
 ### 13.9 App-netwerk
 
 `INTERNET`; network-security-config: alleen `icthorsecloud.nl`, `cleartextTrafficPermitted=false`, pin-set op
-ISRG Root X1 + X2 (SPKI-SHA-256), vervaldatum pins 2028-12-31. Geen FCM. Basis-URL vast in BuildConfig.
+ISRG Root X1 + X2 + Root YE + Root YR (SPKI-SHA-256; Gen-Y-keten), vervaldatum pins 2028-12-31. Geen FCM. Basis-URL vast in BuildConfig.
 De PIN-schermen van deel 1 blijven zonder netwerkcode (bronbeleidstest: `yubikey/`, `pin/`, `flow/` importeren niets uit `net/`).
 
 ### 13.10 Minimale tests

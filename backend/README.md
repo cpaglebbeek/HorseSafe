@@ -107,6 +107,29 @@ python -I backend/tools/build_yubico_roots.py /tmp/ykpki       # zie docstring v
 python -I backend/tools/build_aaguids.py /tmp/mds/blob.jwt --root /tmp/mds/root-r3.crt
 ```
 
+## Telefoon koppelen (v0.3.4-Miller deel 2)
+
+Bindend contract: `../docs/HARDWARE_KEYS.md` §13.
+
+| Onderdeel | Bestand |
+|---|---|
+| `POST/GET/DELETE /devices/pairings…`, `…/claim`, `…/confirm`, `GET /devices`, `DELETE /devices/{id}` | `routes/devices.py` |
+| `GET /device/v1/status`, `GET /device/v1/keys/{kid}/sealed` (getekend met K_dev) | `routes/device_api.py` |
+| Afleidingen (§13.1), pairings/devices in de DB, device-handtekening + nonces | `services/device_service.py` |
+| Android key attestation: keten, Google-roots, revocatielijst (24 u cache), key-description (`pyasn1`) | `services/android_attestation.py` |
+| Google hardware-attestation-roots (publiek, gevendord) | `data/android_attestation_roots.pem`, gebouwd met `tools/build_android_roots.py` |
+| Migratie | `db/migrations/006_devices_pairings.sql` (via `migrate.py`; `schema.sql` blijft op 5) |
+| Tests + nep-app (ook CLI voor Playwright) | `tests/test_devices.py`, `tests/test_pair_vectors.py`, `tests/fake_device.py` |
+
+Nieuwe dependency: `pyasn1==0.6.4` (kwam al mee met `webauthn`; nu direct gebruikt).
+Testvlag `HORSESAFE_TEST_DEVICE_ATTESTATION` (alleen tests; `create_app()` weigert hem met rpId
+`icthorsecloud.nl`): software-attestation, package `….debug`, willekeurige signer, de vaste test-root
+`tests/fake_device_root.pem`, en een onbereikbare revocatielijst telt als leeg.
+
+```bash
+python -I backend/tools/build_android_roots.py /tmp/androidroots/page.html --json /tmp/androidroots/roots.json
+```
+
 ## Versie
 
 - Huidig: **v0.2.0-Koblitz** (zie `config.py::app_version`)

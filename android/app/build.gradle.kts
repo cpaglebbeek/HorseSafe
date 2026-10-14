@@ -133,6 +133,64 @@ val verifyYubikitHashes = tasks.register("verifyYubikitHashes") {
 }
 
 // ---------------------------------------------------------------------------------------------
+// zxing (deel 2, QR-scanner zonder GMS): SHA-256 van de twee artefacten vast, zelfde patroon als
+// yubikit. Berekend op 2026-10-14 uit de Maven Central-download en gekruist met de .sha1 die Maven
+// Central naast het artefact publiceert (aar 148ce3de…1f28, core-jar 1869da97…e25d: identiek).
+// ---------------------------------------------------------------------------------------------
+val zxingEmbeddedVersion = libs.versions.zxingEmbedded.get()
+val zxingCoreVersion = libs.versions.zxingCore.get()
+val zxingExpectedSha256: Map<String, String> = mapOf(
+    "com.journeyapps:zxing-android-embedded:$zxingEmbeddedVersion@aar" to "4ab03353127c34e55cbb80fbc9a34031decbcfb1ec5e8f991944d2d494621a33",
+    "com.google.zxing:core:$zxingCoreVersion@jar" to "acfa30338c26267b6cab665509c2251bb96e8350bfcad89d59b949ba77011f8d",
+)
+
+val zxingPinned: Configuration = configurations.create("zxingPinned") {
+    isTransitive = false
+    isCanBeConsumed = false
+    isCanBeResolved = true
+}
+dependencies {
+    zxingExpectedSha256.keys.forEach { add("zxingPinned", it) }
+}
+
+val verifyZxingHashes = tasks.register("verifyZxingHashes") {
+    group = "verification"
+    description = "Controleert de SHA-256 van de zxing-artefacten en dat de runtime-classpath precies deze versies gebruikt."
+    inputs.files(zxingPinned)
+    doLast {
+        val failures = mutableListOf<String>()
+        val resolved = zxingPinned.resolvedConfiguration.resolvedArtifacts
+        zxingExpectedSha256.forEach { (coord, expected) ->
+            val (group, name) = coord.split(":").let { it[0] to it[1] }
+            val ext = coord.substringAfter("@")
+            val art = resolved.firstOrNull { it.moduleVersion.id.group == group && it.moduleVersion.id.name == name && it.extension == ext }
+            if (art == null) {
+                failures += "$coord: niet gevonden"
+            } else {
+                val actual = sha256Hex(art.file)
+                if (actual != expected) failures += "$coord: sha256 $actual != verwacht $expected"
+            }
+        }
+        val expectedVersions = mapOf(
+            "com.journeyapps:zxing-android-embedded" to zxingEmbeddedVersion,
+            "com.google.zxing:core" to zxingCoreVersion,
+        )
+        listOf("debugRuntimeClasspath", "releaseRuntimeClasspath").forEach { cfgName ->
+            configurations.getByName(cfgName).incoming.resolutionResult.allComponents.forEach { c ->
+                val id = c.moduleVersion ?: return@forEach
+                if (id.group == "com.journeyapps" || id.group == "com.google.zxing") {
+                    val want = expectedVersions["${id.group}:${id.name}"]
+                    if (want == null) failures += "$cfgName: onverwachte module ${id.group}:${id.name}"
+                    else if (id.version != want) failures += "$cfgName: ${id.group}:${id.name}:${id.version} (verwacht $want)"
+                }
+            }
+        }
+        if (failures.isNotEmpty()) throw GradleException("verifyZxingHashes faalt:\n  " + failures.joinToString("\n  "))
+        logger.lifecycle("verifyZxingHashes: 2/2 zxing-artefacten kloppen ($zxingEmbeddedVersion, core $zxingCoreVersion)")
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
 // A-13: yubikit logt via slf4j-api (o.a. USB-apparaatnamen en CTAP-debug). Zonder provider is dat
 // een NOP-logger. Deze taak laat de build falen zodra een afhankelijkheid een slf4j-provider of een
 // oude StaticLoggerBinder binnenhaalt (slf4j-android, logback-android, slf4j-simple, slf4j-nop, ...).
@@ -187,6 +245,9 @@ android {
 
         buildConfigField("String", "TRUST_ROOTS_SHA256", "\"${sha256Hex(trustAnchorFiles[0])}\"")
         buildConfigField("String", "AAGUIDS_SHA256", "\"${sha256Hex(trustAnchorFiles[1])}\"")
+        // Deel 2 (HARDWARE_KEYS §13.9): vaste basis-URL van de device-API. De host staat ook in
+        // res/xml/network_security_config.xml (pins); een unit-test bewaakt dat ze gelijk zijn.
+        buildConfigField("String", "API_BASE_URL", "\"https://icthorsecloud.nl/HorseSafe/api\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -256,7 +317,7 @@ tasks.withType<Test>().configureEach {
     })
 }
 
-tasks.named("preBuild") { dependsOn(verifyYubikitHashes, verifyNoSlf4jProvider) }
+tasks.named("preBuild") { dependsOn(verifyYubikitHashes, verifyZxingHashes, verifyNoSlf4jProvider) }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
@@ -276,6 +337,13 @@ dependencies {
     implementation(libs.yubikit.core)
     implementation(libs.yubikit.fido)
     implementation(libs.yubikit.management)
+
+    // Deel 2: telefoon koppelen. Biometrie alleen BIOMETRIC_STRONG met CryptoObject (biometric/StrongGate);
+    // BiometricPrompt vraagt een FragmentActivity. QR-scanner zonder GMS (zxing, hashes gecontroleerd).
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment.ktx)
+    implementation(libs.zxing.android.embedded)
+    implementation(libs.zxing.core)
 
     debugImplementation(libs.androidx.ui.tooling)
 

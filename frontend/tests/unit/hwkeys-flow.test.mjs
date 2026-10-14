@@ -362,6 +362,21 @@ test('pins: vastleggen in de KDBX-meta (CustomData); andere vault telt niet', as
   assert.equal(HK.pinStatus({ id: 'k-9', public_key: kp.publicKey }, pins), 'missing');
 });
 
+test('pinKey overschrijft nooit een bestaande pin met een andere publieke sleutel (key_id komt van de server)', async () => {
+  const creds = new kdbxweb.Credentials(kdbxweb.ProtectedValue.fromString('wachtwoord123'), null);
+  const db = kdbxweb.Kdbx.create(creds, 'pins');
+  const yubi = (await H.keypairFromPrf(b(32, 1))).publicKey;
+  const phone = (await H.keypairFromPrf(b(32, 2))).publicKey;
+  HK.pinKey(db, VAULT, KID, yubi);
+  assert.throws(() => HK.pinKey(db, VAULT, KID, phone), (e) => e.code === 'key_pin_conflict' && e.key_id === KID);
+  assert.equal(HK.readPins(db, VAULT)[KID], yubi, 'oude pin onaangetast');
+  HK.pinKey(db, VAULT, KID, yubi); // dezelfde sleutel opnieuw: mag (idempotent)
+  HK.pinKey(db, VAULT, 'k-2', phone); // nieuw key_id: mag
+  assert.deepEqual(HK.readPins(db, VAULT), { [KID]: yubi, 'k-2': phone });
+  assert.match(HK.messageFor({ code: 'key_pin_conflict' }), /al met een andere sleutel/);
+  assert.throws(() => HK.pinKey(db, VAULT, '', phone), (e) => e.code === 'invalid_request');
+});
+
 // ───────────── rekey: onbekende uitkomst (reviewronde 2) ─────────────
 async function rekeySetup() {
   const kp = await H.keypairFromPrf(b(32, 1));

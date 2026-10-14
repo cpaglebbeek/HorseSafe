@@ -248,6 +248,13 @@ class HorseSafeViewModel(
 
     fun openAbout() = _ui.update { it.copy(screen = Screen.M12_ABOUT, message = null) }
 
+    /** Deel 2: "Telefoon koppelen" (M14-M19, eigen PairingViewModel). Geen PIN; niet geblokkeerd door de omgeving. */
+    fun openPairing() {
+        val s = _ui.value
+        if (s.secretsTouched || s.busy) return
+        _ui.update { it.copy(screen = Screen.M14_PAIR, message = null) }
+    }
+
     fun openReports() {
         refreshArchive()
         _ui.update { it.copy(screen = Screen.M10_REPORT, report = null, comparison = null, finalReport = false, message = null) }

@@ -10,8 +10,9 @@ import org.w3c.dom.Element
 
 /**
  * Leest de MERGED release-manifest (dus inclusief alles wat afhankelijkheden toevoegen) en controleert
- * de harde regels uit A-14/A-15: geen INTERNET, geen biometrie, geen backup, niet debuggable, precies één
- * exported component met alleen de launcher-intent-filter, geen USB/NFC-intent-filters.
+ * de harde regels uit A-14/A-15: exacte permissieset (sinds deel 2 met INTERNET, USE_BIOMETRIC en CAMERA),
+ * network-security-config, geen backup, niet debuggable, precies één exported component met alleen de
+ * launcher-intent-filter, geen USB/NFC-intent-filters, geen zxing-CaptureActivity.
  *
  * Het pad komt uit de Gradle-koppeling in app/build.gradle.kts (systeemeigenschap horsesafe.releaseManifest).
  * Ontbreekt die, dan faalt de test (fail-closed) in plaats van stil over te slaan.
@@ -54,11 +55,11 @@ class ReleaseManifestTest {
         val perms = elements("uses-permission").mapNotNull { it.a("name") }.toSet() +
             elements("uses-permission-sdk-23").mapNotNull { it.a("name") }
         val forbidden = setOf(
-            "android.permission.INTERNET",
             "android.permission.ACCESS_NETWORK_STATE",
             "android.permission.ACCESS_WIFI_STATE",
-            "android.permission.USE_BIOMETRIC",
             "android.permission.USE_FINGERPRINT",
+            "android.permission.POST_NOTIFICATIONS",
+            "com.google.android.c2dm.permission.RECEIVE",
             "android.permission.REQUEST_INSTALL_PACKAGES",
             "android.permission.READ_EXTERNAL_STORAGE",
             "android.permission.WRITE_EXTERNAL_STORAGE",
@@ -70,6 +71,10 @@ class ReleaseManifestTest {
             "android.permission.DETECT_SCREEN_CAPTURE",
             "android.permission.DETECT_SCREEN_RECORDING",
             "nl.icthorse.horsesafe.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION",
+            // deel 2 (HARDWARE_KEYS §13.9, §7.2)
+            "android.permission.INTERNET",
+            "android.permission.USE_BIOMETRIC",
+            "android.permission.CAMERA",
         )
         assertEquals("permissieset release", allowed, perms)
         assertFalse(manifestCode.contains("DEVICE_CREDENTIAL"))
@@ -82,6 +87,13 @@ class ReleaseManifestTest {
         val testOnly = application.a("testOnly")
         assertTrue("release is testOnly", testOnly == null || testOnly == "false")
         assertEquals("false", application.a("usesCleartextTraffic"))
+        assertEquals("@xml/network_security_config", application.a("networkSecurityConfig"))
+    }
+
+    @Test fun cameraNietVerplicht() {
+        val cam = elements("uses-feature").filter { (it.a("name") ?: "").startsWith("android.hardware.camera") }
+        assertTrue("camera-features", cam.isNotEmpty())
+        cam.forEach { assertEquals("${it.a("name")} required", "false", it.a("required")) }
     }
 
     @Test fun eenExportedComponentMetAlleenLauncherFilter() {
@@ -106,7 +118,7 @@ class ReleaseManifestTest {
 
         val text = manifestCode
         listOf("InitializationProvider", "USB_DEVICE_ATTACHED", "NDEF_DISCOVERED", "TECH_DISCOVERED", "TAG_DISCOVERED", "device_filter",
-            "OtpActivity", "YubiKeyPromptActivity", "ProfileInstallReceiver")
+            "OtpActivity", "YubiKeyPromptActivity", "ProfileInstallReceiver", "CaptureActivity", "firebase", "c2dm")
             .forEach { assertFalse("release-manifest bevat $it", text.contains(it)) }
     }
 }

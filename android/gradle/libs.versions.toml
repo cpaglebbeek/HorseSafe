@@ -1,5 +1,6 @@
-# HorseSafe Android (0.3.0-Miller deel 1). Sjabloon: HorseAPK/android.
-# Bewust GEEN netwerkbibliotheken (geen okhttp/retrofit/ktor): de app heeft geen INTERNET.
+# HorseSafe Android (0.3.0-Miller deel 1, 0.3.4-Miller deel 2). Sjabloon: HorseAPK/android.
+# Bewust GEEN netwerkbibliotheken (geen okhttp/retrofit/ktor): deel 2 (telefoon koppelen) gebruikt de
+# platform-HttpsURLConnection in net/, alleen naar icthorsecloud.nl (network-security-config met pins).
 [versions]
 agp = "8.7.3"
 kotlin = "2.0.21"
@@ -12,6 +13,13 @@ kotlinxCoroutines = "1.9.0"
 # SHA-256 van de vier artefacten wordt gecontroleerd door :app:verifyYubikitHashes.
 yubikit = "3.0.1"
 junit = "4.13.2"
+# Deel 2 (HARDWARE_KEYS §7.2): biometrie (alleen BIOMETRIC_STRONG + CryptoObject) en QR-scanner zonder GMS.
+biometric = "1.2.0-alpha05"
+fragmentKtx = "1.8.5"
+# zxing-android-embedded 4.3.0 met zijn eigen core-versie 3.4.1; SHA-256 van beide gecontroleerd door
+# :app:verifyZxingHashes (zelfde patroon als yubikit).
+zxingEmbedded = "4.3.0"
+zxingCore = "3.4.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -31,6 +39,10 @@ yubikit-core = { group = "com.yubico.yubikit", name = "core", version.ref = "yub
 yubikit-fido = { group = "com.yubico.yubikit", name = "fido", version.ref = "yubikit" }
 yubikit-management = { group = "com.yubico.yubikit", name = "management", version.ref = "yubikit" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
+androidx-fragment-ktx = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragmentKtx" }
+zxing-android-embedded = { group = "com.journeyapps", name = "zxing-android-embedded", version.ref = "zxingEmbedded" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxingCore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

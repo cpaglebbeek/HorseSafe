@@ -13,6 +13,9 @@ pyotp>=2.9,<3
 cryptography>=43,<46
 # v0.2.0-Koblitz: WebAuthn-verificatie (trekt cbor2, pyOpenSSL, pyasn1 mee); getest: 2.7.1 + cryptography 45.0.7
 webauthn>=2.2,<3
+# v0.3.4-Miller: ASN.1 van de Android key-description (attestation). Kwam al mee met webauthn;
+# nu direct geïmporteerd, dus expliciet en exact vastgezet. Getest: 0.6.4 + webauthn 2.7.1.
+pyasn1==0.6.4
 
 # Dev / test
 pytest>=8

@@ -27,8 +27,8 @@ _B64URL_CHARS = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0
 _SEALED_KEYS = frozenset({"v", "kid", "epk", "iv", "ct"})
 
 _COLS = (
-    "id, user_id, vault_id, kind, label, status, credential_id, cose_public_key, aaguid, att_fmt, "
-    "sign_count, prf_salt, public_key, created_at, updated_at, last_used_at, "
+    "id, user_id, vault_id, kind, label, status, device_id, credential_id, cose_public_key, "
+    "aaguid, att_fmt, sign_count, prf_salt, public_key, created_at, updated_at, last_used_at, "
     "release_requested_at, release_at, release_consumed_at, blocked_at, blocked_by"
 )
 
@@ -130,6 +130,15 @@ def public_key_object(key: dict[str, Any]) -> dict[str, Any]:
         "updated_at": key["updated_at"],
         "last_used_at": key.get("last_used_at"),
         "recovery": recovery,
+        "device": (
+            {
+                "id": key["device_id"],
+                "label": key.get("device_label"),
+                "model": key.get("device_model"),
+            }
+            if key["kind"] == "phone" and key.get("device_id")
+            else None
+        ),
     }
 
 
@@ -139,10 +148,15 @@ def public_key_object(key: dict[str, Any]) -> dict[str, Any]:
 async def list_keys(
     conn: aiosqlite.Connection, user_id: str, vault_id: str
 ) -> list[dict[str, Any]]:
-    """Sleutels van een vault, oplopend op created_at, zonder 'revoked'."""
+    """Sleutels van een vault, oplopend op created_at, zonder 'revoked'.
+
+    Telefoonsleutels krijgen ``device_label``/``device_model`` mee (Miller, §13.4)."""
+    cols = ", ".join(f"k.{c.strip()}" for c in _COLS.split(","))
     cur = await conn.execute(
-        f"SELECT {_COLS} FROM vault_keys WHERE user_id = ? AND vault_id = ? "  # noqa: S608
-        "AND status != 'revoked' ORDER BY created_at, rowid",
+        f"SELECT {cols}, d.label AS device_label, d.model AS device_model "  # noqa: S608
+        "FROM vault_keys k LEFT JOIN devices d ON d.id = k.device_id "
+        "WHERE k.user_id = ? AND k.vault_id = ? AND k.status != 'revoked' "
+        "ORDER BY k.created_at, k.rowid",
         (user_id, vault_id),
     )
     return [dict(r) for r in await cur.fetchall()]

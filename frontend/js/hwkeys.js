@@ -103,6 +103,7 @@
     key_pin_mismatch: 'De publieke sleutel van een gekoppelde sleutel wijkt af van wat je kluis bij het koppelen vastlegde. Er is mogelijk met de server geknoeid; er is niets verzegeld. Verwijder die sleutel en koppel hem opnieuw.',
     key_not_pinned: 'Een gekoppelde sleutel staat niet in je kluis vastgelegd (koppelen niet afgerond, of de kluis is buiten HorseSafe bewerkt); er is niets verzegeld. Verwijder die sleutel en koppel hem opnieuw.',
     pin_save_failed: 'De sleutel kon niet in je kluis worden vastgelegd; hij is niet gekoppeld. Probeer het opnieuw.',
+    key_pin_conflict: 'Dit sleutelnummer staat al met een andere sleutel in je kluis vastgelegd. Er is mogelijk met de server geknoeid; er is niets vastgelegd of gekoppeld.',
     rekey_unknown: 'Er kwam geen duidelijk antwoord van de server; onbekend of het wijzigen is doorgevoerd.',
     rekey_not_applied: 'Het wijzigen is niet doorgevoerd (de server gaf geen duidelijk antwoord). Je huidige wachtwoord/keyfile blijft gelden; probeer het opnieuw.',
   };
@@ -481,12 +482,22 @@
     }
   }
 
-  /** Leg key_id → public_key vast in de geopende kluis (in RAM; de aanroeper slaat de kluis op). */
+  /**
+   * Leg key_id → public_key vast in de geopende kluis (in RAM; de aanroeper slaat de kluis op).
+   * Een bestaande pin wordt NOOIT door een andere publieke sleutel vervangen (key_pin_conflict): het key_id komt
+   * van de server, en een overschreven pin zou reseal/rekey naar een sleutel van de aanvaller laten verzegelen.
+   * Dezelfde sleutel opnieuw vastleggen mag (idempotent).
+   */
   function pinKey(db, vaultId, keyId, publicKey) {
     if (!db || !db.meta) throw new HwKeyError('no_secret');
+    if (typeof keyId !== 'string' || !keyId) throw new HwKeyError('invalid_request');
     if (typeof publicKey !== 'string' || b64uDecode(publicKey).length !== 32) throw new HwKeyError('invalid_public_key');
+    const current = readPins(db, vaultId);
+    if (Object.prototype.hasOwnProperty.call(current, keyId) && current[keyId] !== publicKey) {
+      throw new HwKeyError('key_pin_conflict', undefined, { key_id: keyId });
+    }
     if (!db.meta.customData) db.meta.customData = new Map();
-    const keys = Object.assign({}, readPins(db, vaultId), { [keyId]: publicKey });
+    const keys = Object.assign({}, current, { [keyId]: publicKey });
     db.meta.customData.set(PIN_FIELD, { value: JSON.stringify({ v: 1, vault_id: vaultId, keys }), lastModified: new Date() });
   }
 

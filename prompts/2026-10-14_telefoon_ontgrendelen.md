@@ -3,7 +3,7 @@ date: 2026-10-14
 repo: HorseSafe
 session: telefoon_ontgrendelen
 status: pending
-resume: "verder met HorseSafe: bouwplan fase A (Miller deel 2, 0.3.4)"
+resume: "verder met HorseSafe: akkoord A12 deploy + publicatie 0.3.4, dan veldtest koppelen; daarna fase B Montgomery"
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 linked_actions: [telefoon-ontgrendelen]
@@ -33,5 +33,13 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
   browser (k_srv naar server, k_web blijft in browser) — anders kan de server de telefoonsleutels verwisselen.
 - Backend, app en web worden parallel gebouwd tegen §13 (niet gecommit tot integratie en review).
 
+- Agents backend/app/web klaar; integratie: userAuthType strikt == 2 (advies backend-agent, E2), Gen-Y-pins YE/YR toegevoegd
+  (icthorsecloud.nl draait op YE1 → Root YE; pins zelf nagerekend), smoke.sh gerepareerd (vals ROOD: FLAG_SECURE-grep
+  en `monkey` rc 251 op Android 14).
+- Adversariële review: 0 kritiek/hoog; middel = app wiste geldige koppeling bij 401 → gefixt, plus 9 laag.
+- Eindmeting: pytest 269, node 87, Playwright 12, JVM 337, lint 0 errors; release vc 304 sha 3e0419c2…c20c,
+  verify_apk GROEN; smoke Android 16+14 groen; emulator zonder vinger-HAL → M18 correct.
+
 ## Open
+- A12 deploy + publicatie (apart akkoord), daarna veldtest op echte telefoon.
 - Bouwplan fase A (Miller deel 2, 0.3.4) als WhatIf + akkoord.

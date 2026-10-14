@@ -4,7 +4,7 @@ import nl.icthorse.horsesafe.flow.Profile
 import nl.icthorse.horsesafe.flow.State
 import nl.icthorse.horsesafe.flow.Written
 
-/** Schermen van deel 1. [code] is de vaste naam uit het bouwplan. */
+/** Schermen van deel 1 (M0-M13) en deel 2 (M14-M19). [code] is de vaste naam uit het bouwplan. */
 enum class Screen(val code: String, val titel: String, val holdsSecret: Boolean = false) {
     M0_START("M0", "Start"),
     M1_CHECKLIST("M1", "Checklist"),
@@ -21,6 +21,14 @@ enum class Screen(val code: String, val titel: String, val holdsSecret: Boolean 
     M11_STOP("M11", "Stop"),
     M12_ABOUT("M12", "Over"),
     M13_RESET("M13", "Sleutel wissen"),
+    // Deel 2 (0.3.4): telefoon koppelen. De stap binnen het koppelen bepaalt welke van deze schermen
+    // getoond wordt (PairingViewModel); HorseSafeViewModel staat dan op M14_PAIR.
+    M14_PAIR("M14", "Telefoon koppelen"),
+    M15_PAIR_SCAN("M15", "QR-code scannen"),
+    M16_PAIR_SAS("M16", "Vergelijk de code"),
+    M17_PAIRED("M17", "Gekoppeld"),
+    M18_BIO_REQUIRED("M18", "Vingerafdruk nodig"),
+    M19_REPAIR("M19", "Opnieuw koppelen"),
     BUSY("—", "Bezig"),
 }
 

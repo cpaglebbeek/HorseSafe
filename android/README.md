@@ -1,7 +1,9 @@
-# HorseSafe Android — 0.3.0-Miller deel 1
+# HorseSafe Android — 0.3.0-Miller deel 1 + 0.3.4-Miller deel 2
 
-YubiKey inrichten en keuren op de telefoon. Geen INTERNET-permissie, geen server, geen back-up.
-Ontwerp en eisen: `docs/HARDWARE_KEYS.md` (§4.1, §7) en het bouwplan Miller deel 1.
+Deel 1: YubiKey inrichten en keuren op de telefoon, zonder netwerk en zonder back-up.
+Deel 2 (0.3.4): deze telefoon koppelen aan HorseSafe (QR + twee vingeraanrakingen + SAS van 6 cijfers),
+met INTERNET alleen naar `icthorsecloud.nl`.
+Ontwerp en eisen: `docs/HARDWARE_KEYS.md` (§4.1, §7; deel 2: **§13 is bindend**, plus §2, §7.2 en §12.5).
 
 ## Wat de app doet (deel 1)
 
@@ -14,6 +16,78 @@ Ontwerp en eisen: `docs/HARDWARE_KEYS.md` (§4.1, §7) en het bouwplan Miller de
 - Rapport zonder geheimen (whitelist), in de app en via de opslagkiezer te exporteren en te importeren.
 
 Niet in deel 1: ontgrendelen, koppelen, de device-API, Keystore-sleutels, applets of NFC uitzetten.
+
+## Wat de app doet (deel 2, 0.3.4 — telefoon koppelen, §13.3 stap 2, 5, 6)
+
+- M0 "Telefoon koppelen" → M14-M19 (`docs/screens/M14..M19`).
+- Vooraf `canAuthenticate(BIOMETRIC_STRONG)`; anders blokkerend scherm M18. Geen toestel-PIN als alternatief.
+- QR `hs1p:<pairing_id>.<b64u(s)>` scannen (zxing, zonder GMS, als view onder FLAG_SECURE; CAMERA pas bij
+  het scannen gevraagd). Daaruit k_srv, k_web en att_challenge (§13.1); `s` en de afgeleide sleutels worden na
+  de claim gewist.
+- Keystore (§13.2): K_dev (EC P-256, geen UV, unlockedDeviceRequired), K_biosig (EC P-256, per gebruik alleen
+  BIOMETRIC_STRONG, invalidated-by-enrollment), K_wrap (AES-256-GCM, idem + unlockedDeviceRequired); StrongBox
+  eerst, bij `StrongBoxUnavailableException` of een andere `ProviderException` tijdens de StrongBox-generatie
+  terugval op de TEE; attestation met att_challenge; een software-sleutel wordt geweigerd. Twee sleutelsets
+  (A/B): een nieuwe koppeling maakt haar sleutels in de vrije set en wisselt pas na een geslaagde claim (201)
+  om; mislukt de claim, dan worden alleen de nieuwe sleutels gewist en blijft de oude koppeling staan.
+- Label/model: stuurtekens, Unicode-opmaaktekens (Cf), losse surrogaten en U+2028/U+2029 eruit (§13.5 stap 1).
+- sk_c = 32 willekeurige bytes (X25519 via platform-XDH); vinger 1 wikkelt sk_c met K_wrap, vinger 2 tekent het
+  transcript met K_biosig; claim met mac_srv + mac_web + sig_biosig + beide attestatieketens. De app rekent
+  de SAS zelf en breekt af als de server een andere SAS meldt.
+- Daarna `GET /device/v1/status` (device-handtekening D met K_dev, §13.6) elke 2 s, max 10 min, tot `active`
+  → M17 "Gekoppeld". Alleen `revoked` (200) → alles lokaal wissen. 401/404/netwerkfout = tijdelijk: melding,
+  niets gewist; bij 401 met een `Date`-header > 60 s naast de toestelklok een klokwaarschuwing.
+- Proef "Kopie openen" (stap 6): sealed ophalen → vinger → sk_c uitpakken → Seal_v2 openen met de eigen
+  vault_id/key_id → alleen vormcontrole {ph,kh} → buffers wissen. Niets getoond of bewaard.
+- `KeyPermanentlyInvalidatedException` (vingerafdrukken gewijzigd) → koppelbestand en sleutels lokaal gewist,
+  scherm M19 "Opnieuw koppelen".
+- Toestelopslag: `noBackupFilesDir/device/device.json` (device_id, SAS, label, sleutels, sk_c ALLEEN gewikkeld);
+  allowBackup=false en de data-extraction-rules sluiten alles uit.
+- **Omgevingsbewaking:** de blokkade van deel 1 (a11y, ADB/ontwikkelaarsopties, multi-window, extern scherm,
+  opname) geldt alleen voor de PIN-schermen M4/M5/M6/M8/M13. Koppelen toont geen PIN en wordt er niet door
+  geblokkeerd (bewuste keuze: het ontwerp eist het niet; de SAS is geen geheim, het QR-geheim staat niet in
+  beeld). FLAG_SECURE geldt wel overal, ook voor het camerabeeld.
+
+### Pakketten (deel 2)
+
+| Pakket | Inhoud |
+|---|---|
+| `crypto/` | `B64u` (strikt, canoniek), `Hkdf` (HKDF-SHA256/HMAC), `X25519` (platform-XDH; Tink niet nodig), `SealV2` (openen; verzegelen alleen voor tests), `PairV1` (k_srv, k_web, att_challenge, transcript, MAC's, SAS) |
+| `net/` | `HttpsTransport` (platform-HttpsURLConnection; alleen https://icthorsecloud.nl, geen redirects/cache, max 64 KiB), `DeviceAuth` (handtekening D), `DeviceApi` (claim, status, sealed; strikte JSON) |
+| `keystore/` | `PhoneKeys` (contract), `AndroidPhoneKeys` (K_dev, K_biosig, K_wrap volgens §13.2) |
+| `biometric/` | `StrongGate` (alleen BIOMETRIC_STRONG, altijd CryptoObject, "Annuleren"), `StrongGateFinger` |
+| `pairing/` | `PairingQr`, `PairingFlow` (claim, awaitActive, refresh, trialOpen, keysValid, wipeLocal), `DeviceStore`, `QrScanner` |
+| `ui/` | `PairingViewModel`, `screens/PairingScreens.kt` (M14-M19) |
+
+`MainActivity` is sinds deel 2 een `FragmentActivity` (nodig voor de vingerprompt van androidx.biometric).
+
+### Permissies en netwerk (deel 2)
+
+- Nieuw: `INTERNET`, `USE_BIOMETRIC`, `CAMERA` (feature `android.hardware.camera` met `required=false`).
+  Blijven weg: `ACCESS_NETWORK_STATE`, `USE_FINGERPRINT`, `REQUEST_INSTALL_PACKAGES`, `POST_NOTIFICATIONS`, FCM.
+- `res/xml/network_security_config.xml`: base-config zonder vertrouwensankers en zonder cleartext (elke andere
+  host faalt bij TLS); domain-config `icthorsecloud.nl` (zonder subdomeinen) met systeemankers en pin-set
+  (vervalt 2028-12-31) op de SPKI-SHA-256 van ISRG Root X1 `C5+lpZ7tcVwmwQIMcRtPbsQtWLABXhQzejna0wHFr8M=` en
+  ISRG Root X2 `diGVwiVYbubAI3RW4hB9xU8e/CH2GnkuvVFZE8zmgzI=` (14-10-2026 berekend uit
+  `letsencrypt.org/certs/isrgrootx1.pem` en `isrg-root-x2.pem`). Geen debug-overrides.
+- Basis-URL vast in BuildConfig: `API_BASE_URL = https://icthorsecloud.nl/HorseSafe/api`; de device-handtekening
+  tekent PATH vanaf `/api` (bv. `/api/device/v1/status`).
+- **Let op (pins):** icthorsecloud.nl serveert nu de Let's Encrypt-"Gen Y"-keten
+  (leaf → YE1 → ISRG Root YE, kruislings getekend door X2 → X2 door X1). Zolang Root YE geen systeemanker is,
+  eindigt de gecontroleerde keten bij X2 of X1 en klopt de pin. Neemt Android Root YE (of YR) op in de
+  systeemankers, dan eindigt de keten daar en faalt de pin. Mogelijke contractwijziging: Root YE
+  `sCkq5UWXjg+7mKu9lMhhYF5bGLsy7VI/UNW3tccdR7w=` en Root YR `fk6IOKit1ild5647BH06ujSIq5XbCgqlbYl6ANhhi88=`
+  aan de pin-set toevoegen. Nu bewust NIET gedaan (§13.9 noemt alleen X1 + X2).
+
+### Open punten in het contract (deel 2)
+
+- §13 noemt de JSON-namen van de attestatieketens in het claim-request niet; de app gebruikt `k_dev_chain` en
+  `k_biosig_chain`, gelijk aan `PairingClaim` in `backend/models/device.py`. Graag in §13.4/§13.5 vastleggen.
+- §7.2 noemt bij `KeyPermanentlyInvalidatedException` ook "server-status `revoked`"; §13 heeft geen
+  device-eigen intrekking. De app wist alleen lokaal en vraagt de gebruiker het toestel op de laptop te
+  verwijderen (M19).
+- `androidx.biometric:1.2.0-alpha05` (§7.2) is een alpha-versie en haalt appcompat 1.2.0 binnen. De platform-
+  `android.hardware.biometrics.BiometricPrompt` (API 30+) zou zonder extra bibliotheek kunnen; nu contract gevolgd.
 
 ## Bouwen
 
@@ -29,6 +103,11 @@ cd android
   (bouwt op de build-box). Het release-artefact voor publicatie bouw je alleen lokaal op HC55, want
   alleen daar tekent de juiste sleutel.
 - `verifyYubikitHashes`: SHA-256 van de vier yubikit-3.0.1-artefacten (geen `verification-metadata.xml`).
+- `verifyZxingHashes` (deel 2, hangt ook aan `preBuild`): SHA-256 van `zxing-android-embedded-4.3.0.aar`
+  (`4ab03353…1a33`) en `zxing core-3.4.1.jar` (`acfa3033…f8d`), gekruist met de `.sha1` van Maven Central.
+- Nieuwe afhankelijkheden deel 2: `androidx.biometric:biometric:1.2.0-alpha05` (haalt o.a. appcompat 1.2.0
+  binnen), `androidx.fragment:fragment-ktx:1.8.5`, `com.journeyapps:zxing-android-embedded:4.3.0`,
+  `com.google.zxing:core:3.4.1`. Geen OkHttp, geen Tink, geen WorkManager, geen GMS/FCM.
 - `verifyNoSlf4jProvider`: de build faalt als een afhankelijkheid een slf4j-provider binnenhaalt (A-13).
 - Versie komt uit `../version.json`: `versionName` = `X.Y.Z-Codenaam`, `versionCode` = `X*10000 + Y*100 + Z`.
 
@@ -52,8 +131,29 @@ cd android
   (aangeroepen door `flow/ResetFlow.kt`), geen `deleteCredential`/`updateDeviceConfig`/`setMode`, geen `getCachedInfo`; `icthorsecloud.nl` alleen in `ConfigOps.kt` en
   gelijk aan `backend/config.py`).
 - **Release-manifest:** `ReleaseManifestTest` leest de merged release-manifest (AGP
-  `SingleArtifact.MERGED_MANIFEST`) en eist de exacte permissieset, geen provider/service en precies één
-  exported activity (MAIN/LAUNCHER).
+  `SingleArtifact.MERGED_MANIFEST`) en eist de exacte permissieset (sinds deel 2 met INTERNET, USE_BIOMETRIC,
+  CAMERA), `networkSecurityConfig`, camera niet verplicht, geen provider/service, geen zxing-`CaptureActivity`
+  en precies één exported activity (MAIN/LAUNCHER).
+- **Deel 2 (JVM, zonder netwerk, nooit productie):**
+  - `crypto/PairV1VectorTest`: alle vectoren uit `specs/testvectors/pair_v1.json` (k_srv, k_web, QR,
+    att_challenge, transcript, mac_srv, mac_web, sas) plus de negatieve vector en de transcript-codering;
+  - `crypto/SealV2VectorTest`: `seal_v2.json` (PRF → sleutelpaar, AAD/pt/k/sealed byte voor byte, openen,
+    alle negatieve vectoren `unseal_failed`) plus extra vorm- en lage-orde-punt-gevallen; `B64uTest`;
+  - `net/DeviceAuthTest` (exacte getekende tekst §13.6, ECDSA-controle), `net/DeviceApiTest` (nep-transport:
+    paden, headers, strikte antwoorden, foutcodes, alleen eigen host);
+  - `pairing/PairingQrTest`, `pairing/DeviceStoreTest`, `pairing/PairingFlowTest` (end-to-end met
+    nep-Keystore, nep-vinger en een nep-server die mac_srv, sig_biosig, att_challenge en de
+    device-handtekening narekent; annuleren, andere SAS, intrekken, ongeldige sleutels);
+  - `PairingSourcePolicyTest`: `yubikey/`, `pin/`, `flow/` importeren niets uit `net/` (of `pairing/`,
+    `keystore/`, `biometric/`) en geen java.net/okhttp; netwerkcode alleen in `net/`; `BiometricPrompt` alleen
+    in `biometric/` met BIOMETRIC_STRONG, "Annuleren" en CryptoObject; Keystore-eigenschappen; de
+    network-security-config (host, cleartext, pins, vervaldatum); host gelijk in BuildConfig, `net/` en rpId.
+  - `SourcePolicyTest` (DEVICE_CREDENTIAL nergens; INTERNET alleen als één manifestregel) en
+    `YubikeyFlowSourcePolicyTest` (domeinnaam alleen in `ConfigOps.kt`, `net/HttpTransport.kt` en
+    `network_security_config.xml`) zijn bijgewerkt.
+- **Niet automatisch getest (deel 2):** echte Keystore/StrongBox/attestation, BiometricPrompt, de camera,
+  Conscrypt-XDH op het toestel en TLS/pinning tegen de echte server. Dat is de toesteltest (Fold6) met de
+  backend van 0.3.4; tot dan geen release.
 - **Nog niet:** `androidTest` (instrumented, met fake-`KeyLink`) bestaat niet; de emulator-smoke is niet
   gedraaid; niets is op een echt toestel of een echte sleutel getest.
 
@@ -110,8 +210,8 @@ bash ~/Meta_Master/tools/apk-publish.sh HorseSafe /tmp/HorseSafe-v0.3.0-Miller-r
   script controleert ook dat het pakket `nl.icthorse.horsesafe` het segment `horsesafe` bevat.
 - Publiceer het **release**-artefact (niet-debuggable, geminificeerd), nooit de debug-APK: een
   debuggable build geeft JDWP- en `run-as`-toegang tot het geheugen met de PIN.
-- De app heeft geen INTERNET en dus geen eigen update-module: updates lopen via de HorseAPK-app. Nog te
-  meten: of HorseAPK het nieuwe project HorseSafe oppakt en de update aanbiedt (signer `32491e0f…`).
+- De app heeft (ook met INTERNET in deel 2) geen eigen update-module: updates lopen via de HorseAPK-app. Nog
+  te meten: of HorseAPK het nieuwe project HorseSafe oppakt en de update aanbiedt.
 - Een APK van de build-box (`remote-gradle.sh`) is met een wegwerp-keystore getekend en komt niet terug
   naar HC55: nooit publiceren.
 
@@ -145,6 +245,19 @@ Volgorde is verplicht: **eerst een wisbare testsleutel**, pas daarna de echte sl
    blokkeert anders de PIN-schermen), niemand kijkt mee, pigmentpen en het formulier klaar.
 5. Na elke inrichting, PIN-wijziging of keuring met PIN: **"Afsluiten"** (wist de PIN en beëindigt de app).
 6. Koppel de sleutel daarna in Chrome op de laptop (scherm S14).
+
+## Checklist deel 2 (telefoon koppelen, Fold6) — na de backend van 0.3.4
+
+1. Release-build van HC55 (debug-pakket `.debug` wordt door de server zonder testvlag geweigerd, §13.5).
+2. M18: zonder vingerafdruk blokkeert de app; met alleen gezichtsherkenning ook.
+3. Koppelen: QR scannen, twee vingers, SAS gelijk op laptop en telefoon, "Klopt" → M17. Controleer in de
+   web-UI `security_level` (verwacht StrongBox op de Fold6) en `strongbox`.
+4. Proef "Kopie openen" → "Kopie klopt".
+5. Annuleren bij vinger 1 en vinger 2: niets blijft achter (opnieuw openen toont M14).
+6. Nieuwe vingerafdruk toevoegen in Android → app openen → M19; oude toestel op de laptop verwijderen.
+7. Toestel op de laptop verwijderen → M17 "Status verversen" → melding en lokaal gewist.
+8. Pinning: met een proxy/eigen CA (gebruikers-CA) moet elke verbinding falen; vliegtuigmodus → nette melding.
+9. FLAG_SECURE op M15 (camerabeeld) met Link to Windows / schermopname: zwart.
 
 ## PIN-opslag (regels)
 

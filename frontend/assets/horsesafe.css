@@ -220,3 +220,40 @@ footer {
   color: var(--hs-fg-muted);
   font-size: 0.75rem;
 }
+
+/* v0.3.4-Miller — S17 telefoon koppelen */
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.pair-panel {
+  margin-top: var(--hs-sp-3);
+  padding: var(--hs-sp-4);
+  border: 1px solid var(--hs-border);
+  border-radius: var(--hs-br-lg);
+  background: var(--hs-bg-elevated);
+}
+.pair-qr {
+  width: 100%;
+  max-width: 280px;
+  margin: var(--hs-sp-3) auto;
+  background: #ffffff;
+  border-radius: var(--hs-br-md);
+}
+.pair-qr svg { display: block; width: 100%; height: auto; }
+.pair-countdown { font-family: var(--hs-font-mono); font-variant-numeric: tabular-nums; color: var(--hs-fg-primary); }
+.pair-sas {
+  font-family: var(--hs-font-mono);
+  font-size: clamp(2.25rem, 12vw, 3.5rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  color: var(--hs-fg-primary);
+  margin: var(--hs-sp-3) 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pair-device { margin: var(--hs-sp-3) 0; }
+#pair-step-sas .actions button { min-width: 8rem; min-height: 44px; font-size: 1rem; }
+
+@media (max-width: 480px) {
+  .pair-panel { padding: var(--hs-sp-3); }
+  #pair-step-sas .actions button { flex: 1 1 100%; }
+}

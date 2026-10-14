@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import time
 from collections import defaultdict, deque
 from collections.abc import Awaitable, Callable
@@ -21,12 +22,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         "/vault": (60, 60),  # 60 per minuut (alle vault-routes samen)
     }
     DEFAULT_LIMIT = (300, 60)  # 300/min default
+    # Patronen gaan vóór de prefixen. Claim is publiek (alleen mac): 10 per 10 min per IP
+    # (docs/HARDWARE_KEYS.md §13.4). Pollen van /devices/pairings/{id} valt onder de default.
+    PATTERNS = ((re.compile(r"^/devices/pairings/[^/]+/claim$"), "pairing_claim", (10, 600)),)
 
     def __init__(self, app: object) -> None:
         super().__init__(app)  # type: ignore[arg-type]
         self._hits: dict[str, deque[float]] = defaultdict(deque)
 
     def _key(self, ip: str, path: str) -> tuple[str, tuple[int, int]]:
+        for pattern, name, plimit in self.PATTERNS:
+            if pattern.match(path):
+                return f"{ip}:{name}", plimit
         for prefix, limit in self.LIMITS.items():
             if path.startswith(prefix):
                 return f"{ip}:{prefix}", limit

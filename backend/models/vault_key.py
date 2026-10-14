@@ -109,15 +109,27 @@ class RecoveryInfo(BaseModel):
     blocked_by: str | None = None
 
 
-class VaultKeyPublic(BaseModel):
-    """Het sleutelobject (§12.6.3) — nooit ``sealed``, ``cose_public_key`` of ``sign_count``."""
+class DeviceRef(BaseModel):
+    """Het toestel achter een telefoonsleutel (v0.3.4-Miller, §13.4)."""
 
     id: str
-    kind: KeyKind
+    label: str
+    model: str | None = None
+
+
+class VaultKeyPublic(BaseModel):
+    """Het sleutelobject (§12.6.3) — nooit ``sealed``, ``cose_public_key`` of ``sign_count``.
+
+    Telefoonsleutels (Miller, §13.4) hebben geen WebAuthn-velden (``credential_id``, ``prf_salt``
+    en ``aaguid`` zijn ``null``) maar wel ``device``. Het request-type ``KeyKind`` blijft zonder
+    ``phone``: een telefoon koppel je alleen via ``/devices/pairings``."""
+
+    id: str
+    kind: Literal["bio", "recovery", "phone"]
     label: str
     status: Literal["active", "blocked"]
-    credential_id: str
-    prf_salt: str
+    credential_id: str | None
+    prf_salt: str | None
     public_key: str
     aaguid: str | None = None
     authenticator: str | None = None
@@ -125,6 +137,7 @@ class VaultKeyPublic(BaseModel):
     updated_at: int
     last_used_at: int | None = None
     recovery: RecoveryInfo | None = None
+    device: DeviceRef | None = None
 
 
 class VaultKeyList(BaseModel):

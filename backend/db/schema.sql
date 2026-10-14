@@ -3,6 +3,9 @@
 -- Schema-versie 5: omvat alle migrations 001-005 in één fresh-install-blob.
 -- Bestaande installs migreren via db/migrations/*.sql. De DDL van 005 hieronder is letterlijk
 -- gelijk aan migrations/005_vault_keys.sql (gecontroleerd door tests/test_schema.py).
+-- Migraties vanaf 006 (v0.3.4-Miller: ALTER TABLE devices, pairings, device_nonces) staan hier
+-- bewust NIET in: init_db draait dit bestand bij elke start opnieuw en ALTER TABLE is niet
+-- idempotent. Ook een verse installatie krijgt ze via migrate.py (lifespan: init_db -> run_migrations).
 
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;

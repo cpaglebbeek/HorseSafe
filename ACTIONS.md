@@ -8,7 +8,11 @@ Doel Christian: HorseSafe op de laptop openen zonder YubiKey, alleen met de tele
 
 - [x] ~~**Besluiten** — volgorde omgedraaid, één app met INTERNET, code van 6 cijfers + commitment-SAS i.p.v. QR~~ ✅ 14-10
 - [x] ~~**Besluit R4 release-keystore**~~ ✅ 14-10 — eigen keystore (a), uitvoering in fase A
-- [ ] **Fase A — Miller deel 2 (0.3.4)**: bouwplan (WhatIf) + akkoord; migratie 006, device-API, key-attestation, web "Telefoon koppelen", app INTERNET/QR/SAS/Keystore/Seal.kt, emulator `hb-horsesafe`
+- [x] ~~**Fase A — Miller deel 2 (0.3.4) gebouwd**~~ ✅ 14-10 — contract §13; pytest 269, node 87, Playwright 12, JVM 337, lint 0 errors; release vc 304 sha `3e0419c2…c20c` (signer fbd6b151…), verify_apk GROEN, smoke Android 16+14 groen; adversariële review: 1 middel + 9 laag gefixt
+- [ ] **A12 Deploy HC55** (backup, migratie 006, `/api/health` 0.3.4-Miller, `test_device_attestation:false`) — akkoord Christian
+- [ ] **A12 Publicatie HorseAPK** vc 304 — akkoord Christian; daarna app op Fold/Fairphone **verwijderen en opnieuw installeren** (nieuwe keystore; rapporten eerst exporteren)
+- [ ] **Veldtest koppelen** — echte telefoon + laptop: QR, 2× vinger, SAS vergelijken, "Kopie openen"; meet security level/StrongBox
+- [ ] **Later Miller:** noodsleutel blokkeren vanaf de telefoon, in-app update, androidTest, CI-job android, `/ModelArchDSL update`
 - [ ] **Fase B — Montgomery (0.4.0)**: contract §5 herschrijven volgens §11.2 + akkoord; migratie 007, approvals, web "Ontgrendel met telefoon", app goedkeuringskaart; veldtest laptop + telefoon
 
 ## 🆕 2026-10-12 — v0.3.0-Miller deel 1 (Android: YubiKey inrichten en keuren)

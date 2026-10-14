@@ -14,8 +14,9 @@ import org.junit.Test
  * - geen reset, deleteCredential, enableEnterpriseAttestation, updateDeviceConfig, setMode, deviceReset
  *   en geen getCachedInfo (kritiek 18: in eigen code volledig verboden);
  * - geen logging;
- * - `"icthorsecloud.nl"` in de hele main-tree alleen in `yubikey/api/ConfigOps.kt` (strings.xml en de
- *   UI-teksten noemen het domein niet), en gelijk aan `webauthn_rp_id` in `backend/config.py`.
+ * - `"icthorsecloud.nl"` in de hele main-tree alleen in `yubikey/api/ConfigOps.kt`, en sinds deel 2 in
+ *   `net/HttpTransport.kt` (toegestane host) en `res/xml/network_security_config.xml` (pins); strings.xml en
+ *   de UI-teksten noemen het domein niet. Gelijk aan `webauthn_rp_id` in `backend/config.py`.
  */
 class YubikeyFlowSourcePolicyTest {
     private val pkgRoot = listOf("src/main/java/nl/icthorse/horsesafe", "app/src/main/java/nl/icthorse/horsesafe")
@@ -71,7 +72,14 @@ class YubikeyFlowSourcePolicyTest {
             val t = f.readText()
             (if (f.extension == "xml") xmlCode(t) else code(t)).contains("icthorsecloud.nl")
         }.map { it.relativeTo(mainRoot).path.replace(File.separatorChar, '/') }
-        assertEquals(listOf("java/nl/icthorse/horsesafe/yubikey/api/ConfigOps.kt"), where)
+        assertEquals(
+            listOf(
+                "java/nl/icthorse/horsesafe/net/HttpTransport.kt",
+                "java/nl/icthorse/horsesafe/yubikey/api/ConfigOps.kt",
+                "res/xml/network_security_config.xml",
+            ),
+            where.sorted(),
+        )
     }
 
     @Test fun rpIdGelijkAanBackend() {

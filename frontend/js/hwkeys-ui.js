@@ -1,4 +1,6 @@
-/* HorseSafe hardware-sleutels — schermkoppeling vault.html v0.2.0-Koblitz (docs/HARDWARE_KEYS.md §8, §12.13) */
+/* HorseSafe hardware-sleutels — schermkoppeling vault.html v0.2.0-Koblitz (docs/HARDWARE_KEYS.md §8, §12.13)
+ * v0.3.4-Miller: telefoonsleutels (kind 'phone', §13) in de lijst; toestel verwijderen via DELETE /devices/{id}.
+ */
 (function () {
   'use strict';
 
@@ -48,10 +50,24 @@
   const find = (id) => (id ? ui.keys.find((k) => k.id === id) || null : null);
   const recState = (k) => (k && k.recovery ? k.recovery.state : null);
 
+  /** Soort + model voor tabel en bevestigingen. */
+  function kindText(k) {
+    if (k.kind === 'phone') return 'Telefoon';
+    return k.kind === 'bio' ? 'YubiKey Bio' : 'Noodsleutel';
+  }
+  function modelText(k) {
+    if (k.kind === 'phone') return (k.device && k.device.model) || '';
+    return k.authenticator || '';
+  }
+  /** Telefoon: het toestellabel uit de koppeling; anders het sleutellabel. */
+  function labelText(k) {
+    return (k.kind === 'phone' && k.device && k.device.label) || k.label;
+  }
+
   /** Status in gewone taal. */
   function statusText(k) {
     let s;
-    if (k.kind === 'bio') {
+    if (k.kind === 'bio' || k.kind === 'phone') {
       s = 'klaar';
     } else {
       const r = k.recovery || {};
@@ -189,16 +205,17 @@
     }
     const pins = UI.pins();
     body.innerHTML = ui.keys.map((k) => {
-      const kind = k.kind === 'bio' ? 'YubiKey Bio' : 'Noodsleutel';
-      const actions = k.kind === 'recovery'
-        ? recoveryButtons(k, { withDelete: true, withUnlock: false })
-        : `<button type="button" class="danger" data-delete="${esc(k.id)}">Verwijder</button>`;
-      const model = k.authenticator ? `<br><span class="muted">${esc(k.authenticator)}</span>` : '';
+      const kind = kindText(k);
+      let actions;
+      if (k.kind === 'recovery') actions = recoveryButtons(k, { withDelete: true, withUnlock: false });
+      else if (k.kind === 'phone' && k.device && k.device.id) actions = `<button type="button" class="danger" data-device="${esc(k.device.id)}" data-key-id="${esc(k.id)}">Toestel verwijderen</button>`;
+      else actions = `<button type="button" class="danger" data-delete="${esc(k.id)}">Verwijder</button>`;
+      const model = modelText(k) ? `<br><span class="muted">${esc(modelText(k))}</span>` : '';
       // Kluis open: klopt de publieke sleutel met wat de kluis bij het koppelen vastlegde? (reviewronde 2)
       const pin = UI.state.db ? HK.pinStatus(k, pins) : 'ok';
       const pinWarn = pin === 'mismatch' ? '<br><strong class="error">⚠ publieke sleutel gewijzigd — verwijderen en opnieuw koppelen</strong>'
         : pin === 'missing' ? '<br><strong class="error">⚠ niet in de kluis vastgelegd — verwijderen en opnieuw koppelen</strong>' : '';
-      return `<tr data-key="${esc(k.id)}"><td>${esc(k.label)}</td><td>${kind}${model}</td>
+      return `<tr data-key="${esc(k.id)}"><td>${esc(labelText(k))}</td><td>${kind}${model}</td>
         <td>${fmt(k.created_at)}</td><td>${fmt(k.last_used_at)}</td><td class="key-status">${esc(statusText(k))}${pinWarn}</td>
         <td>${actions}</td></tr>`;
     }).join('');
@@ -243,10 +260,10 @@
     if (!keys.length) return true;
     const now = Date.now() / 1000;
     const lines = keys.map((k) => {
-      const kind = k.kind === 'bio' ? 'YubiKey Bio' : 'Noodsleutel';
-      const model = k.authenticator ? `, ${k.authenticator}` : '';
+      const kind = kindText(k);
+      const model = modelText(k) ? `, ${modelText(k)}` : '';
       const recent = k.created_at && now - k.created_at < RECENT_KEY_SECONDS ? '  ⚠ RECENT GEKOPPELD' : '';
-      return `• ${k.label} (${kind}${model}), gekoppeld ${fmt(k.created_at)}${recent}`;
+      return `• ${labelText(k)} (${kind}${model}), gekoppeld ${fmt(k.created_at)}${recent}`;
     });
     return confirm(`Deze sleutels krijgen toegang tot ${what}:\n\n${lines.join('\n')}\n\n`
       + 'Herken je ze allemaal? Zo niet: kies Annuleren en verwijder eerst de sleutel die je niet herkent.');
@@ -374,6 +391,7 @@
     const t = ev.target.closest('button');
     if (!t || !t.dataset) return;
     const d = t.dataset;
+    if (d.device) { await removeDevice(d.device, d.keyId); return; }
     const id = d.request || d.cancel || d.block || d.unblock || d.recover || d.delete;
     if (!id) return;
     const k = find(id);
@@ -405,6 +423,25 @@
     }
   }
 
+  /** v0.3.4-Miller: telefoon ontkoppelen = toestel intrekken (§13.4 DELETE /devices/{id}; alle kopieën weg). */
+  async function removeDevice(deviceId, keyId) {
+    msg('keys-error', '');
+    msg('keys-status', '');
+    const k = find(keyId);
+    const name = k ? labelText(k) : 'dit toestel';
+    const others = ui.keys.filter((x) => x.kind === 'phone' && x.device && x.device.id === deviceId).length;
+    if (!confirm(`Telefoon "${name}" verwijderen?\n\nHet toestel wordt ingetrokken: het kan daarna geen enkele kluis meer `
+      + `openen en de verzegelde kopie${others > 1 ? 'ën' : ''} op de server ${others > 1 ? 'worden' : 'wordt'} gewist. `
+      + 'Je wachtwoord/keyfile blijft gewoon werken.')) return;
+    try {
+      await window.HorseSafePairing.revokeDevice(deviceId);
+      msg('keys-status', `✓ Telefoon "${name}" verwijderd.`);
+    } catch (e) {
+      msg('keys-error', window.HorseSafePairing.messageFor(e && (e.code === 'not_found' || e.code === 'api_404') ? { code: 'device_not_found' } : e));
+    }
+    await refresh();
+  }
+
   document.addEventListener('click', (ev) => {
     if (ev.target.closest('#recovery-alert, #recovery-list, #keys-body')) onClick(ev);
   });
@@ -426,6 +463,9 @@
   });
   document.addEventListener('horsesafe:locked', () => { $('keys-section').hidden = true; refresh(); });
   document.addEventListener('horsesafe:stale-copy', () => { ui.stale = true; renderAll(); });
+
+  // v0.3.4-Miller: pairing-ui.js ververst de lijst na een geslaagde koppeling
+  window.HorseSafeKeysUI = { refresh };
 
   (async () => {
     ui.support = await HK.checkSupport();

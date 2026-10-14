@@ -46,7 +46,7 @@ from ..services import webauthn_service as wa
 
 router = APIRouter()
 
-KIND_NL = {"bio": "sleutel", "recovery": "noodsleutel"}
+KIND_NL = {"bio": "sleutel", "recovery": "noodsleutel", "phone": "telefoon"}
 ADVICE_KEYS = "Log direct in, controleer je sleutels en verwijder of blokkeer wat je niet herkent."
 
 
@@ -78,7 +78,9 @@ async def _own_key(
     with_sealed: bool = False,
 ) -> dict[str, Any]:
     key = await svc.get_key(conn, user_id, vault_id, key_id, with_sealed=with_sealed)
-    if not key or key["kind"] == "phone":  # telefoonsleutels bestaan pas in Miller
+    # Telefoonsleutels (Miller, §13.4) gaan niet via deze routes: ontgrendelen is Montgomery en
+    # verwijderen gaat met het toestel (DELETE /devices/{id}).
+    if not key or key["kind"] == "phone":
         raise HTTPException(status_code=404, detail={"error": "not_found"})
     return key
 
@@ -148,7 +150,7 @@ async def list_keys(vault_id: str, request: Request) -> VaultKeyList:
         await _own_vault(conn, user_id, vault_id)
         keys = await svc.list_keys(conn, user_id, vault_id)
     return VaultKeyList(
-        keys=[VaultKeyPublic(**svc.public_key_object(k)) for k in keys if k["kind"] != "phone"],
+        keys=[VaultKeyPublic(**svc.public_key_object(k)) for k in keys],  # incl. phone (§13.4)
         notify_available=mail_service.is_configured(),
         stepup_until=stepup_service.stepup_until(payload),
     )

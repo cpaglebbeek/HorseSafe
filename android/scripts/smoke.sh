@@ -26,13 +26,17 @@ bad() { echo "  FOUT  $*"; fail=1; }
 "$ADB" uninstall "$PKG" >/dev/null 2>&1 || true
 "$ADB" logcat -b crash -c || true
 "$ADB" install "$APK" >/dev/null && ok "geïnstalleerd" || { bad "install faalt"; exit 1; }
-"$ADB" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
+# Start via de launcher-activity; `monkey` breekt op sommige AVD's af met rc 251 ("SYS_KEYS has no physical keys").
+comp="$("$ADB" shell cmd package resolve-activity --brief -c android.intent.category.LAUNCHER "$PKG" | tr -d '\r' | tail -1)"
+"$ADB" shell am start -n "$comp" >/dev/null 2>&1 || bad "am start $comp faalt"
 sleep 4
 pid="$("$ADB" shell pidof "$PKG" | tr -d '\r' || true)"
 [ -n "$pid" ] && ok "proces leeft (pid $pid)" || bad "proces leeft niet"
 crash="$("$ADB" logcat -b crash -d | grep -c "$PKG" || true)"
 [ "$crash" = 0 ] && ok "logcat -b crash leeg voor $PKG" || bad "$crash crashregels"
-if "$ADB" shell dumpsys window windows | tr -d '\r' | grep -A40 "$PKG" | grep -q "FLAG_SECURE\|FLG_SECURE\|SECURE"; then
+# Alleen het venster van $PKG bekijken (vlaggenregel kan na >40 regels komen; 0.3.4 gaf zo een vals ROOD).
+if "$ADB" shell dumpsys window windows | tr -d '\r' \
+    | awk -v p="$PKG" '/Window #[0-9]+ Window\{/{f=index($0,p)>0} f' | grep -q " fl=.*SECURE"; then
   ok "FLAG_SECURE op het venster"
 else
   bad "FLAG_SECURE niet gevonden"
