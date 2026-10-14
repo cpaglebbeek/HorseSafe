@@ -23,7 +23,8 @@ SDK="${ANDROID_HOME:-$HOME/Android/Sdk}"
 BT="$(ls -d "$SDK"/build-tools/* 2>/dev/null | sort -V | tail -1)"
 APKSIGNER="$BT/apksigner"
 AAPT2="$BT/aapt2"
-EXPECTED_SIGNER="32491e0f87f46daea0fe2fc048994c9902df4725ec82f3b536dc23d933e73f17"
+# Eigen release-keystore sinds 0.3.4-Miller (R4); was debug-keystore 32491e0f…3f17.
+EXPECTED_SIGNER="fbd6b151ecfd202279d9ee1999b4bfce7f7eb9095b1a0a5bf5338151a64b062e"
 
 fail=0
 ok()   { echo "  OK    $*"; }

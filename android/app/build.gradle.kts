@@ -30,6 +30,18 @@ if (vMinor >= 100 || vPatch >= 100) {
 val horseSafeVersionCode: Int = vMajor * 10000 + vMinor * 100 + vPatch
 
 // ---------------------------------------------------------------------------------------------
+// Release-ondertekening (R4, HARDWARE_KEYS §11.2.5): eigen keystore op HC55, buiten de repo.
+// ~/.keystores/horsesafe.env (HORSESAFE_KS_FILE/_ALIAS/_PASSWORD) komt uit ClaudeSecrets.
+// Ontbreekt het bestand (build-box), dan blijft de release ONGETEKEND — nooit stil terugvallen
+// op de debug-keystore; verify_apk.sh keurt een ongetekende APK af.
+// ---------------------------------------------------------------------------------------------
+val releaseSigningEnv: Map<String, String>? = File(System.getProperty("user.home"), ".keystores/horsesafe.env")
+    .takeIf { it.isFile }
+    ?.readLines()
+    ?.mapNotNull { line -> line.split("=", limit = 2).takeIf { it.size == 2 }?.let { it[0].trim() to it[1].trim() } }
+    ?.toMap()
+
+// ---------------------------------------------------------------------------------------------
 // Vertrouwensankers: de enige bron is ../backend/data. Ze worden bij de build naar
 // gegenereerde assets gekopieerd (assets/trust/...), nooit met de hand in android/ gezet (A-22).
 // ---------------------------------------------------------------------------------------------
@@ -180,9 +192,14 @@ android {
     }
 
     signingConfigs {
-        // E8: release wordt ondertekend met ~/.android/debug.keystore (AGP-standaard voor "debug").
-        // Restrisico: wachtwoord van die keystore is publiek bekend (kritiek 13, THREAT_MODEL).
-        getByName("debug")
+        if (releaseSigningEnv != null) {
+            create("release") {
+                storeFile = file(releaseSigningEnv.getValue("HORSESAFE_KS_FILE"))
+                storePassword = releaseSigningEnv.getValue("HORSESAFE_KS_PASSWORD")
+                keyAlias = releaseSigningEnv.getValue("HORSESAFE_KS_ALIAS")
+                keyPassword = releaseSigningEnv.getValue("HORSESAFE_KS_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -190,7 +207,7 @@ android {
             isDebuggable = false
             isMinifyEnabled = true
             isShrinkResources = true
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         debug {
