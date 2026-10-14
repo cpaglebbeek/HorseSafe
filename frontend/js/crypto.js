@@ -93,10 +93,31 @@
     return await db.save();
   }
 
-  /** Voeg entry toe aan default-groep. */
-  function addEntry(db, { title, username, password, url, notes }) {
+  /** Zoek een groep op uuid (string); null als hij niet bestaat. */
+  function findGroup(db, groupUuid) {
+    if (!groupUuid) return null;
+    function walk(group) {
+      if (group.uuid.id === groupUuid) return group;
+      for (const sub of group.groups) {
+        const hit = walk(sub);
+        if (hit) return hit;
+      }
+      return null;
+    }
+    return walk(db.getDefaultGroup());
+  }
+
+  /** uuid (string) van de prullenbak, of null. */
+  function recycleBinId(db) {
+    const id = db.meta && db.meta.recycleBinEnabled !== false && db.meta.recycleBinUuid;
+    return id && !id.empty ? id.id : null;
+  }
+
+  /** Voeg entry toe aan groep groupUuid (v0.3.5), anders aan de default-groep. Nooit in de prullenbak. */
+  function addEntry(db, { title, username, password, url, notes }, groupUuid) {
     const kdb = window.kdbxweb;
-    const group = db.getDefaultGroup();
+    const target = groupUuid && groupUuid !== recycleBinId(db) ? findGroup(db, groupUuid) : null;
+    const group = target || db.getDefaultGroup();
     const entry = db.createEntry(group);
     if (title)    entry.fields.set('Title', title);
     if (username) entry.fields.set('UserName', username);
@@ -106,17 +127,41 @@
     return entry;
   }
 
-  /** Lijst alle entries uit default-groep + sub-groepen. */
+  /**
+   * Groepenboom onder de default-groep (v0.3.5-Miller): {uuid, name, path, isRecycleBin, children}.
+   * path = namen vanaf de eerste laag onder de root; de root zelf hoort niet bij een categorie.
+   */
+  function listGroups(db) {
+    const bin = recycleBinId(db);
+    function node(group, path, inBin) {
+      const isBin = group.uuid.id === bin;
+      return {
+        uuid: group.uuid.id,
+        name: group.name || '',
+        path,
+        isRecycleBin: isBin || inBin,
+        children: group.groups.map(g => node(g, path.concat(g.name || ''), isBin || inBin)),
+      };
+    }
+    return db.getDefaultGroup().groups.map(g => node(g, [g.name || ''], false));
+  }
+
+  /** Lijst alle entries uit default-groep + sub-groepen, met hun categorie (v0.3.5). */
   function listEntries(db) {
     const all = [];
-    function walk(group) {
+    const bin = recycleBinId(db);
+    function walk(group, path, chain, inBin) {
       for (const entry of group.entries) {
-        all.push(entry);
+        all.push({ entry, path, chain, inBin, groupUuid: group.uuid.id });
       }
-      for (const sub of group.groups) walk(sub);
+      for (const sub of group.groups) {
+        const subInBin = inBin || sub.uuid.id === bin;
+        walk(sub, path.concat(sub.name || ''), chain.concat(sub.uuid.id), subInBin);
+      }
     }
-    walk(db.getDefaultGroup());
-    return all.map(e => {
+    const root = db.getDefaultGroup();
+    walk(root, [], [], false);
+    return all.map(({ entry: e, path, chain, inBin, groupUuid }) => {
       const otpField = e.fields.get('otp');
       let otp = null;
       if (otpField) {
@@ -132,6 +177,10 @@
         url:      e.fields.get('URL') || '',
         notes:    e.fields.get('Notes') || '',
         otp,
+        groupUuid,               // directe groep
+        groupPath:   path,       // namen onder de root, [] = hoofdmap
+        groupChain:  chain,      // uuids van alle voorouder-groepen onder de root + eigen groep
+        inRecycleBin: inBin,
         _entry:   e,
       };
     });
@@ -191,6 +240,7 @@
     saveDatabase,
     addEntry,
     listEntries,
+    listGroups,
     deleteEntry,
     generatePassword,
     copyWithWipe,

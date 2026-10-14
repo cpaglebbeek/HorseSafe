@@ -8,7 +8,7 @@
   <link rel="stylesheet" href="assets/horsesafe.css">
 </head>
 <body>
-  <div class="container">
+  <div class="container container-wide">
     <header class="brand">
       <img src="assets/horsesafe.svg" alt="HorseSafe">
       <h1>HorseSafe</h1>
@@ -86,17 +86,36 @@
           pas weer na bijwerken. Open "🔑 Sleutels" en klik "↻ Bijwerken".
         </div>
 
-        <div class="layout-split">
+        <div class="layout-split layout-vault">
+          <!-- v0.3.5-Miller: categorieën (KDBX-groepen) -->
+          <nav class="card group-pane" aria-label="Categorieën">
+            <h2 style="font-size: 1rem;">Categorieën</h2>
+            <label for="group-select" class="visually-hidden">Categorie</label>
+            <select id="group-select"></select>
+            <ul id="group-tree" class="group-tree" role="tree"></ul>
+          </nav>
+
           <div class="card">
-            <h2 style="font-size: 1rem;">Entries (<span id="entry-count">0</span>)</h2>
-            <table id="entries-table">
-              <thead>
-                <tr><th>Titel</th><th>Gebruikersnaam</th><th>URL</th></tr>
-              </thead>
-              <tbody id="entries-body">
-                <tr><td colspan="3" class="muted">Geen entries — klik "+ Nieuwe entry"</td></tr>
-              </tbody>
-            </table>
+            <h2 style="font-size: 1rem;"><span id="list-title">Alle entries</span>
+              (<span id="entry-count">0</span><span id="entry-total"></span>)</h2>
+            <div class="search-row" role="search">
+              <label for="entry-search" class="visually-hidden">Zoeken</label>
+              <input type="search" id="entry-search" placeholder="Zoeken in titel, gebruiker, URL, notities, categorie  ( / )"
+                autocomplete="off" spellcheck="false">
+              <label class="search-scope" id="search-scope-label" hidden>
+                <input type="checkbox" id="search-in-group"> alleen in deze categorie
+              </label>
+            </div>
+            <div class="table-scroll">
+              <table id="entries-table">
+                <thead>
+                  <tr><th>Titel</th><th>Gebruikersnaam</th><th>URL</th><th class="col-group">Categorie</th></tr>
+                </thead>
+                <tbody id="entries-body">
+                  <tr><td colspan="4" class="muted">Geen entries — klik "+ Nieuwe entry"</td></tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <div class="card" id="detail-pane" hidden>
@@ -222,6 +241,7 @@
         <!-- Entry-edit modal -->
         <section class="card" id="edit-section" hidden>
           <h2>Nieuwe entry</h2>
+          <p class="muted">Komt in: <strong id="e-group-label">hoofdmap</strong></p>
           <form id="edit-form">
             <label for="e-title">Titel</label>
             <input type="text" id="e-title" required>
@@ -285,6 +305,7 @@
   <script src="vendor/qrcode/qrcode.js"></script>
   <script src="js/hwkeys.js"></script>
   <script src="js/pairing.js"></script>
+  <script src="js/vault-index.js"></script>
   <script src="js/vault-ui.js"></script>
   <script src="js/main.js"></script>
   <script src="js/stepup.js"></script>

@@ -17,6 +17,7 @@
   $('lock-vault').addEventListener('click', () => UI.lockVault());
   $('add-entry').addEventListener('click', () => {
     $('edit-form').reset();
+    UI.prepareNewEntry();
     $('edit-section').hidden = false;
     $('e-title').focus();
   });

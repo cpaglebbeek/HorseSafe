@@ -83,7 +83,7 @@ label {
   color: var(--hs-fg-secondary);
 }
 
-input[type="email"], input[type="password"], input[type="text"], textarea {
+input[type="email"], input[type="password"], input[type="text"], input[type="search"], select, textarea {
   width: 100%;
   padding: var(--hs-sp-2) var(--hs-sp-3);
   background: var(--hs-bg-elevated);
@@ -96,7 +96,7 @@ input[type="email"], input[type="password"], input[type="text"], textarea {
   transition: border-color var(--hs-tr-base);
 }
 
-input:focus, textarea:focus {
+input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--hs-accent);
   box-shadow: 0 0 0 3px rgba(76,158,235,0.2);
@@ -256,4 +256,48 @@ footer {
 @media (max-width: 480px) {
   .pair-panel { padding: var(--hs-sp-3); }
   #pair-step-sas .actions button { flex: 1 1 100%; }
+}
+
+/* v0.3.5-Miller: categorieën + zoeken in de kluis (S7) */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+.layout-vault { grid-template-columns: 240px minmax(0, 1fr) 320px; align-items: start; }
+.group-pane { position: sticky; top: var(--hs-sp-4); max-height: calc(100vh - 2 * var(--hs-sp-4)); overflow-y: auto; }
+.group-pane select { display: none; width: 100%; margin-bottom: 0; }
+.container.container-wide { max-width: 1440px; }
+.group-tree, .group-tree ul { list-style: none; margin: 0; padding: 0; }
+.group-tree ul { padding-left: var(--hs-sp-3); }
+.group-row { display: flex; align-items: center; gap: 2px; }
+.group-toggle {
+  flex: 0 0 22px; padding: 0; background: none; border: 0; color: var(--hs-fg-muted);
+  cursor: pointer; font-size: 0.75rem; line-height: 1.8;
+}
+.group-toggle[hidden] { display: inline-block; visibility: hidden; }
+.group-btn {
+  flex: 1; display: flex; justify-content: space-between; gap: var(--hs-sp-2); text-align: left;
+  padding: 3px var(--hs-sp-2); background: none; border: 0; border-radius: var(--hs-br-sm);
+  color: var(--hs-fg-primary); cursor: pointer; font: inherit; font-size: 0.875rem;
+}
+.group-btn:hover { background: var(--hs-bg-elevated); }
+.group-btn[aria-current="true"] { background: var(--hs-bg-elevated); color: var(--hs-accent); font-weight: 600; }
+.group-btn .count { color: var(--hs-fg-muted); font-variant-numeric: tabular-nums; font-weight: 400; }
+.group-btn.bin { color: var(--hs-fg-secondary); font-style: italic; }
+.search-row { display: flex; flex-wrap: wrap; gap: var(--hs-sp-2) var(--hs-sp-4); align-items: center; margin-bottom: var(--hs-sp-3); }
+.search-row input[type="search"] { flex: 1 1 260px; margin: 0; }
+.search-scope { display: flex; align-items: center; gap: var(--hs-sp-1); font-size: 0.875rem; color: var(--hs-fg-secondary); margin: 0; }
+.search-scope input { width: auto; margin: 0; }
+#entries-table .col-group { color: var(--hs-fg-muted); font-size: 0.8125rem; }
+#entries-table.no-group-col .col-group { display: none; }
+
+@media (max-width: 1100px) {
+  .layout-vault { grid-template-columns: minmax(0, 1fr) 320px; }
+  .group-pane { grid-column: 1 / -1; position: static; max-height: none; }
+  .group-pane select { display: block; }
+  .group-pane .group-tree { display: none; }
+}
+@media (max-width: 768px) {
+  .layout-vault { grid-template-columns: 1fr; }
+  #entries-table .col-group { display: none; }
 }

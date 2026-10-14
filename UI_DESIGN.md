@@ -41,8 +41,18 @@
 - **Automatisch vergrendelen** na 15 minuten inactiviteit (`AUTO_LOCK_MS`); het wachtwoordveld wordt direct na openen geleegd.
 
 ### S7. Vault-content (hoofdscherm)
-- Linker-zijbalk: groepen-boom (Root → General, Internet, eMail, ...)
-- Hoofdpaneel: entry-tabel (Title, Username, URL, Modified)
+- **Linker-zijbalk (v0.3.5-Miller): categorieën** = de KDBX-groepen onder de root (`#group-tree`): "Alle entries" (totaal
+  zonder prullenbak), daaronder de groepen met submappen (▸/▾ uitklappen) en het aantal entries inclusief subgroepen;
+  de prullenbak heet "Prullenbak", staat onderaan en telt alleen mee als je hem kiest. ≤ 1100 px: keuzelijst
+  `#group-select` boven de lijst in plaats van de boom. Pagina-breedte op vault.html max 1440 px (`.container-wide`).
+- **Zoeken (v0.3.5-Miller):** `#entry-search` boven de lijst; alle woorden moeten voorkomen, hoofdletters/accenten tellen
+  niet; zoekt in titel, gebruikersnaam, URL, notities en categorienaam, **nooit in wachtwoorden of andere beveiligde
+  velden**; standaard in de hele kluis, met `#search-in-group` "alleen in deze categorie" (alleen zichtbaar als er een
+  categorie gekozen is). `/` springt naar het zoekveld, `Esc` maakt het leeg. Alleen in de browser, niets naar de server.
+- Hoofdpaneel: entry-tabel (Titel, Gebruikersnaam, URL, Categorie) gesorteerd op titel; kop "<categorie> (n van totaal)"
+  of "Zoekresultaten"; kolom Categorie alleen als de lijst meerdere categorieën kan bevatten (verborgen ≤ 768 px).
+  Een geselecteerde entry die uit de lijst valt, sluit het detailpaneel.
+- "+ Nieuwe entry" landt in de gekozen categorie ("Komt in: …"), anders in de hoofdmap; nooit in de prullenbak.
 - Rechter-detailpaneel bij selectie:
   - Title, Username
   - Password (verborgen, "👁 toon" + "📋 kopieer (10s wipe)" knoppen)

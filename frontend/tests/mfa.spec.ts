@@ -72,6 +72,10 @@ test('TOTP setup + re-login MFA-challenge flow', async ({ page, context }) => {
   const setupBody = await setupRes.json();
   const secret = setupBody.secret as string;
   expect(secret.length).toBeGreaterThan(10);
+  // HS-BUG-010: de QR moet echt zichtbaar zijn (scalable SVG zonder maat werd 0×0 px)
+  const qrBox = await page.locator('#qr-canvas svg').boundingBox();
+  expect(qrBox?.width ?? 0).toBeGreaterThan(150);
+  expect(qrBox?.height ?? 0).toBeGreaterThan(150);
 
   // 3. Bereken TOTP-code + verifieer
   const code = await totpCode(secret);

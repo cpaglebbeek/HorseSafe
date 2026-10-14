@@ -14,6 +14,12 @@
     // leesbare wachtwoord of de keyfile. Alleen tab-RAM, alleen zolang de vault open is.
     secret: null,
     idleTimer: null,
+    // v0.3.5-Miller: categorie + zoeken (alleen weergave; niets hiervan gaat naar de server)
+    groupId: 'all',
+    query: '',
+    inGroupOnly: false,
+    expanded: new Set(),
+    groups: [],
   };
 
   // Automatisch vergrendelen na inactiviteit (v0.2.0-Koblitz)
@@ -77,25 +83,204 @@
 
   function clearError(id) { $(id).hidden = true; }
 
+  // ───────────── v0.3.5-Miller: categorieën + zoeken ─────────────
+  function VI() { return window.HorseSafeVaultIndex; }
+
+  /** Gekozen categorie bestaat niet meer (bv. na import)? Dan terug naar "Alle". */
+  function currentGroupNode() {
+    if (state.groupId === 'all') return null;
+    const n = VI().findNode(state.groups, state.groupId);
+    if (!n) state.groupId = 'all';
+    return n;
+  }
+
+  /** Categorie waarin "+ Nieuwe entry" landt: de gekozen groep, nooit de prullenbak. */
+  function newEntryGroup() {
+    const n = currentGroupNode();
+    return n && !n.isRecycleBin ? n : null;
+  }
+
+  function prepareNewEntry() {
+    const n = newEntryGroup();
+    setText('e-group-label', n ? VI().pathLabel(n.path) : 'hoofdmap');
+  }
+
+  /** Weergavenaam; de prullenbak zelf heet altijd "Prullenbak" (KeePass noemt hem "Recycle Bin"). */
+  function groupName(g) {
+    const isBinRoot = g.isRecycleBin && (g.path || []).length === 1;
+    return isBinRoot ? 'Prullenbak' : (g.name || g.label || '(naamloos)');
+  }
+
+  function renderTree(counts, total) {
+    const tree = $('group-tree');
+    const sel = $('group-select');
+    tree.innerHTML = '';
+    sel.innerHTML = '';
+
+    const opt = (value, label) => {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = label;
+      sel.appendChild(o);
+    };
+    opt('all', `Alle entries (${total})`);
+    for (const g of VI().flatten(state.groups)) {
+      opt(g.uuid, `${' '.repeat(g.depth)}${groupName(g)} (${counts.get(g.uuid) || 0})`);
+    }
+    sel.value = state.groupId;
+
+    const item = (uuid, label, n, opts = {}) => {
+      const li = document.createElement('li');
+      li.setAttribute('role', 'treeitem');
+      const row = document.createElement('div');
+      row.className = 'group-row';
+      const tog = document.createElement('button');
+      tog.type = 'button';
+      tog.className = 'group-toggle';
+      if (opts.children && opts.children.length) {
+        const open = state.expanded.has(uuid);
+        tog.textContent = open ? '▾' : '▸';
+        tog.setAttribute('aria-label', (open ? 'Inklappen: ' : 'Uitklappen: ') + label);
+        li.setAttribute('aria-expanded', String(open));
+        tog.addEventListener('click', () => {
+          if (state.expanded.has(uuid)) state.expanded.delete(uuid); else state.expanded.add(uuid);
+          renderEntries();
+        });
+      } else {
+        tog.hidden = true;
+        tog.tabIndex = -1;
+      }
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'group-btn' + (opts.bin ? ' bin' : '');
+      btn.dataset.group = uuid;
+      if (state.groupId === uuid) btn.setAttribute('aria-current', 'true');
+      const name = document.createElement('span');
+      name.textContent = label;
+      const cnt = document.createElement('span');
+      cnt.className = 'count';
+      cnt.textContent = String(n);
+      btn.append(name, cnt);
+      btn.addEventListener('click', () => chooseGroup(uuid));
+      row.append(tog, btn);
+      li.appendChild(row);
+      if (opts.children && opts.children.length && state.expanded.has(uuid)) {
+        const ul = document.createElement('ul');
+        ul.setAttribute('role', 'group');
+        for (const c of opts.children) ul.appendChild(groupItem(c));
+        li.appendChild(ul);
+      }
+      return li;
+    };
+    const groupItem = (g) => item(g.uuid, groupName(g), counts.get(g.uuid) || 0,
+      { children: g.children, bin: g.isRecycleBin });
+
+    tree.appendChild(item('all', 'Alle entries', total));
+    // Prullenbak onderaan
+    const normal = state.groups.filter((g) => !g.isRecycleBin);
+    const bins = state.groups.filter((g) => g.isRecycleBin);
+    for (const g of normal.concat(bins)) tree.appendChild(groupItem(g));
+  }
+
+  function chooseGroup(uuid) {
+    state.groupId = uuid || 'all';
+    // Pad naar de gekozen groep openklappen, zodat hij zichtbaar blijft in de boom
+    const n = VI().findNode(state.groups, state.groupId);
+    if (n) {
+      for (const g of VI().flatten(state.groups)) {
+        if (n.path.length > g.path.length && g.path.every((x, i) => x === n.path[i])) state.expanded.add(g.uuid);
+      }
+    }
+    renderEntries();
+  }
+
   function renderEntries() {
-    const entries = window.HorseSafeCrypto.listEntries(state.db);
+    const all = window.HorseSafeCrypto.listEntries(state.db);
+    state.groups = window.HorseSafeCrypto.listGroups(state.db);
+    const node = currentGroupNode();
+    const { total, counts } = VI().countEntries(all);
+    renderTree(counts, total);
+
+    const searching = VI().terms(state.query).length > 0;
+    const entries = VI().filterEntries(all, state.groups, {
+      groupUuid: state.groupId, query: state.query, inGroupOnly: state.inGroupOnly,
+    });
+    const scopeLabel = node ? VI().pathLabel(node.path) : 'Alle entries';
+    setText('list-title', searching && !(state.inGroupOnly && node) ? 'Zoekresultaten' : scopeLabel);
     setText('entry-count', entries.length);
+    setText('entry-total', searching || node ? ` van ${total}` : '');
+    $('search-scope-label').hidden = !node;
+    // Categoriekolom alleen als de lijst meerdere categorieën kan bevatten
+    $('entries-table').classList.toggle('no-group-col', !!node && !(searching && !state.inGroupOnly));
+    prepareNewEntry();
+
+    // Detailvenster alleen voor een entry die in de lijst staat
+    if (state.currentEntry && !entries.some((e) => e.uuid === state.currentEntry.uuid)) {
+      stopTotpLoop();
+      state.currentEntry = null;
+      hide('detail-pane');
+    }
+
     const tbody = $('entries-body');
     tbody.innerHTML = '';
     if (entries.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" class="muted">Geen entries — klik "+ Nieuwe entry"</td></tr>';
-      hide('detail-pane');
+      const msg = searching ? 'Niets gevonden'
+        : (all.length === 0 ? 'Geen entries — klik "+ Nieuwe entry"' : 'Geen entries in deze categorie');
+      tbody.innerHTML = `<tr><td colspan="4" class="muted">${escapeHtml(msg)}</td></tr>`;
       return;
     }
     for (const e of entries) {
       const tr = document.createElement('tr');
       tr.className = 'selectable';
       tr.dataset.uuid = e.uuid;
-      tr.innerHTML = `<td>${escapeHtml(e.title)}</td><td>${escapeHtml(e.username)}</td><td>${escapeHtml(e.url)}</td>`;
+      tr.innerHTML = `<td>${escapeHtml(e.title)}</td><td>${escapeHtml(e.username)}</td>`
+        + `<td>${escapeHtml(e.url)}</td><td class="col-group">${escapeHtml(VI().pathLabel(e.groupPath) || 'hoofdmap')}</td>`;
       tr.addEventListener('click', () => selectEntry(e));
+      if (state.currentEntry && state.currentEntry.uuid === e.uuid) tr.classList.add('selected');
       tbody.appendChild(tr);
     }
   }
+
+  function resetView() {
+    state.groupId = 'all';
+    state.query = '';
+    state.inGroupOnly = false;
+    state.expanded = new Set();
+    state.groups = [];
+    $('entry-search').value = '';
+    $('search-in-group').checked = false;
+    $('group-tree').innerHTML = '';
+    $('group-select').innerHTML = '';
+    $('entries-body').innerHTML = '';
+  }
+
+  (function wireViewControls() {
+    let t = null;
+    $('entry-search').addEventListener('input', (ev) => {
+      clearTimeout(t);
+      t = setTimeout(() => { state.query = ev.target.value; if (state.db) renderEntries(); }, 120);
+    });
+    $('entry-search').addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape') {
+        ev.target.value = '';
+        state.query = '';
+        if (state.db) renderEntries();
+      }
+    });
+    $('search-in-group').addEventListener('change', (ev) => {
+      state.inGroupOnly = ev.target.checked;
+      if (state.db) renderEntries();
+    });
+    $('group-select').addEventListener('change', (ev) => { if (state.db) chooseGroup(ev.target.value); });
+    // "/" springt naar het zoekveld (niet tijdens typen in een ander veld)
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key !== '/' || !state.db || $('vault-section').hidden) return;
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (document.activeElement && document.activeElement.isContentEditable)) return;
+      ev.preventDefault();
+      $('entry-search').focus();
+    });
+  })();
 
   function escapeHtml(s) {
     return String(s || '').replace(/[&<>"']/g, c => ({
@@ -296,6 +481,7 @@
     wipeSecret();
     resetIdleTimer();
     clearUnlockInputs();
+    resetView();
     hide('vault-section');
     show('unlock-section');
     document.dispatchEvent(new CustomEvent('horsesafe:locked'));
@@ -310,7 +496,8 @@
       url:      $('e-url').value,
       notes:    $('e-notes').value,
     };
-    window.HorseSafeCrypto.addEntry(state.db, data);
+    const target = newEntryGroup();
+    window.HorseSafeCrypto.addEntry(state.db, data, target ? target.uuid : null);
     if (await persist()) {
       hide('edit-section');
       renderEntries();
@@ -427,5 +614,6 @@
     copyTotp,
     generatePw,
     renderEntries,
+    prepareNewEntry,
   };
 })();

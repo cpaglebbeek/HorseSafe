@@ -8,6 +8,8 @@
   <link rel="stylesheet" href="assets/horsesafe.css">
   <style>
     .qr-canvas { display: block; margin: var(--hs-sp-4) auto; padding: var(--hs-sp-3); background: white; border-radius: var(--hs-br-md); width: fit-content; }
+    /* HS-BUG-010: een schaalbare SVG zonder width/height krijgt in een fit-content-vak 0×0 px — maat vastleggen */
+    .qr-canvas svg { display: block; width: min(240px, 70vw); height: auto; aspect-ratio: 1; }
     .secret-text { font-family: var(--hs-font-mono); padding: var(--hs-sp-2); background: var(--hs-bg-elevated); border-radius: var(--hs-br-sm); word-break: break-all; }
   </style>
 </head>

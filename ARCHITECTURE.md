@@ -73,6 +73,7 @@ Vanaf v0.2.0-Koblitz kan een gekoppelde YubiKey (of de noodsleutel na 24 u) de v
 | `HorseSafeCrypto.listEntries()` extractie van `otp` | `frontend/js/crypto.js` | Custom-string `otp` (KeePassXC-compat) parsen naar entry-property; handelt ProtectedValue en plain string. |
 | `HorseSafeTotp.generateTotp(otpauthUri)` | `frontend/js/totp.js` | RFC 6238 via `crypto.subtle.sign('HMAC')`. Base32-decoder + dynamic truncation per RFC 4226. Default SHA-1/6/30, override via URI-params. |
 | `state.totpTimer` + `startTotpLoop`/`stopTotpLoop` | `frontend/js/vault-ui.js` | Interval-lifecycle voor per-entry-TOTP-render. Start in `selectEntry`, stop in `lockVault` en bij entry-wissel. |
+| Categorieën + zoeken (v0.3.5) | `frontend/js/vault-index.js` + `vault-ui.js` (`renderTree`, `renderEntries`, `state.groupId/query/inGroupOnly`) + `crypto.js` (`listGroups`, `listEntries.groupPath/groupChain/inRecycleBin`, `addEntry(…, groupUuid)`) | Pure filterfuncties zonder DOM/netwerk; zoeken alleen in tab-RAM over titel, gebruiker, URL, notities en categorienaam — nooit over beveiligde velden. Prullenbak telt alleen mee als hij gekozen is. Bij vergrendelen `resetView()`. |
 | Detail-pane TOTP-rij (`d-totp-label`/`d-totp-cell`/`d-totp-code`/`d-totp-countdown`/`d-totp-copy`) | `frontend/vault.html` | UI-elementen voor live TOTP-code + countdown + clipboard-copy. Verborgen tot entry een geldig `otp`-veld heeft. |
 
 ### 2.0b Componenten v0.2.0-Koblitz (hardware-sleutels)

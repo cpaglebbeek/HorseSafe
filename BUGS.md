@@ -12,6 +12,26 @@ Kleurcodes:
 
 ## Open bugs
 
+### HS-BUG-010 — TOTP-QR in Instellingen onzichtbaar (0×0 px)
+
+**Kleur:** 🟢 Groen
+**Status:** fix in v0.3.5-Miller (werkboom), nog niet gedeployed
+**Versie ontdekt:** live 0.3.4-Miller, door Christian (14-10-2026, "qr code werkt niet")
+**Bestond sinds:** v0.0.3-Merkle (e704f9b, 21-05-2026)
+
+**Symptoom:** na "TOTP inschakelen" blijft het witte QR-vak leeg; handmatig secret werkt wel.
+
+**RCA — drie niveaus:**
+- **Functioneel:** de QR is er wel (SVG in de DOM, decodeerbaar), maar heeft geen afmeting.
+- **Technisch:** `createSvgTag({scalable: true})` laat `width`/`height` weg (alleen `viewBox`); de container is
+  `width: fit-content`, dus SVG en container krijgen 0×0 px (gemeten in Chromium).
+- **Architectonisch:** de e2e-test controleerde alleen het secret uit de API-respons, nooit of de QR zichtbaar was.
+
+**Fix:** `.qr-canvas svg { width: min(240px, 70vw); height: auto; aspect-ratio: 1 }` in `settings.html`;
+`mfa.spec.ts` eist nu een QR van >150×150 px (faalt zonder fix met 0, slaagt met fix). Gedecodeerd met OpenCV → otpauth-URI.
+
+**Preventie:** UI-elementen die de gebruiker moet scannen of lezen in e2e op zichtbare afmeting controleren, niet alleen op bestaan.
+
 ### HS-BUG-009 — Reviewronde 3 Koblitz: afkoelperiode via kluis verwijderen, magic-link vanuit webmail, save tegen rekey
 
 **Kleur:** 🟡 Geel (punt 1 raakt R6; punt 2 maakt een MFA-factor onbruikbaar; punt 3 kan een kluis onopenbaar voor hardware-sleutels maken)

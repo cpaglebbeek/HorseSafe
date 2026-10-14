@@ -17,10 +17,22 @@
 - Vault-naam + stats
 - Buttons: **+ Nieuwe entry**, **Vergrendel**, **Uitloggen**
 
-### Linker-paneel: entries-tabel
-- Kolommen: Titel · Gebruikersnaam · URL
-- Rij is `selectable` — klik = selecteer → toont detail
-- Lege state: muted-melding
+### Linker-paneel: categorieën (`nav.group-pane`, v0.3.5-Miller)
+- `#group-tree`: "Alle entries" + KDBX-groepen onder de root met submappen (`.group-toggle` ▸/▾, `state.expanded`),
+  per groep het aantal entries inclusief subgroepen (`.count`); gekozen groep `aria-current="true"` (accentkleur).
+- Prullenbak (`meta.recycleBinUuid`) heet "Prullenbak", cursief, onderaan; telt niet mee in "Alle".
+- ≤ 1100 px: `#group-select` (ingesprongen namen met aantallen) i.p.v. de boom, over de volle breedte boven de lijst.
+- Bij vergrendelen: boom, keuzelijst, zoekveld en lijst leeg (`resetView()`).
+
+### Middenpaneel: entries-tabel
+- Kop: `#list-title` (categoriepad "A › B", "Alle entries" of "Zoekresultaten") + `#entry-count` + `#entry-total` (" van N")
+- Zoekveld `#entry-search` (type search, debounce 120 ms) + `#search-in-group` "alleen in deze categorie"
+  - zoekt in titel, gebruikersnaam, URL, notities, categorienaam; nooit in Password/beveiligde velden
+  - alle woorden moeten voorkomen; hoofdletters en accenten tellen niet (`HorseSafeVaultIndex.normalize`)
+  - `/` = focus zoekveld (niet tijdens typen elders), `Esc` = leegmaken
+- Kolommen: Titel · Gebruikersnaam · URL · Categorie (`.col-group`, alleen als de lijst meerdere categorieën kan bevatten)
+- Gesorteerd op titel (`localeCompare('nl')`); rij is `selectable` — klik = selecteer → toont detail
+- Lege state: "Geen entries — klik …", "Geen entries in deze categorie" of "Niets gevonden"
 
 ### Rechter-paneel: detail (`#detail-pane`)
 - Title, Username (read-only)
@@ -37,6 +49,7 @@
 - Acties: **📋 Kopieer wachtwoord** (met 10s-aftel-progressbar) + **Verwijder** (rood)
 
 ### Entry-edit-section (`#edit-section`, hidden tot "+ Nieuwe entry")
+- "Komt in: <categorie>" (`#e-group-label`); de entry landt in de gekozen categorie, anders de hoofdmap (nooit de prullenbak)
 - Title (required), Username, Password, URL, Notes
 - 🎲 Genereer 20-char wachtwoord (cryptografisch random via `crypto.getRandomValues`)
 - Opslaan + Annuleren
