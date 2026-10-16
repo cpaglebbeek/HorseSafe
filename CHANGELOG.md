@@ -5,6 +5,13 @@ Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://
 ## [Unreleased]
 - Later: noodsleutel blokkeren vanaf de telefoon, update in de app; achtergrondmelding voor verzoeken (ntfy/WorkManager).
 
+## [0.4.1-Montgomery] — 2026-10-16 (bugfix)
+
+### Opgelost
+- **HS-BUG-011:** "🔑 Sleutels" opende het paneel onder alle entries, buiten beeld (bij 342 entries leek de knop
+  niets te doen). Paneel staat nu boven de lijst; openen scrolt ernaartoe en zet de focus op de titel. Alleen web;
+  APK blijft 0.4.0 (vc 400). Test `keys-panel.spec.ts` met 300 entries.
+
 ## [0.4.0-Montgomery] — 2026-10-16 (vertrouwde browser + telefoonvinger)
 
 Besluit HARDWARE_KEYS §11.3 (akkoord 16-10), contract §14, invulling §14.11. Vervangt §11.2 punt 3 (6 cijfers + SAS).

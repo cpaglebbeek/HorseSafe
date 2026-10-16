@@ -450,11 +450,17 @@
   $('hwkey-unlock-btn').addEventListener('click', unlockWithKey);
   $('keys-open').addEventListener('click', async () => {
     $('keys-section').hidden = false;
+    // HS-BUG-011: paneel in beeld brengen; zonder dit leek de knop niets te doen bij een lange lijst
+    $('keys-section').scrollIntoView({ block: 'start', behavior: 'smooth' });
+    $('keys-title').focus({ preventScroll: true });
     msg('keys-error', ui.support.ok ? '' : (HK.MESSAGES[ui.support.reason] || HK.MESSAGES.browser_unsupported));
     setBusy(false);
     await refresh();
   });
-  $('keys-close').addEventListener('click', () => { $('keys-section').hidden = true; });
+  $('keys-close').addEventListener('click', () => {
+    $('keys-section').hidden = true;
+    $('keys-open').focus();
+  });
   $('key-add-bio').addEventListener('click', () => addKey('bio'));
   $('key-add-recovery').addEventListener('click', () => addKey('recovery'));
   $('keys-reseal').addEventListener('click', resealAll);

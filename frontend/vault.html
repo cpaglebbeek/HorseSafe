@@ -104,68 +104,9 @@
           pas weer na bijwerken. Open "🔑 Sleutels" en klik "↻ Bijwerken".
         </div>
 
-        <div class="layout-split layout-vault">
-          <!-- v0.3.5-Miller: categorieën (KDBX-groepen) -->
-          <nav class="card group-pane" aria-label="Categorieën">
-            <h2 style="font-size: 1rem;">Categorieën</h2>
-            <label for="group-select" class="visually-hidden">Categorie</label>
-            <select id="group-select"></select>
-            <ul id="group-tree" class="group-tree" role="tree"></ul>
-          </nav>
-
-          <div class="card">
-            <h2 style="font-size: 1rem;"><span id="list-title">Alle entries</span>
-              (<span id="entry-count">0</span><span id="entry-total"></span>)</h2>
-            <div class="search-row" role="search">
-              <label for="entry-search" class="visually-hidden">Zoeken</label>
-              <input type="search" id="entry-search" placeholder="Zoeken in titel, gebruiker, URL, notities, categorie  ( / )"
-                autocomplete="off" spellcheck="false">
-              <label class="search-scope" id="search-scope-label" hidden>
-                <input type="checkbox" id="search-in-group"> alleen in deze categorie
-              </label>
-            </div>
-            <div class="table-scroll">
-              <table id="entries-table">
-                <thead>
-                  <tr><th>Titel</th><th>Gebruikersnaam</th><th>URL</th><th class="col-group">Categorie</th></tr>
-                </thead>
-                <tbody id="entries-body">
-                  <tr><td colspan="4" class="muted">Geen entries — klik "+ Nieuwe entry"</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="card" id="detail-pane" hidden>
-            <h2 style="font-size: 1rem;">Details</h2>
-            <dl class="detail-grid">
-              <dt>Titel</dt>          <dd id="d-title"></dd>
-              <dt>Gebruikersnaam</dt> <dd id="d-username"></dd>
-              <dt>Wachtwoord</dt>     <dd class="pw-cell">
-                                       <span id="d-pw-display" class="pw-hidden">••••••••••••</span>
-                                       <button id="d-pw-toggle" class="secondary" style="margin-left: 8px; padding: 2px 8px;">👁</button>
-                                     </dd>
-              <dt>URL</dt>            <dd><a id="d-url" target="_blank" rel="noopener noreferrer"></a></dd>
-              <dt id="d-totp-label" hidden>TOTP</dt>
-              <dd id="d-totp-cell" hidden>
-                <span id="d-totp-code" style="font-family:monospace;font-size:1.3em;letter-spacing:0.15em;font-weight:bold;">———</span>
-                <span id="d-totp-countdown" class="muted" style="margin-left:10px;font-variant-numeric:tabular-nums;">—s</span>
-                <button id="d-totp-copy" class="secondary" style="margin-left:8px;padding:2px 8px;">📋</button>
-              </dd>
-              <dt>Notities</dt>       <dd id="d-notes"></dd>
-            </dl>
-
-            <div class="actions">
-              <button id="d-copy-pw">📋 Kopieer wachtwoord<span class="copy-progress" hidden><span class="copy-progress-bar"></span></span></button>
-              <button id="d-share" class="secondary">🤝 Deel</button>
-              <button id="d-delete" class="danger">Verwijder</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- v0.2.0-Koblitz: hardware-sleutels beheren -->
+        <!-- v0.2.0-Koblitz: hardware-sleutels beheren; HS-BUG-011 (0.4.1): boven de lijst, anders onder alle entries buiten beeld -->
         <section class="card" id="keys-section" hidden>
-          <h2>Sleutels</h2>
+          <h2 id="keys-title" tabindex="-1">Sleutels</h2>
           <p class="muted">Open deze kluis met je vingerafdruk op een <strong>YubiKey Bio</strong>. Een
             <strong>noodsleutel</strong> (reserve-YubiKey, alleen lange PIN) bewaar je in een fysieke kluis; hij werkt
             pas 24 uur na aanvraag. Je wachtwoord/keyfile blijft altijd werken — ook in KeePassXC.</p>
@@ -281,6 +222,66 @@
           <div id="rekey-status" class="success" hidden></div>
         </section>
 
+        <div class="layout-split layout-vault">
+          <!-- v0.3.5-Miller: categorieën (KDBX-groepen) -->
+          <nav class="card group-pane" aria-label="Categorieën">
+            <h2 style="font-size: 1rem;">Categorieën</h2>
+            <label for="group-select" class="visually-hidden">Categorie</label>
+            <select id="group-select"></select>
+            <ul id="group-tree" class="group-tree" role="tree"></ul>
+          </nav>
+
+          <div class="card">
+            <h2 style="font-size: 1rem;"><span id="list-title">Alle entries</span>
+              (<span id="entry-count">0</span><span id="entry-total"></span>)</h2>
+            <div class="search-row" role="search">
+              <label for="entry-search" class="visually-hidden">Zoeken</label>
+              <input type="search" id="entry-search" placeholder="Zoeken in titel, gebruiker, URL, notities, categorie  ( / )"
+                autocomplete="off" spellcheck="false">
+              <label class="search-scope" id="search-scope-label" hidden>
+                <input type="checkbox" id="search-in-group"> alleen in deze categorie
+              </label>
+            </div>
+            <div class="table-scroll">
+              <table id="entries-table">
+                <thead>
+                  <tr><th>Titel</th><th>Gebruikersnaam</th><th>URL</th><th class="col-group">Categorie</th></tr>
+                </thead>
+                <tbody id="entries-body">
+                  <tr><td colspan="4" class="muted">Geen entries — klik "+ Nieuwe entry"</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card" id="detail-pane" hidden>
+            <h2 style="font-size: 1rem;">Details</h2>
+            <dl class="detail-grid">
+              <dt>Titel</dt>          <dd id="d-title"></dd>
+              <dt>Gebruikersnaam</dt> <dd id="d-username"></dd>
+              <dt>Wachtwoord</dt>     <dd class="pw-cell">
+                                       <span id="d-pw-display" class="pw-hidden">••••••••••••</span>
+                                       <button id="d-pw-toggle" class="secondary" style="margin-left: 8px; padding: 2px 8px;">👁</button>
+                                     </dd>
+              <dt>URL</dt>            <dd><a id="d-url" target="_blank" rel="noopener noreferrer"></a></dd>
+              <dt id="d-totp-label" hidden>TOTP</dt>
+              <dd id="d-totp-cell" hidden>
+                <span id="d-totp-code" style="font-family:monospace;font-size:1.3em;letter-spacing:0.15em;font-weight:bold;">———</span>
+                <span id="d-totp-countdown" class="muted" style="margin-left:10px;font-variant-numeric:tabular-nums;">—s</span>
+                <button id="d-totp-copy" class="secondary" style="margin-left:8px;padding:2px 8px;">📋</button>
+              </dd>
+              <dt>Notities</dt>       <dd id="d-notes"></dd>
+            </dl>
+
+            <div class="actions">
+              <button id="d-copy-pw">📋 Kopieer wachtwoord<span class="copy-progress" hidden><span class="copy-progress-bar"></span></span></button>
+              <button id="d-share" class="secondary">🤝 Deel</button>
+              <button id="d-delete" class="danger">Verwijder</button>
+            </div>
+          </div>
+        </div>
+
+
         <!-- Entry-edit modal -->
         <section class="card" id="edit-section" hidden>
           <h2>Nieuwe entry</h2>
@@ -334,7 +335,7 @@
     </main>
 
     <footer>
-      HorseSafe v0.4.0-Montgomery — Zero-knowledge: server ziet alleen ciphertext
+      HorseSafe v0.4.1-Montgomery — Zero-knowledge: server ziet alleen ciphertext
     </footer>
   </div>
 

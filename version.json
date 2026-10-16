@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.4.1",
   "codename": "Montgomery",
   "codename_theme": "Cryptografen",
   "codename_theme_examples": [
@@ -31,11 +31,12 @@
     "0.3.2": "Miller-bugfix — maxPINLength (0x1D, CTAP 2.2) ontbreekt op YubiKey 5.7: CTAP 2.1-maximum 63 aannemen (oranje), setPin is de proef; typemelding noemt aangesloten type en gekozen rol",
     "0.3.4": "Miller deel 2 — telefoon koppelen: QR (geheim in de browser, k_srv/k_web) + SAS, Android key-attestation (Google-roots, revocatie, userAuthType == biometrie), device-API met K_dev-handtekening, migratie 006, web 'Telefoon koppelen', app INTERNET (gepind) + Keystore K_dev/K_biosig/K_wrap + Seal_v2 openen; eigen release-keystore (R4)",
     "0.3.5": "Miller — kluis: categorieboom (KDBX-groepen) + zoeken (titel/gebruiker/URL/notities/categorie, nooit wachtwoorden), nieuwe entry in gekozen categorie; HS-BUG-010 TOTP-QR in Instellingen 0×0 px",
-    "0.3.3": "Miller-bugfix — gewiste/nieuwe Bio onterecht KEY_ALREADY_USED: PIN-pogingen zonder PIN niet meer als stop (oranje; 8 pogingen na setPin blijft de controle); M11 toont gate-regels, sleutelgegevens en stopcode"
+    "0.3.3": "Miller-bugfix — gewiste/nieuwe Bio onterecht KEY_ALREADY_USED: PIN-pogingen zonder PIN niet meer als stop (oranje; 8 pogingen na setPin blijft de controle); M11 toont gate-regels, sleutelgegevens en stopcode",
+    "0.4.1": "Montgomery-bugfix — HS-BUG-011: Sleutels-paneel opende onder alle entries (buiten beeld); nu boven de lijst + scrollen en focus"
   },
   "phase": "Phase 12 — Montgomery (vertrouwde browser + telefoonvinger)",
   "released": "2026-10-11",
-  "built": "2026-10-16 (0.4.0-Montgomery: §14; APK 0.4.0 vc 400); LIVE HC55 + HorseAPK 2026-10-16",
+  "built": "2026-10-16 (0.4.1-Montgomery: HS-BUG-011, alleen web; APK blijft 0.4.0 vc 400)",
   "previous_release": {
     "version": "0.1.0",
     "codename": "Massey",

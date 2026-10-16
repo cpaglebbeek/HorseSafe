@@ -12,6 +12,18 @@ Kleurcodes:
 
 ## Open bugs
 
+### HS-BUG-011 — "🔑 Sleutels" leek niets te doen (paneel buiten beeld) 🟢 OPGELOST 0.4.1
+
+- **Melding (16-10, Christian):** "klikken op sleutels werkt niet" — zocht "Telefoon koppelen".
+- **Fysiek:** `#keys-section` stond in `vault.html` ná `layout-vault`; de knop zette alleen `hidden=false`, zonder
+  scrollen. nginx-log 16:00–16:02: bij elke klik `/keys`, `/auth/me`, `/trusted-browsers` = 200 → klik werkte.
+- **Logisch:** sinds `database1` (342 i.p.v. 57 entries) en 0.3.5 ("Alle entries" toont alles) staat het paneel
+  honderden rijen lager. Tests hadden maar een paar entries, dus het paneel was daar altijd in beeld.
+- **Conceptueel:** een knop die iets opent moet het resultaat in beeld brengen; e2e-tests moeten ook met een
+  realistische kluisgrootte draaien.
+- **Fix:** paneel boven de lijst, `scrollIntoView` + focus op de titel; Sluiten zet de focus terug op de knop.
+- **Test:** `tests/keys-panel.spec.ts` (300 entries): zonder fix faalt hij (`viewport ratio 0`), met fix groen.
+
 ### HS-BUG-010 — TOTP-QR in Instellingen onzichtbaar (0×0 px)
 
 **Kleur:** 🟢 Groen

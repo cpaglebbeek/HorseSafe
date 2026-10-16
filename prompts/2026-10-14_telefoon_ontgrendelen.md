@@ -3,7 +3,7 @@ date: 2026-10-14
 repo: HorseSafe
 session: telefoon_ontgrendelen
 status: pending
-resume: "verder met HorseSafe: veldtest koppelen telefoon (0.3.4 live), daarna fase B Montgomery"
+resume: "verder met HorseSafe 0.4.1: volledige testrun HS-BUG-011, dan web-deploy (apart akkoord)"
 project: HorseSafe
 ecosystem: iCt Horse Diensten
 linked_actions: [telefoon-ontgrendelen]
@@ -74,6 +74,13 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
 18. "ja" → deploy 0.4.0 (backup 20261016-154933, migratie 7, health/endpoints/smoke groen) + APK vc 400 naar HorseAPK
     (sha 8ef9e684…, verify_apk GROEN, 2 toestellen gewekt).
 
+19. "waar it telefoon koppelen?" → 🔑 Sleutels → 📱 Telefoon koppelen (alleen op kluis met keyfile).
+20. "klikken op sleutels werkt niet" → RCA HS-BUG-011: paneel opende onder 342 entries, buiten beeld. Fix: paneel boven
+    de lijst + scrollIntoView + focus; e2e `keys-panel.spec.ts` (300 entries) faalt zonder fix (viewport ratio 0), slaagt
+    met. "akkoord" (bouwen + deployen) → versie 0.4.1-Montgomery, BUGS/CHANGELOG bijgewerkt; Christian onderbrak de
+    volledige testrun ("STOP … status?"). Bij OEU gecommit als NIET-gedeployd; volledige suite nog niet gedraaid.
+
 ## Open
+- **0.4.1 (HS-BUG-011):** volledige testrun (pytest, node, Playwright) → web-deploy; LIVE = 0.4.0. Workaround: na 🔑 Sleutels naar beneden scrollen.
 - Besluit R26 eigen subdomein.
 - Christian: TOTP instellen; app bijwerken/opnieuw installeren; telefoon koppelen; veldtest Montgomery.
