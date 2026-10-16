@@ -9,8 +9,17 @@ import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import javax.net.ssl.HttpsURLConnection
 
-/** Eén HTTP-verzoek naar de device-API. [path] is relatief aan de basis-URL (begint met `/`). */
-class HttpRequest(val method: String, val path: String, val body: ByteArray?, val headers: Map<String, String>)
+/**
+ * Eén HTTP-verzoek naar de device-API. [path] is relatief aan de basis-URL (begint met `/`).
+ * [readTimeoutMs] = langere leestijd voor long-polling (`?wait=25`, §14.6); null = standaard.
+ */
+class HttpRequest(
+    val method: String,
+    val path: String,
+    val body: ByteArray?,
+    val headers: Map<String, String>,
+    val readTimeoutMs: Int? = null,
+)
 
 /** Antwoord; [dateMillis] = de `Date`-header van de server (ms sinds 1970) of null (voor de klokwaarschuwing). */
 class HttpResponse(val status: Int, val body: String, val dateMillis: Long? = null)
@@ -44,7 +53,7 @@ class HttpsTransport(private val baseUrl: String) : HttpTransport {
             c.instanceFollowRedirects = false
             c.useCaches = false
             c.connectTimeout = CONNECT_TIMEOUT_MS
-            c.readTimeout = READ_TIMEOUT_MS
+            c.readTimeout = (req.readTimeoutMs ?: READ_TIMEOUT_MS).coerceIn(READ_TIMEOUT_MS, MAX_READ_TIMEOUT_MS)
             c.requestMethod = req.method
             c.setRequestProperty("Accept", "application/json")
             req.headers.forEach { (k, v) -> c.setRequestProperty(k, v) }
@@ -89,5 +98,8 @@ class HttpsTransport(private val baseUrl: String) : HttpTransport {
         const val MAX_BODY = 64 * 1024
         private const val CONNECT_TIMEOUT_MS = 10_000
         private const val READ_TIMEOUT_MS = 20_000
+
+        /** Bovengrens voor long-polling (wait=25 + marge). */
+        private const val MAX_READ_TIMEOUT_MS = 45_000
     }
 }

@@ -3,8 +3,26 @@
 Alle wijzigingen worden hier gedocumenteerd. Format: [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
-- v0.4.0-Montgomery: laptop ontgrendelen met code van 6 cijfers + telefoonvinger (HARDWARE_KEYS §11.2).
-- Later in Miller: noodsleutel blokkeren vanaf de telefoon, update in de app.
+- Later: noodsleutel blokkeren vanaf de telefoon, update in de app; achtergrondmelding voor verzoeken (ntfy/WorkManager).
+
+## [0.4.0-Montgomery] — 2026-10-16 (vertrouwde browser + telefoonvinger)
+
+Besluit HARDWARE_KEYS §11.3 (akkoord 16-10), contract §14, invulling §14.11. Vervangt §11.2 punt 3 (6 cijfers + SAS).
+
+### Toegevoegd
+- **Vertrouwde browser:** niet-exporteerbare ECDSA-sleutel in IndexedDB; koppelbewijs = HMAC met sleutel uit CK over
+  (vault_id, browser_id, pub_B, label); alleen kluizen met keyfile; step-up vereist; max 10 per gebruiker.
+- **Inloggen op een vertrouwde browser** met e-mail + browserhandtekening + TOTP (challenge eenmalig, geen enumeratie,
+  TOTP-tijdstap-replay geweigerd).
+- **Ontgrendelen met de telefoon:** verzoek ondertekend door de browser met tijdelijke X25519-sleutel; app controleert
+  handtekening (vóór vinger) en koppelbewijs (na vinger), verzegelt CK als Seal_v2 `relay`; antwoord eenmalig, ≤ 120 s,
+  daarna gewist (410). Weigeren trekt de sessie in (+ 15 min afkoelen); "Weigeren en browser intrekken" ook het vertrouwen.
+- **Sessies:** JWT-claim `sid`; `revoked_sessions`; uitloggen, intrekken, weigeren en rekey trekken sessies in.
+- Migratie 007 (`trusted_browsers`, `browser_challenges`, `approvals`, `revoked_sessions`); testvectoren `trust_v1`
+  (Python = JS = Kotlin); app-scherm M20 goedkeuringskaart (alleen BIOMETRIC_STRONG); versionCode 400.
+
+### Tests
+- pytest 316 (was 269), node 130 (was 97), Playwright 16/16 (was 13), JVM 389 (was 337).
 
 ## [0.3.5-Miller] — 2026-10-14 (kluis: categorieën + zoeken)
 

@@ -12,14 +12,24 @@ DB_DIR = Path(__file__).resolve().parent.parent / "db"
 SCHEMA = (DB_DIR / "schema.sql").read_text(encoding="utf-8")
 MIG005 = (DB_DIR / "migrations" / "005_vault_keys.sql").read_text(encoding="utf-8")
 KOBLITZ_MARKER = "-- v0.2.0-Koblitz: hardware-sleutels per vault"
-TABLES = ("devices", "vault_keys", "webauthn_challenges", "pairings", "device_nonces")
+TABLES = (
+    "devices",
+    "vault_keys",
+    "webauthn_challenges",
+    "pairings",
+    "device_nonces",
+    "trusted_browsers",
+    "browser_challenges",
+    "approvals",
+    "revoked_sessions",
+)
 
 
 def _ddl(db: Path) -> dict[str, str]:
     con = sqlite3.connect(db)
     try:
         rows = con.execute(
-            "SELECT name, sql FROM sqlite_master WHERE tbl_name IN (?, ?, ?, ?, ?) "
+            f"SELECT name, sql FROM sqlite_master WHERE tbl_name IN ({','.join('?' * len(TABLES))}) "  # noqa: S608
             "AND sql IS NOT NULL",
             TABLES,
         ).fetchall()
@@ -45,7 +55,7 @@ def test_005_has_no_delete_and_sets_version() -> None:
 async def test_schema_sql_equals_schema4_plus_005(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # A: verse installatie via schema.sql (schema 5) + migrate.py (vanaf 006, v0.3.4-Miller)
+    # A: verse installatie via schema.sql (schema 5) + migrate.py (006 Miller, 007 Montgomery)
     a = tmp_path / "a.db"
     con = sqlite3.connect(a)
     con.executescript(SCHEMA)
@@ -54,8 +64,8 @@ async def test_schema_sql_equals_schema4_plus_005(
     from backend.db.migrate import run_migrations
 
     monkeypatch.setenv("HORSESAFE_DB_PATH", str(a))
-    assert await run_migrations() == [6]
-    assert _version(a) == 6
+    assert await run_migrations() == [6, 7]
+    assert _version(a) == 7
 
     # B: schema 4 (schema.sql zonder het Koblitz-deel) + migratie 005 via de migratierunner
     assert KOBLITZ_MARKER in SCHEMA
@@ -70,12 +80,20 @@ async def test_schema_sql_equals_schema4_plus_005(
     assert _version(b) == 4 and _ddl(b) == {}
 
     monkeypatch.setenv("HORSESAFE_DB_PATH", str(b))
-    assert await run_migrations() == [5, 6]
-    assert _version(b) == 6
+    assert await run_migrations() == [5, 6, 7]
+    assert _version(b) == 7
     ddl_a, ddl_b = _ddl(a), _ddl(b)
     assert set(ddl_a) >= {"devices", "vault_keys", "webauthn_challenges", "idx_vault_keys_vault"}
     assert set(ddl_a) >= {"pairings", "device_nonces", "idx_pairings_user"}
     assert "confirmed_at" in ddl_a["devices"]
+    assert set(ddl_a) >= {
+        "trusted_browsers",
+        "browser_challenges",
+        "approvals",
+        "revoked_sessions",
+        "idx_tb_user",
+        "idx_approvals_user",
+    }
     assert ddl_a == ddl_b
 
 

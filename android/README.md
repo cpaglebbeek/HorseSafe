@@ -1,4 +1,4 @@
-# HorseSafe Android — 0.3.0-Miller deel 1 + 0.3.4-Miller deel 2
+# HorseSafe Android — 0.3.0-Miller deel 1 + 0.3.4-Miller deel 2 + 0.4.0-Montgomery
 
 Deel 1: YubiKey inrichten en keuren op de telefoon, zonder netwerk en zonder back-up.
 Deel 2 (0.3.4): deze telefoon koppelen aan HorseSafe (QR + twee vingeraanrakingen + SAS van 6 cijfers),
@@ -47,6 +47,30 @@ Niet in deel 1: ontgrendelen, koppelen, de device-API, Keystore-sleutels, applet
   opname) geldt alleen voor de PIN-schermen M4/M5/M6/M8/M13. Koppelen toont geen PIN en wordt er niet door
   geblokkeerd (bewuste keuze: het ontwerp eist het niet; de SAS is geen geheim, het QR-geheim staat niet in
   beeld). FLAG_SECURE geldt wel overal, ook voor het camerabeeld.
+
+## Wat de app doet (0.4.0-Montgomery — ontgrendelen met de telefoon, §14.5 stap 3-5, §14.9)
+
+Contract: `docs/HARDWARE_KEYS.md` §14 (§14.2, §14.5, §14.9) en §11.3; testvectoren `specs/testvectors/trust_v1.json`.
+
+- **Foreground-polling:** `ApprovalViewModel` doet `GET /device/v1/status?wait=25` (long-poll, leestijd 35 s) zolang
+  de activity STARTED is, de telefoon `active` gekoppeld is en het scherm M0 of M14-M19 is (nooit op een PIN-scherm).
+  Tijdens een open kaart staat de lus stil. Netwerkfout/5xx → na 5 s opnieuw; 401/404/ingetrokken → na 30 s.
+- **Kaart M20 "Ontgrendelverzoek"** (laag boven M0/M14-M19): browsernaam, kluis, IP, UA, tijd; knoppen
+  **Goedkeuren (vinger)**, **Weigeren**, **Weigeren en browser intrekken**, plus Sluiten (geen beslissing).
+- **Volgorde** (`approval/ApprovalFlow`): verzoek ophalen → `sig_req` controleren met pub_B (VÓÓR de vinger; fout →
+  meteen `deny` met reden `sig_req_invalid`, kaart "Verzoek niet vertrouwd — mogelijk gemanipuleerd") → kaart →
+  Goedkeuren: eigen `store`-kopie ophalen → vinger (K_wrap, CryptoObject, alleen BIOMETRIC_STRONG) → sk_c → kopie
+  openen met AAD (vault_id, key_id) → CK → `kh` verplicht (anders `deny` reden `keyfile_required`) → proof controleren
+  (timing-safe; fout → `deny` reden `browser_proof_invalid`) → `resp` = Seal_v2 `relay` naar epk_L → `approve`.
+  sk_c, CK en k_bind worden gewist vóór het POST-verzoek.
+- Extra (veiligste lezing): een verzoek ouder dan 300 s of > 120 s in de toekomst (toestelklok) is niet goedkeurbaar;
+  een browsernaam met stuur-/opmaaktekens (§13.5.1) of zonder eigen kopie voor die kluis evenmin (alleen weigeren).
+- `crypto/TrustV1`: k_bind, bind_t, proof (+ timing-safe controle), login_t, req_t, P1363 → DER, sig_req-controle
+  (alleen P-256, r/s in 1..n-1), relay-verzegelen (`sealRelayWith` = testingang met vaste e/iv).
+- `net/DeviceApi`: `status(…, waitSeconds)` met `approvals`, `approval()`, `decide()`; alle veldnamen centraal in
+  `ApprovalWire` (gelijk aan de backend: `pub_B`, `epk_L`, `nonce_L` met hoofdletter, verder snake_case; kaart toont `vault_name`).
+- **Niet gebouwd:** WorkManager-vangnet (15 min, §14.9) — de app heeft bewust geen WorkManager-afhankelijkheid
+  (supply-chain-hashes, geen achtergrondnetwerk); open punt.
 
 ### Pakketten (deel 2)
 
@@ -126,6 +150,10 @@ cd android
     `ClientPin`, `Config`) draait mee met de eigen adapters en `RawInfo`;
   - attestation (positief en negatief), rapport-whitelist, import en vergelijkingsbasis, ViewModel-flows,
     omgevingsbewaking, lektest met een sentinel-PIN (`FlowCanaryTest`, `ReportCanaryTest`).
+- **0.4.0 (JVM):** `crypto/TrustV1Test` (trust_v1: k_bind/bind_t/proof beide vectoren + alle negatieve, login_t,
+  req_t, sig_req positief/negatief, P1363↔DER, relay byte voor byte gelijk aan `resp` + openen/negatief),
+  `net/DeviceApiApprovalTest`, `approval/ApprovalFlowTest` (end-to-end met nep-server), `approval/ApprovalViewModelTest`,
+  `approval/ApprovalSourcePolicyTest` (geen PIN-terugval/eigen prompt/netwerk in nieuwe code; sig vóór vinger).
 - **Bronbeleid:** `SourcePolicyTest` en `YubikeyFlowSourcePolicyTest` (geen `DEVICE_CREDENTIAL`, geen
   logging, geen netwerk/bestanden in `yubikey/` en `flow/`, reset alleen in `yubikey/YubikitResetOps.kt`
   (aangeroepen door `flow/ResetFlow.kt`), geen `deleteCredential`/`updateDeviceConfig`/`setMode`, geen `getCachedInfo`; `icthorsecloud.nl` alleen in `ConfigOps.kt` en

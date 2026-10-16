@@ -376,6 +376,8 @@
         ? '✓ Gewijzigd (bevestigd na een vertraagd antwoord van de server). Gebruik vanaf nu het nieuwe wachtwoord/de nieuwe keyfile.'
         : `✓ Gewijzigd. ${r.resealed} sleutel(s) bijgewerkt.`);
       await refresh();
+      // v0.4.0-Montgomery: CK is veranderd (o.a. keyfile erbij/eraf); trust-ui.js werkt zijn knop en lijst bij.
+      document.dispatchEvent(new CustomEvent('horsesafe:rekeyed'));
     } catch (e) {
       if (!done) db.credentials = oldCreds; // niets doorgevoerd: kluis blijft open met het oude materiaal
       msg('rekey-error', explain(e));

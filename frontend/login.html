@@ -16,6 +16,28 @@
     </header>
 
     <main>
+      <!-- v0.4.0-Montgomery: inloggen op een vertrouwde browser (docs/HARDWARE_KEYS.md §14.4) -->
+      <section class="card" id="trusted-login" hidden>
+        <h2>Inloggen met deze vertrouwde browser</h2>
+        <p class="muted">Deze browser is vertrouwd. Je hebt geen account-wachtwoord nodig: alleen de code uit je
+          authenticator-app. De kluis open je daarna met je telefoon.</p>
+        <form id="trusted-login-form">
+          <label for="trusted-email">E-mailadres</label>
+          <select id="trusted-email-select" hidden></select>
+          <input type="email" id="trusted-email" readonly autocomplete="username">
+
+          <label for="trusted-code">Code uit je authenticator-app</label>
+          <input type="text" id="trusted-code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" required>
+
+          <div id="trusted-error" class="error" role="alert" hidden></div>
+
+          <div class="actions">
+            <button type="submit" id="trusted-submit">Inloggen</button>
+          </div>
+        </form>
+        <p class="muted">Liever met je wachtwoord? Gebruik het formulier hieronder.</p>
+      </section>
+
       <section class="card">
         <h2>Account-login</h2>
         <p class="muted">
@@ -45,12 +67,14 @@
     </main>
 
     <footer>
-      HorseSafe v0.0.2-Hellman — iCt Horse · KvK 96787112
+      HorseSafe v0.4.0-Montgomery — iCt Horse · KvK 96787112
     </footer>
   </div>
 
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/hwkeys.js"></script>
+  <script src="js/trust.js"></script>
   <script src="js/page-login.js"></script>
 </body>
 </html>

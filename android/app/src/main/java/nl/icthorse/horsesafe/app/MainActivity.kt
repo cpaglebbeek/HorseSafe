@@ -22,10 +22,12 @@ import nl.icthorse.horsesafe.secure.CrashGuard
 import nl.icthorse.horsesafe.secure.ProcessEnd
 import nl.icthorse.horsesafe.secure.ScreenWatch
 import nl.icthorse.horsesafe.secure.SecureWindow
+import nl.icthorse.horsesafe.ui.ApprovalViewModel
 import nl.icthorse.horsesafe.ui.HorseSafeRoot
 import nl.icthorse.horsesafe.ui.HorseSafeViewModel
 import nl.icthorse.horsesafe.ui.PairingViewModel
 import nl.icthorse.horsesafe.ui.RootActions
+import nl.icthorse.horsesafe.ui.approvalAllowedOn
 
 /**
  * Enige activity van HorseSafe (Compose).
@@ -37,11 +39,13 @@ import nl.icthorse.horsesafe.ui.RootActions
  * - "Afsluiten" en het einde van een inrichting: [ProcessEnd] (finishAndRemoveTask + killProcess).
  * - Deel 2: FragmentActivity (de systeem-vingerprompt van androidx.biometric heeft er een nodig);
  *   "Telefoon koppelen" heeft een eigen [PairingViewModel].
+ * - 0.4.0: [ApprovalViewModel] pollt ontgrendelverzoeken alleen in de voorgrond (STARTED) en op M0/M14-M19.
  */
 class MainActivity : FragmentActivity() {
 
     private lateinit var vm: HorseSafeViewModel
     private lateinit var pairing: PairingViewModel
+    private lateinit var approvals: ApprovalViewModel
     private val screenWatch = ScreenWatch()
 
     private val exportLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument(ReportStore.MIME_TYPE)) { uri ->
@@ -62,12 +66,14 @@ class MainActivity : FragmentActivity() {
 
         vm = ViewModelProvider(this, HorseSafeViewModel.factory(ServiceLocator))[HorseSafeViewModel::class.java]
         pairing = ViewModelProvider(this, PairingViewModel.factory(ServiceLocator.pairing))[PairingViewModel::class.java]
+        approvals = ViewModelProvider(this, ApprovalViewModel.factory(ServiceLocator.approvalServices))[ApprovalViewModel::class.java]
         val signer = signerSha256()
 
         setContent {
             HorseSafeRoot(
                 vm = vm,
                 pairing = pairing,
+                approvals = approvals,
                 services = ServiceLocator,
                 signerSha256 = signer,
                 actions = RootActions(
@@ -83,6 +89,14 @@ class MainActivity : FragmentActivity() {
         }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
+                launch {
+                    // 0.4.0: ontgrendelverzoeken alleen pollen zolang de app zichtbaar is en M0/koppelen toont.
+                    try {
+                        vm.ui.map { approvalAllowedOn(it.screen) }.distinctUntilChanged().collect { approvals.setActive(it) }
+                    } finally {
+                        approvals.setActive(false)
+                    }
+                }
                 launch {
                     // A-3 (API 34+): melding bij een schermafbeelding; de ingedrukte PIN-groep gaat dicht.
                     var seen = screenWatch.captureCount.value
@@ -119,6 +133,7 @@ class MainActivity : FragmentActivity() {
     }
 
     override fun onStop() {
+        approvals.setActive(false)
         vm.onStop()
         pairing.onStop()
         screenWatch.stop(this)

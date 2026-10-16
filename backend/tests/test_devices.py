@@ -136,6 +136,7 @@ async def test_happy_path(client: AsyncClient, dev_env: Any, mailbox: Any) -> No
         "device_id": d.device_id,
         "state": "pending",
         "keys": [],
+        "approvals": [],
     }
 
     # Web: claim met mac_web, eigen SAS-berekening
@@ -745,6 +746,7 @@ async def test_revoke_deletes_vault_keys(client: AsyncClient, dev_env: Any, mail
         "device_id": d.device_id,
         "state": "revoked",
         "keys": [],
+        "approvals": [],
     }
     r = await dget(client, d, f"/device/v1/keys/{key['id']}/sealed")
     assert r.status_code == 401

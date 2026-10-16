@@ -41,6 +41,7 @@ from ..models.vault_key import (
     VaultKeySealed,
 )
 from ..services import audit_service, mail_service, stepup_service, storage_service
+from ..services import trust_service as trust
 from ..services import vault_key_service as svc
 from ..services import webauthn_service as wa
 
@@ -485,6 +486,9 @@ async def rekey(
                 "UPDATE vaults SET size_bytes = ?, etag = ?, updated_at = ? WHERE id = ?",
                 (len(data), new_etag, t, vault_id),
             )
+            # §14.7 (Montgomery): CK verandert, dus elk koppelbewijs is ongeldig → alle
+            # vertrouwde browsers van deze kluis ingetrokken (revoke_reason 'rekey').
+            revoked_browsers = await trust.revoke_vault_browsers(conn, vault_id, t)
             try:
                 storage_service._atomic_write(blob_path, data)
             except OSError as e:
@@ -501,6 +505,14 @@ async def rekey(
             "vault_rekey",
             {"vault_id": vault_id, "size": len(data), "keys": len(items)},
         )
+        for bid in revoked_browsers:
+            await _audit(
+                conn,
+                request,
+                user_id,
+                "browser_revoke",
+                {"browser_id": bid, "vault_id": vault_id, "reason": "rekey"},
+            )
         email = await svc.user_email(conn, user_id)
     # De melding gaat NA het antwoord (BackgroundTask): de rekey is gecommit, en een trage
     # SMTP-server mag het antwoord niet laten verlopen (nginx-504 → client denkt ten onrechte
@@ -513,7 +525,13 @@ async def rekey(
         "vault_rekey",
         "HorseSafe: wachtwoord of keyfile van je kluis gewijzigd",
         f"Het wachtwoord en/of de keyfile van je kluis '{meta['name']}' is gewijzigd. "
-        "Alle verzegelde kopieën voor je hardware-sleutels zijn bijgewerkt.",
+        "Alle verzegelde kopieën voor je hardware-sleutels zijn bijgewerkt."
+        + (
+            f" {len(revoked_browsers)} vertrouwde browser(s) van deze kluis zijn ingetrokken; "
+            "vertrouw ze zo nodig opnieuw."
+            if revoked_browsers
+            else ""
+        ),
         label=None,
         advice="Log direct in, controleer je kluis en je sleutels.",
     )

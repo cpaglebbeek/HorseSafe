@@ -17,6 +17,19 @@ CLI (laatste stdout-regel is JSON)::
                                           → {"state": …, "keys": […]}
     python -m backend.tests.fake_device sealed --api <base> --state <file> --key-id <kid>
                                           → {"key_id": …, "vault_id": …, "opened": true}
+    python -m backend.tests.fake_device approve --api <base> --state <file> \
+        [--decision approve|deny|deny_revoke] [--tamper-label] [--timeout 60]
+                                          → {"approval_id": …, "decision": …, "reason": …,
+                                             "status": "approved"|"denied", "label": …}
+    python -m backend.tests.fake_device deny --api <base> --state <file> [--revoke]
+                                          (= approve --decision deny | deny_revoke)
+
+``approve`` (v0.4.0-Montgomery, §14.5): pollt ``/device/v1/status?wait=25`` tot er een verzoek is,
+haalt het op, controleert ``sig_req`` met ``pub_B`` (vóór de "vinger"), opent de eigen store-kopie met
+``sk_c``, weigert ``kh == null`` (``keyfile_required``), controleert ``proof`` met ``k_bind`` uit
+``pt_ck`` (``browser_proof_invalid``) en verzegelt CK als Seal_v2 ``relay`` naar ``epk_L``. Een
+mislukte controle wordt een ``deny`` met die reden. ``--tamper-label`` doet alsof de server een ander
+label toonde: het koppelbewijs klopt dan niet en de nep-app weigert.
 
 ``<base>`` is de API-basis zonder ``/api``-pad van de server zelf, bv. ``http://127.0.0.1:3997``
 (uvicorn direct) of ``https://icthorsecloud.nl/HorseSafe/api``. Getekend PATH = ``/api`` + endpoint.
@@ -41,6 +54,7 @@ from typing import Any
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec, x25519
+from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from cryptography.x509.oid import NameOID
@@ -367,6 +381,51 @@ def parse_qr(qr: str) -> tuple[str, bytes]:
     return pairing_id, b64u_dec(s)
 
 
+# ─────────────── Montgomery-afleidingen (§14.2, eigen implementatie) ───────────────
+
+
+def trust_k_bind(pt_ck: bytes, vault_id: str) -> bytes:
+    salt = hashlib.sha256(b"HSv2 bind salt\x00" + vault_id.encode()).digest()
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=salt, info=b"HSv2 browser bind").derive(
+        pt_ck
+    )
+
+
+def trust_bind_t(vault_id: str, browser_id: str, pub_b: str, label: str) -> bytes:
+    return "\x00".join(["HSv2 browser", vault_id, browser_id, pub_b, label]).encode("utf-8")
+
+
+def trust_req_t(a: dict[str, Any]) -> bytes:
+    """``req_t`` uit wat de telefoon van ``GET /device/v1/approvals/{id}`` krijgt."""
+    return "\x00".join(
+        [
+            "HSv2 approve",
+            a["approval_id"],
+            a["vault_id"],
+            a["browser"]["browser_id"],
+            a["epk_L"],
+            a["nonce_L"],
+            str(a["created_at"]),
+        ]
+    ).encode("utf-8")
+
+
+def verify_raw_p256(spki_b64u: str, sig_b64u: str, data: bytes) -> bool:
+    from cryptography.exceptions import InvalidSignature
+
+    try:
+        sig = b64u_dec(sig_b64u)
+        if len(sig) != 64:
+            return False
+        key = serialization.load_der_public_key(b64u_dec(spki_b64u))
+        assert isinstance(key, ec.EllipticCurvePublicKey)
+        der = encode_dss_signature(int.from_bytes(sig[:32], "big"), int.from_bytes(sig[32:], "big"))
+        key.verify(der, data, ec.ECDSA(hashes.SHA256()))
+    except (ValueError, TypeError, AssertionError, InvalidSignature):
+        return False
+    return True
+
+
 # ─────────────── De nep-app ───────────────
 
 
@@ -495,6 +554,53 @@ class FakeDevice:
             seal.unseal(sealed, sk, purpose="store", vault_id=vault_id, bind=key_id, kid=key_id)
         )
 
+    def decide_body(
+        self,
+        approval: dict[str, Any],
+        store_sealed: str,
+        *,
+        decision: str = "approve",
+        tamper_label: bool = False,
+    ) -> dict[str, Any]:
+        """Wat de app doet bij een ontgrendelverzoek (§14.5 stap 4-5, §14.9). Geeft de POST-body.
+
+        Volgorde: ``sig_req`` (vóór de vinger) → vinger (hier: ``sk_c`` uit de state) → eigen
+        store-kopie openen (AAD met vault_id/key_id) → ``kh`` vereist → ``proof`` timing-safe →
+        ``resp = Seal_v2(epk_L, CK, "relay", vault_id, approval_id ‖ 0 ‖ nonce_L)``."""
+        from . import seal_v2_ref as seal
+
+        a = json.loads(json.dumps(approval))  # kopie: --tamper-label wijzigt alleen lokaal
+        if tamper_label:
+            a["browser"]["label"] = a["browser"]["label"] + " (gewijzigd)"
+        if not verify_raw_p256(a["browser"]["pub_B"], a["sig_req"], trust_req_t(a)):
+            return {"decision": "deny", "reason": "sig_req_invalid"}
+        if decision != "approve":
+            return {"decision": decision, "reason": "user"}
+        ph, kh = self.open_sealed(store_sealed, a["vault_id"], a["key_id"])
+        if kh is None:
+            return {"decision": "deny", "reason": "keyfile_required"}
+        pt_ck = seal.plaintext(ph, kh)
+        b = a["browser"]
+        expect = hmac.new(
+            trust_k_bind(pt_ck, a["vault_id"]),
+            trust_bind_t(a["vault_id"], b["browser_id"], b["pub_B"], b["label"]),
+            hashlib.sha256,
+        ).digest()
+        if not hmac.compare_digest(expect, b64u_dec(b["proof"])):
+            return {"decision": "deny", "reason": "browser_proof_invalid"}
+        resp, _mid = seal.seal_with(
+            b64u_dec(a["epk_L"]),
+            ph,
+            kh,
+            purpose="relay",
+            vault_id=a["vault_id"],
+            bind=a["approval_id"] + "\x00" + a["nonce_L"],
+            kid=a["approval_id"],
+            ephemeral_sk=os.urandom(32),
+            iv=os.urandom(12),
+        )
+        return {"decision": "approve", "resp": resp}
+
     # ── opslaan/laden voor de CLI ──
     def to_state(self) -> dict[str, Any]:
         def pem(k: Any) -> str:
@@ -580,6 +686,42 @@ def _signed_get(a: argparse.Namespace, path: str) -> tuple[FakeDevice, Any]:
     return d, res
 
 
+def _cli_approve(a: argparse.Namespace) -> dict[str, Any]:
+    """Zie de moduledocstring (``approve``/``deny``)."""
+    import time
+
+    deadline = time.monotonic() + a.timeout
+    while True:
+        wait = max(0, min(25, int(deadline - time.monotonic())))
+        d, st = _signed_get(a, f"/device/v1/status?wait={wait}")
+        if st.get("state") != "active":
+            raise SystemExit(f"toestel niet actief: {st.get('state')}")
+        if st.get("approvals"):
+            break
+        if time.monotonic() >= deadline:
+            raise SystemExit("geen ontgrendelverzoek binnen de wachttijd")
+    approval_id = st["approvals"][0]["approval_id"]
+    _d, ap = _signed_get(a, f"/device/v1/approvals/{approval_id}")
+    _d, store = _signed_get(a, f"/device/v1/keys/{ap['key_id']}/sealed")
+    if store["vault_id"] != ap["vault_id"]:
+        raise SystemExit("kopie hoort bij een andere kluis")
+    body = d.decide_body(ap, store["sealed"], decision=a.decision, tamper_label=a.tamper_label)
+    raw = json.dumps(body).encode()
+    path = f"/device/v1/approvals/{approval_id}"
+    headers = {"Content-Type": "application/json", **d.signed_headers("POST", path, raw)}
+    code, res = _http("POST", a.api.rstrip("/") + path, raw, headers)
+    if code != 200:
+        raise SystemExit(f"POST {path} {code}: {res}")
+    return {
+        "approval_id": approval_id,
+        "decision": body["decision"],
+        "reason": body.get("reason"),
+        "status": res["status"],
+        "label": ap["browser"]["label"],
+        "ip": ap.get("ip"),
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="HorseSafe nep-app (alleen tests)")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -596,13 +738,29 @@ def main(argv: list[str] | None = None) -> int:
     k.add_argument("--api", required=True)
     k.add_argument("--state", required=True)
     k.add_argument("--key-id", required=True)
+    for name in ("approve", "deny"):
+        p = sub.add_parser(name)
+        p.add_argument("--api", required=True)
+        p.add_argument("--state", required=True)
+        p.add_argument("--timeout", type=float, default=60.0)
+        p.add_argument("--tamper-label", action="store_true")
+        if name == "approve":
+            p.add_argument(
+                "--decision", choices=("approve", "deny", "deny_revoke"), default="approve"
+            )
+        else:
+            p.add_argument("--revoke", action="store_true", help="deny_revoke")
     sub.add_parser("make-root")
     a = ap.parse_args(argv)
+    if a.cmd == "deny":
+        a.decision = "deny_revoke" if a.revoke else "deny"
     if a.cmd == "claim":
         out: Any = _cli_claim(a)
     elif a.cmd == "status":
         _d, res = _signed_get(a, "/device/v1/status")
         out = {"state": res["state"], "keys": res["keys"]}
+    elif a.cmd in ("approve", "deny"):
+        out = _cli_approve(a)
     elif a.cmd == "sealed":
         d, res = _signed_get(a, f"/device/v1/keys/{a.key_id}/sealed")
         d.open_sealed(res["sealed"], res["vault_id"], res["key_id"])  # inhoud niet tonen

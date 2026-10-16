@@ -8,6 +8,7 @@ import androidx.fragment.app.FragmentActivity
 import java.io.File
 import java.lang.ref.WeakReference
 import nl.icthorse.horsesafe.BuildConfig
+import nl.icthorse.horsesafe.approval.ApprovalFlow
 import nl.icthorse.horsesafe.attest.AaguidAllowlist
 import nl.icthorse.horsesafe.attest.AttestationResult
 import nl.icthorse.horsesafe.attest.AttestationVerifier
@@ -38,6 +39,7 @@ import nl.icthorse.horsesafe.report.ReportStore
 import nl.icthorse.horsesafe.report.SerialHasher
 import nl.icthorse.horsesafe.secure.EnvironmentGuard
 import nl.icthorse.horsesafe.ui.AppServices
+import nl.icthorse.horsesafe.ui.ApprovalServices
 import nl.icthorse.horsesafe.ui.PairingServices
 import nl.icthorse.horsesafe.ui.TrustInfo
 import nl.icthorse.horsesafe.yubikey.Inspector
@@ -171,16 +173,19 @@ object ServiceLocator : AppServices {
     // ============================================================== deel 2: telefoon koppelen
 
     private val gate: StrongGate by lazy { StrongGate(appContext) { currentActivity() as? FragmentActivity } }
+    private val phoneKeys by lazy { AndroidPhoneKeys() }
+    private val deviceApi by lazy { DeviceApi(HttpsTransport(BuildConfig.API_BASE_URL)) }
+    private val deviceStore by lazy { DeviceStore(File(appContext.noBackupFilesDir, "device")) }
 
     /** Koppel-diensten voor de PairingViewModel (HARDWARE_KEYS §13). */
     val pairing: PairingServices by lazy {
         object : PairingServices {
             override val flow: PairingFlow by lazy {
                 PairingFlow(
-                    keys = AndroidPhoneKeys(),
+                    keys = phoneKeys,
                     finger = StrongGateFinger(gate),
-                    api = DeviceApi(HttpsTransport(BuildConfig.API_BASE_URL)),
-                    store = DeviceStore(File(appContext.noBackupFilesDir, "device")),
+                    api = deviceApi,
+                    store = deviceStore,
                 )
             }
 
@@ -197,6 +202,21 @@ object ServiceLocator : AppServices {
                     label = DeviceInfo.clean(name, 64, model),
                     model = model,
                     appVersion = DeviceInfo.clean(BuildConfig.VERSION_NAME, 32, "onbekend"),
+                )
+            }
+        }
+    }
+
+    /** Ontgrendelverzoeken (HARDWARE_KEYS §14.5): zelfde Keystore, vinger, API en opslag als het koppelen. */
+    val approvalServices: ApprovalServices by lazy {
+        object : ApprovalServices {
+            override val approvals: ApprovalFlow by lazy {
+                ApprovalFlow(
+                    keys = phoneKeys,
+                    finger = StrongGateFinger(gate),
+                    api = deviceApi,
+                    store = deviceStore,
+                    wipeLocal = { pairing.flow.wipeLocal() },
                 )
             }
         }

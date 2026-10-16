@@ -29,6 +29,9 @@ enum class Screen(val code: String, val titel: String, val holdsSecret: Boolean 
     M17_PAIRED("M17", "Gekoppeld"),
     M18_BIO_REQUIRED("M18", "Vingerafdruk nodig"),
     M19_REPAIR("M19", "Opnieuw koppelen"),
+    // 0.4.0-Montgomery: goedkeuringskaart (ApprovalViewModel); wordt als laag over M0/M14-M19 getoond,
+    // HorseSafeViewModel zet dit scherm nooit zelf.
+    M20_APPROVAL("M20", "Ontgrendelverzoek"),
     BUSY("—", "Bezig"),
 }
 

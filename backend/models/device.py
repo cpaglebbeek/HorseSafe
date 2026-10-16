@@ -135,10 +135,18 @@ class DeviceKeyRef(BaseModel):
     label: str
 
 
+class DeviceApprovalRef(BaseModel):
+    """Open ontgrendelverzoek voor dit toestel (v0.4.0-Montgomery, §14.6)."""
+
+    approval_id: str
+    vault_id: str
+
+
 class DeviceStatus(BaseModel):
     device_id: str
     state: Literal["pending", "active", "revoked"]
     keys: list[DeviceKeyRef]
+    approvals: list[DeviceApprovalRef] = []
 
 
 class DeviceSealed(BaseModel):

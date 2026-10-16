@@ -21,6 +21,7 @@ from ..services import (
     mfa_service,
     pw_service,
     stepup_service,
+    trust_service,
 )
 from ..services import vault_key_service as vk_svc
 from ..services import webauthn_service as wa
@@ -114,6 +115,10 @@ async def logout(request: Request, response: Response) -> dict[str, bool]:
     settings = get_settings()
     token_payload = jwt_service.require_auth(request)
     async with connect(settings.db_path) as conn:
+        sid = token_payload.get("sid")
+        if isinstance(sid, str) and sid:  # v0.4.0-Montgomery: uitgelogd = sessie ingetrokken
+            await trust_service.revoke_session(conn, sid, vk_svc.now())
+            await conn.commit()
         await audit_service.log(
             conn,
             user_id=str(token_payload["sub"]),
@@ -179,7 +184,8 @@ async def totp_verify(
             had_keys = await vk_svc.user_has_keys(conn, user_id)
             if had_keys and not bool(payload.get("mfa", False)):
                 raise HTTPException(status_code=403, detail={"error": "mfa_required"})
-            ok = mfa_service.verify_code(secret_arg, code)
+            step = mfa_service.matched_step(secret_arg, code)
+            ok = step is not None
             if not ok:
                 await auth_service.record_failed_login(conn, ip, None)
                 await audit_service.log(
@@ -193,7 +199,7 @@ async def totp_verify(
                 event="mfa_setup_totp",
                 ip=ip,
                 user_agent=request.headers.get("user-agent"),
-                detail={"action": "enabled", "had_keys": had_keys},
+                detail={"action": "enabled", "had_keys": had_keys, "totp_step": step},
             )
             notify = await vk_svc.user_email(conn, user_id)
         else:
@@ -201,14 +207,17 @@ async def totp_verify(
             stored = await mfa_service.get_user_totp(conn, user_id)
             if not stored:
                 raise HTTPException(status_code=400, detail={"error": "totp_not_configured"})
-            ok = mfa_service.verify_code(stored, code)
-            if not ok:
+            step = mfa_service.matched_step(stored, code)
+            if step is None:
                 await auth_service.record_failed_login(conn, ip, None)
                 await audit_service.log(
                     conn, user_id=user_id, event="mfa_fail", ip=ip, detail={"flow": "challenge"}
                 )
                 raise HTTPException(status_code=400, detail={"error": "invalid_code"})
-            await audit_service.log(conn, user_id=user_id, event="mfa_pass_totp", ip=ip)
+            # totp_step (alleen de tijdstap) voor de replay-bescherming van /auth/browser/login.
+            await audit_service.log(
+                conn, user_id=user_id, event="mfa_pass_totp", ip=ip, detail={"totp_step": step}
+            )
 
     if notify:
         await _totp_changed_mail(request, user_id, notify, enabled=True)
@@ -498,6 +507,7 @@ async def stepup(body: StepupRequest, request: Request, response: Response) -> d
     ua = request.headers.get("user-agent")
     clone: tuple[str, str] | None = None
     stepup_key: str | None = None
+    totp_step: int | None = None
     async with connect(settings.db_path) as conn:
         if isinstance(body, StepupBio):
             try:
@@ -564,7 +574,8 @@ async def stepup(body: StepupRequest, request: Request, response: Response) -> d
             fails = await cur.fetchone()
             if fails and int(fails["n"]) >= STEPUP_FAIL_MAX:
                 raise HTTPException(status_code=429, detail={"error": "too_many_attempts"})
-            if not mfa_service.verify_code(secret, body.code):
+            totp_step = mfa_service.matched_step(secret, body.code)
+            if totp_step is None:
                 await audit_service.log(
                     conn,
                     user_id=user_id,
@@ -582,7 +593,11 @@ async def stepup(body: StepupRequest, request: Request, response: Response) -> d
                 event="stepup",
                 ip=ip,
                 user_agent=ua,
-                detail={"method": body.method},
+                detail=(
+                    {"method": body.method, "totp_step": totp_step}
+                    if body.method == "totp"
+                    else {"method": body.method}
+                ),
             )
     if err is not None:
         if clone is not None:
@@ -605,6 +620,7 @@ async def stepup(body: StepupRequest, request: Request, response: Response) -> d
         stepup_until=until,
         stepup_method=body.method,
         stepup_key=stepup_key,
+        **jwt_service.carry_claims(payload),
     )
     jwt_service.set_cookie(response, token)
     return {"ok": True, "method": body.method, "stepup_until": until}

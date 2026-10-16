@@ -149,7 +149,7 @@ private fun M17Paired(u: PairingUi, vm: PairingViewModel, exit: () -> Unit) {
         if (u.error != null) BlockedPanel(listOf(u.error))
         Panel(border = HsColors.Green) {
             SectionTitle(u.label ?: "Deze telefoon")
-            Body("Deze telefoon is gekoppeld. Ontgrendelen op de laptop met deze telefoon komt in een volgende versie.")
+            Body("Deze telefoon is gekoppeld. Vraagt een vertrouwde browser om je kluis te openen, dan verschijnt hier een verzoek zolang de app open is.")
         }
         if (u.keys.isEmpty()) {
             Small("De server meldt (nog) geen kluis voor deze telefoon.")

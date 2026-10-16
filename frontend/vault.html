@@ -60,6 +60,24 @@
           </details>
           <div id="hwkey-unlock-error" class="error" hidden></div>
         </div>
+
+        <!-- v0.4.0-Montgomery: ontgrendelen met de telefoon op een vertrouwde browser (§14.5) -->
+        <div id="phone-unlock" hidden>
+          <hr>
+          <div class="actions">
+            <button type="button" id="phone-unlock-btn">📱 Ontgrendel met telefoon</button>
+          </div>
+          <div id="phone-unlock-wait" class="pair-panel" hidden>
+            <p><strong>Open HorseSafe op je telefoon en keur goed.</strong></p>
+            <p class="muted">Het verzoek is nog <span id="phone-unlock-countdown" class="pair-countdown">2:00</span> geldig.
+              Keur alleen goed als je dit zelf net hebt gevraagd.</p>
+            <div class="actions">
+              <button type="button" id="phone-unlock-cancel" class="secondary">Annuleren</button>
+            </div>
+          </div>
+          <div id="phone-unlock-status" class="muted" role="status" aria-live="polite" hidden></div>
+          <div id="phone-unlock-error" class="error" role="alert" hidden></div>
+        </div>
       </section>
 
       <!-- S7: Vault content (na unlock) -->
@@ -210,6 +228,31 @@
             </div>
           </div>
 
+          <!-- v0.4.0-Montgomery: vertrouwde browsers (docs/HARDWARE_KEYS.md §14.3) -->
+          <h3>Vertrouwde browsers</h3>
+          <p class="muted">Een vertrouwde browser herkent de server aan een sleutel die alleen in deze browser staat.
+            Daarna log je hier in met je e-mailadres en de code uit je authenticator-app, en open je de kluis door op je
+            <strong>telefoon</strong> goed te keuren met je vingerafdruk. De browser bewaart geen wachtwoord of keyfile.
+            Kan alleen bij een kluis met keyfile en met een authenticator-app.</p>
+          <p id="trust-local" class="muted"></p>
+          <div id="trust-label-row">
+            <label for="trust-label">Naam van deze browser</label>
+            <input type="text" id="trust-label" maxlength="64" placeholder="bijv. Chrome – laptop">
+          </div>
+          <div class="actions">
+            <button type="button" id="trust-add">🖥 Deze browser vertrouwen</button>
+            <button type="button" id="trust-forget" class="secondary" hidden>Vergeet deze browser</button>
+          </div>
+          <p id="trust-why" class="muted" hidden></p>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Browser</th><th>Vertrouwd</th><th>Laatst gebruikt</th><th></th></tr></thead>
+              <tbody id="trust-body"><tr><td colspan="4" class="muted">Geen vertrouwde browsers.</td></tr></tbody>
+            </table>
+          </div>
+          <div id="trust-error" class="error" role="alert" hidden></div>
+          <div id="trust-status" class="success" role="status" hidden></div>
+
           <h3>Wachtwoord of keyfile wijzigen</h3>
           <p class="muted">Wijzigt de kluis en werkt alle gekoppelde sleutels in één keer bij (ook de noodsleutel in
             je kluis). Je bevestigt eerst met je YubiKey Bio of authenticator-code.</p>
@@ -291,7 +334,7 @@
     </main>
 
     <footer>
-      HorseSafe v0.3.5-Miller — Zero-knowledge: server ziet alleen ciphertext
+      HorseSafe v0.4.0-Montgomery — Zero-knowledge: server ziet alleen ciphertext
     </footer>
   </div>
 
@@ -305,11 +348,13 @@
   <script src="vendor/qrcode/qrcode.js"></script>
   <script src="js/hwkeys.js"></script>
   <script src="js/pairing.js"></script>
+  <script src="js/trust.js"></script>
   <script src="js/vault-index.js"></script>
   <script src="js/vault-ui.js"></script>
   <script src="js/main.js"></script>
   <script src="js/stepup.js"></script>
   <script src="js/hwkeys-ui.js"></script>
   <script src="js/pairing-ui.js"></script>
+  <script src="js/trust-ui.js"></script>
 </body>
 </html>

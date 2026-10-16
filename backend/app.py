@@ -16,7 +16,19 @@ from .db.init import init_db
 from .db.migrate import check_vault_keys_schema, run_migrations
 from .middlewares.csp_headers import SecurityHeadersMiddleware
 from .middlewares.ratelimit import RateLimitMiddleware
-from .routes import admin, auth, device_api, devices, health, shares, vault, vault_keys, webauthn
+from .routes import (
+    admin,
+    approvals,
+    auth,
+    device_api,
+    devices,
+    health,
+    shares,
+    trusted_browsers,
+    vault,
+    vault_keys,
+    webauthn,
+)
 from .services import mail_service
 
 logger = logging.getLogger("horsesafe")
@@ -102,8 +114,11 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router, prefix="/auth", tags=["auth"])
+    app.include_router(trusted_browsers.auth_router, prefix="/auth/browser", tags=["trust"])
     app.include_router(vault.router, prefix="/vault", tags=["vault"])
     app.include_router(vault_keys.router, prefix="/vault", tags=["vault-keys"])
+    app.include_router(approvals.router, prefix="/vault", tags=["approvals"])
+    app.include_router(trusted_browsers.router, prefix="/trusted-browsers", tags=["trust"])
     app.include_router(webauthn.router, prefix="/webauthn", tags=["webauthn"])
     app.include_router(devices.router, prefix="/devices", tags=["devices"])
     app.include_router(device_api.router, prefix="/device/v1", tags=["device-api"])

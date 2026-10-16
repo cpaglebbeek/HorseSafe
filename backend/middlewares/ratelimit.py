@@ -24,7 +24,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     DEFAULT_LIMIT = (300, 60)  # 300/min default
     # Patronen gaan vóór de prefixen. Claim is publiek (alleen mac): 10 per 10 min per IP
     # (docs/HARDWARE_KEYS.md §13.4). Pollen van /devices/pairings/{id} valt onder de default.
-    PATTERNS = ((re.compile(r"^/devices/pairings/[^/]+/claim$"), "pairing_claim", (10, 600)),)
+    # v0.4.0-Montgomery: inlog-challenge voor een vertrouwde browser 10 per 10 min per IP (§14.4;
+    # per e-mail telt de route zelf).
+    PATTERNS = (
+        (re.compile(r"^/devices/pairings/[^/]+/claim$"), "pairing_claim", (10, 600)),
+        (re.compile(r"^/auth/browser/challenge$"), "browser_challenge", (10, 600)),
+    )
 
     def __init__(self, app: object) -> None:
         super().__init__(app)  # type: ignore[arg-type]

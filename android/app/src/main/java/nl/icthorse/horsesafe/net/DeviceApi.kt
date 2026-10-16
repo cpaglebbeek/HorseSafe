@@ -1,6 +1,7 @@
 package nl.icthorse.horsesafe.net
 
 import java.io.IOException
+import nl.icthorse.horsesafe.crypto.B64u
 import nl.icthorse.horsesafe.report.ReportSchemaException
 import nl.icthorse.horsesafe.report.StrictJson
 
@@ -60,7 +61,97 @@ data class DeviceKey(val keyId: String, val vaultId: String, val label: String)
 
 enum class DeviceState(val wire: String) { PENDING("pending"), ACTIVE("active"), REVOKED("revoked") }
 
-data class DeviceStatus(val deviceId: String, val state: DeviceState, val keys: List<DeviceKey>)
+/**
+ * [approvals] = openstaande ontgrendelverzoeken (§14.6, alleen `pending`); leeg bij een server zonder Montgomery.
+ */
+data class DeviceStatus(
+    val deviceId: String,
+    val state: DeviceState,
+    val keys: List<DeviceKey>,
+    val approvals: List<PendingApproval> = emptyList(),
+)
+
+/** Eén openstaand verzoek uit de status (§14.6). */
+data class PendingApproval(val approvalId: String, val vaultId: String)
+
+/** De vertrouwde browser zoals de server hem bij het verzoek levert (§14.5 stap 4). Geen geheim. */
+data class TrustedBrowser(val browserId: String, val pubB: String, val label: String, val proof: String)
+
+/**
+ * Detail van een ontgrendelverzoek (`GET /device/v1/approvals/{id}`, §14.5 stap 4). Alleen vorm gecontroleerd;
+ * de handtekening (sig_req) en het koppelbewijs (proof) controleert de app zelf (`crypto/TrustV1`).
+ * [ip], [ua], [requestedAt], [vaultName] en [expiresAt] zijn alleen voor de kaart (niet ondertekend, mogen ontbreken).
+ */
+data class ApprovalRequest(
+    val approvalId: String,
+    val vaultId: String,
+    val keyId: String,
+    val browser: TrustedBrowser,
+    val epkL: String,
+    val nonceL: String,
+    val createdAt: Long,
+    val sigReq: String,
+    val ip: String?,
+    val ua: String?,
+    val requestedAt: Long?,
+    val vaultName: String? = null,
+    val expiresAt: Long? = null,
+)
+
+/** Beslissing van de telefoon (`POST /device/v1/approvals/{id}`, §14.5 stap 5). */
+sealed class ApprovalDecision {
+    /** [resp] = Seal_v2 purpose `relay` naar epk_L. */
+    class Approve(val resp: String) : ApprovalDecision() {
+        override fun toString() = "Approve([verzegeld])"
+    }
+
+    data class Deny(val reason: String? = null) : ApprovalDecision()
+
+    data class DenyRevoke(val reason: String? = null) : ApprovalDecision()
+}
+
+/**
+ * Veldnamen en vaste waarden van de Montgomery-device-API (§14.5/§14.6) op één plek, zodat ze bij een
+ * contractwijziging of afwijkende backend in één keer aan te passen zijn. Gelijk aan de backend van 0.4.0
+ * (16-10-2026): `pub_B`, `epk_L` en `nonce_L` met hoofdletter zoals in §14.5; de rest snake_case.
+ */
+object ApprovalWire {
+    const val APPROVALS = "approvals"
+    const val APPROVAL_ID = "approval_id"
+    const val VAULT_ID = "vault_id"
+    const val KEY_ID = "key_id"
+    const val BROWSER = "browser"
+    const val BROWSER_ID = "browser_id"
+    const val PUB_B = "pub_B"
+    const val LABEL = "label"
+    const val PROOF = "proof"
+    const val EPK_L = "epk_L"
+    const val NONCE_L = "nonce_L"
+    const val CREATED_AT = "created_at"
+    const val SIG_REQ = "sig_req"
+    const val IP = "ip"
+    const val UA = "ua"
+    const val REQUESTED_AT = "requested_at"
+    const val VAULT_NAME = "vault_name"
+    const val EXPIRES_AT = "expires_at"
+    const val DECISION = "decision"
+    const val RESP = "resp"
+    const val REASON = "reason"
+
+    const val DECISION_APPROVE = "approve"
+    const val DECISION_DENY = "deny"
+    const val DECISION_DENY_REVOKE = "deny_revoke"
+
+    /** Redenen bij een automatische weigering (§14.5/§14.9). */
+    const val REASON_SIG_INVALID = "sig_req_invalid"
+    const val REASON_PROOF_INVALID = "browser_proof_invalid"
+    const val REASON_KH_MISSING = "keyfile_required"
+
+    const val PATH_APPROVALS = "/device/v1/approvals/"
+
+    /** Long-polling van de status (`?wait=25`). */
+    const val WAIT_SECONDS = 25
+}
 
 data class SealedCopy(val keyId: String, val vaultId: String, val sealed: String)
 
@@ -89,9 +180,15 @@ class DeviceApi(
         return ClaimResponse(deviceId, sas)
     }
 
-    /** `GET /device/v1/status` (D). */
-    fun status(deviceId: String, signer: DevKeySigner): DeviceStatus {
-        val r = signed("GET", "/device/v1/status", deviceId, signer)
+    /**
+     * `GET /device/v1/status` (D). Met [waitSeconds] > 0 long-polling (`?wait=N`, §14.6); de querystring staat
+     * dan ook in het getekende PATH (§13.6).
+     */
+    fun status(deviceId: String, signer: DevKeySigner, waitSeconds: Int = 0): DeviceStatus {
+        require(waitSeconds in 0..ApprovalWire.WAIT_SECONDS) { "wait buiten 0..25" }
+        val path = if (waitSeconds > 0) "/device/v1/status?wait=$waitSeconds" else "/device/v1/status"
+        val timeout = if (waitSeconds > 0) (waitSeconds + LONG_POLL_MARGIN_S) * 1000 else null
+        val r = signed("GET", path, deviceId, signer, readTimeoutMs = timeout)
         if (r.status != 200) throw error(r)
         val o = obj(r.body)
         val id = str(o, "device_id")
@@ -108,7 +205,88 @@ class DeviceApi(
                 str(m, "label").also { if (it.length > 64) throw ApiException(r.status, "bad_response") },
             )
         }
-        return DeviceStatus(id, state, keys)
+        val approvals = when (val raw = o[ApprovalWire.APPROVALS]) {
+            null -> emptyList()
+            is List<*> -> {
+                if (raw.size > MAX_APPROVALS) throw ApiException(r.status, "bad_response")
+                raw.map { a ->
+                    val m = a as? Map<*, *> ?: throw ApiException(r.status, "bad_response")
+                    PendingApproval(
+                        str(m, ApprovalWire.APPROVAL_ID).also { requireUuidResponse(it) },
+                        str(m, ApprovalWire.VAULT_ID).also { requireUuidResponse(it) },
+                    )
+                }
+            }
+            else -> throw ApiException(r.status, "bad_response")
+        }
+        return DeviceStatus(id, state, keys, approvals)
+    }
+
+    /** `GET /device/v1/approvals/{id}` (D, §14.5 stap 4). Strikte vormcontrole; 404 = niet (meer) open. */
+    fun approval(deviceId: String, approvalId: String, signer: DevKeySigner): ApprovalRequest {
+        requireUuid(approvalId)
+        val r = signed("GET", ApprovalWire.PATH_APPROVALS + approvalId, deviceId, signer)
+        if (r.status != 200) throw error(r)
+        val o = obj(r.body)
+        val bad = { ApiException(r.status, "bad_response") }
+        val b = o[ApprovalWire.BROWSER] as? Map<*, *> ?: throw bad()
+        val browser = TrustedBrowser(
+            browserId = str(b, ApprovalWire.BROWSER_ID).also { requireUuidResponse(it) },
+            pubB = str(b, ApprovalWire.PUB_B).also { if (it.length > MAX_PUB_B || !b64uOk(it, null)) throw bad() },
+            label = str(b, ApprovalWire.LABEL).also { if (it.isEmpty() || it.codePointCount(0, it.length) > MAX_LABEL) throw bad() },
+            proof = str(b, ApprovalWire.PROOF).also { if (!b64uOk(it, 32)) throw bad() },
+        )
+        val createdAt = o[ApprovalWire.CREATED_AT] as? Long ?: throw bad()
+        if (createdAt <= 0) throw bad()
+        // approval_id in het antwoord (als de server het meestuurt) moet gelijk zijn aan het pad.
+        if (o.containsKey(ApprovalWire.APPROVAL_ID) && o[ApprovalWire.APPROVAL_ID] != approvalId) throw bad()
+        fun optLong(k: String): Long? = when (val t = o[k]) {
+            null -> null
+            is Long -> t
+            else -> throw bad()
+        }
+        return ApprovalRequest(
+            approvalId = approvalId,
+            vaultId = str(o, ApprovalWire.VAULT_ID).also { requireUuidResponse(it) },
+            keyId = str(o, ApprovalWire.KEY_ID).also { requireUuidResponse(it) },
+            browser = browser,
+            epkL = str(o, ApprovalWire.EPK_L).also { if (!b64uOk(it, 32)) throw bad() },
+            nonceL = str(o, ApprovalWire.NONCE_L).also { if (!b64uOk(it, 32)) throw bad() },
+            createdAt = createdAt,
+            sigReq = str(o, ApprovalWire.SIG_REQ).also { if (!b64uOk(it, 64)) throw bad() },
+            ip = optStr(o, ApprovalWire.IP, MAX_IP),
+            ua = optStr(o, ApprovalWire.UA, MAX_UA),
+            requestedAt = optLong(ApprovalWire.REQUESTED_AT),
+            vaultName = optStr(o, ApprovalWire.VAULT_NAME, MAX_VAULT_NAME),
+            expiresAt = optLong(ApprovalWire.EXPIRES_AT),
+        )
+    }
+
+    /**
+     * `POST /device/v1/approvals/{id}` (D, §14.5 stap 5). Succes = 200 `{approval_id, status}` of 204 (het antwoord
+     * wordt niet gebruikt);
+     * 409 `approval_not_pending` = al beslist of verlopen.
+     */
+    fun decide(deviceId: String, approvalId: String, decision: ApprovalDecision, signer: DevKeySigner) {
+        requireUuid(approvalId)
+        val body = linkedMapOf<String, Any?>()
+        when (decision) {
+            is ApprovalDecision.Approve -> {
+                body[ApprovalWire.DECISION] = ApprovalWire.DECISION_APPROVE
+                body[ApprovalWire.RESP] = decision.resp
+            }
+            is ApprovalDecision.Deny -> {
+                body[ApprovalWire.DECISION] = ApprovalWire.DECISION_DENY
+                decision.reason?.let { body[ApprovalWire.REASON] = it }
+            }
+            is ApprovalDecision.DenyRevoke -> {
+                body[ApprovalWire.DECISION] = ApprovalWire.DECISION_DENY_REVOKE
+                decision.reason?.let { body[ApprovalWire.REASON] = it }
+            }
+        }
+        val bytes = StrictJson.write(body).toByteArray(Charsets.UTF_8)
+        val r = signed("POST", ApprovalWire.PATH_APPROVALS + approvalId, deviceId, signer, bytes)
+        if (r.status != 200 && r.status != 204) throw error(r)
     }
 
     /** `GET /device/v1/keys/{kid}/sealed` (D). */
@@ -120,10 +298,32 @@ class DeviceApi(
         return SealedCopy(str(o, "key_id"), str(o, "vault_id"), str(o, "sealed"))
     }
 
-    private fun signed(method: String, path: String, deviceId: String, signer: DevKeySigner): HttpResponse {
+    private fun signed(
+        method: String,
+        path: String,
+        deviceId: String,
+        signer: DevKeySigner,
+        body: ByteArray? = null,
+        readTimeoutMs: Int? = null,
+    ): HttpResponse {
         requireUuid(deviceId)
-        val headers = DeviceAuth.headers(deviceId, method, apiPathPrefix + path, ByteArray(0), signer, clockSeconds())
-        return call(HttpRequest(method, path, null, headers))
+        val headers = DeviceAuth.headers(deviceId, method, apiPathPrefix + path, body ?: ByteArray(0), signer, clockSeconds())
+        return call(HttpRequest(method, path, body, headers, readTimeoutMs))
+    }
+
+    /** Strikte b64u; [len] = verwachte lengte na decoderen (null = vrij). */
+    private fun b64uOk(s: String, len: Int?): Boolean = try {
+        val b = B64u.decode(s)
+        len == null || b.size == len
+    } catch (e: IllegalArgumentException) {
+        false
+    }
+
+    /** Optionele string (afwezig of null → null); te lang of geen string → bad_response. */
+    private fun optStr(o: Map<*, *>, k: String, max: Int): String? = when (val v = o[k]) {
+        null -> null
+        is String -> v.takeIf { it.length <= max } ?: throw ApiException(0, "bad_response")
+        else -> throw ApiException(0, "bad_response")
     }
 
     private fun call(req: HttpRequest): HttpResponse = try {
@@ -163,5 +363,12 @@ class DeviceApi(
         private val SAS = Regex("^[0-9]{6}$")
         private val CODE = Regex("^[a-z0-9_]{1,64}$")
         private const val MAX_KEYS = 50
+        private const val MAX_APPROVALS = 20
+        private const val MAX_PUB_B = 256
+        private const val MAX_LABEL = 64
+        private const val MAX_IP = 64
+        private const val MAX_UA = 512
+        private const val MAX_VAULT_NAME = 256
+        private const val LONG_POLL_MARGIN_S = 10
     }
 }

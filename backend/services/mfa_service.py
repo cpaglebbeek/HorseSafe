@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hmac
 import os
 import time
 
@@ -67,6 +68,44 @@ def verify_code(secret_base32: str, code: str, valid_window: int = 1) -> bool:
     if not code.isdigit() or len(code) != 6:
         return False
     return bool(pyotp.TOTP(secret_base32).verify(code, valid_window=valid_window))
+
+
+def totp_now() -> float:
+    """Klok voor TOTP-tijdstappen (losse functie zodat tests hem kunnen verzetten)."""
+    return time.time()
+
+
+def matched_step(
+    secret_base32: str, code: str, valid_window: int = 1, t: float | None = None
+) -> int | None:
+    """Als ``verify_code``, maar geeft de TOTP-tijdstap (``unix // 30``) die klopte, anders None.
+
+    v0.4.0-Montgomery: nodig voor replay-bescherming (een code geldt maar één keer)."""
+    if not code.isascii() or not code.isdigit() or len(code) != 6:
+        return None
+    totp = pyotp.TOTP(secret_base32)
+    step = int((totp_now() if t is None else t) // totp.interval)
+    for off in range(-valid_window, valid_window + 1):
+        if hmac.compare_digest(totp.generate_otp(step + off), code):
+            return step + off
+    return None
+
+
+# Events waarvan de audit-detail ``totp_step`` bevat (alleen de tijdstap, nooit de code).
+TOTP_STEP_EVENTS = ("mfa_pass_totp", "mfa_setup_totp", "stepup", "browser_login")
+
+
+async def last_totp_step(conn: aiosqlite.Connection, user_id: str) -> int | None:
+    """Hoogste al gebruikte TOTP-tijdstap van deze gebruiker (RFC 6238 §5.2: een code die al
+    gebruikt is, of ouder is dan de laatst gebruikte, wordt geweigerd)."""
+    cur = await conn.execute(
+        "SELECT MAX(CAST(json_extract(detail, '$.totp_step') AS INTEGER)) AS s FROM audit_log "
+        "WHERE user_id = ? AND event IN (?, ?, ?, ?) AND ts > ? "
+        "AND json_extract(detail, '$.totp_step') IS NOT NULL",
+        (user_id, *TOTP_STEP_EVENTS, int(time.time()) - 3600),
+    )
+    row = await cur.fetchone()
+    return int(row["s"]) if row and row["s"] is not None else None
 
 
 async def set_user_totp(conn: aiosqlite.Connection, user_id: str, secret_base32: str) -> None:

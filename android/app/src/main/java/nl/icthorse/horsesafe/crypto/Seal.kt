@@ -29,8 +29,9 @@ class SealedSecret(val ph: ByteArray?, val kh: ByteArray?) {
  * Seal_v2 (HARDWARE_KEYS §12.5), byte voor byte gelijk aan `frontend/js/hwkeys.js` en de Python-referentie
  * (vectoren `specs/testvectors/seal_v2.json`).
  *
- * In de app is alleen [open] nodig (proef "Kopie openen", §13.3 stap 6). [sealWith]/[seal] bestaan voor de
- * vectortests en als referentie; de app verzegelt zelf niets.
+ * De app opent `store`-kopieën (proef "Kopie openen", §13.3 stap 6; goedkeuren, §14.5) en verzegelt sinds
+ * 0.4.0-Montgomery alleen met purpose `relay` naar de tijdelijke browsersleutel epk_L (via `TrustV1.sealRelay`).
+ * [sealWith] is de deterministische testingang.
  */
 object SealV2 {
     const val VERSION = 2
@@ -138,8 +139,9 @@ object SealV2 {
      * Openen (§12.5 "Openen"): de AAD komt uit de VERWACHTE [vaultId] en [keyId] (nooit alleen uit
      * `sealed.kid`); `v == 2` en `kid == keyId` worden gecontroleerd. Elke cryptografische fout, een andere
      * kid en een onjuiste pt-vorm geven `unseal_failed`. [sk] wordt niet gewist (dat doet de aanroeper).
+     * [bind] = de verwachte bind uit §12.5 (voor `store` gelijk aan [keyId]; voor `relay` approval_id ‖ \0 ‖ b64u(nonce_L)).
      */
-    fun open(sealed: String, sk: ByteArray, purpose: String, vaultId: String, keyId: String): SealedSecret {
+    fun open(sealed: String, sk: ByteArray, purpose: String, vaultId: String, keyId: String, bind: String = keyId): SealedSecret {
         val p = parse(sealed)
         if (p.kid != keyId) throw SealException("unseal_failed")
         val pk: ByteArray
@@ -155,7 +157,7 @@ object SealV2 {
         val pt: ByteArray = try {
             val c = Cipher.getInstance("AES/GCM/NoPadding")
             c.init(Cipher.DECRYPT_MODE, SecretKeySpec(k, "AES"), GCMParameterSpec(TAG_BITS, p.iv))
-            c.updateAAD(aad(purpose, vaultId, keyId))
+            c.updateAAD(aad(purpose, vaultId, bind))
             c.doFinal(p.ct)
         } catch (e: AEADBadTagException) {
             throw SealException("unseal_failed")

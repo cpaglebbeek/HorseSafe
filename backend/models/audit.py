@@ -69,6 +69,16 @@ AuditEvent = Literal[
     "device_pairing_cancel",
     "device_pairing_rejected",
     "device_revoke",
+    # v0.4.0-Montgomery — vertrouwde browser + telefoonvinger (docs/HARDWARE_KEYS.md §14.8). Detail
+    # bevat nooit challenge, proof, handtekeningen, epk_L, nonce_L of resp.
+    "browser_trust",
+    "browser_revoke",
+    "browser_login",
+    "browser_login_failed",
+    "approval_request",
+    "approval_approve",
+    "approval_deny",
+    "approval_consumed",
 ]
 
 

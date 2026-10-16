@@ -1541,3 +1541,22 @@ verzoek geweigerd. Goedgekeurde ontgrendeling: geen mail (wel audit), anders te 
 - JVM: trust_v1 (proof controleren, sig_req controleren, relay verzegelen), bronbeleid (geen `DEVICE_CREDENTIAL`).
 - Playwright: vertrouwen → uitloggen → inloggen met e-mail + TOTP → ontgrendelen met neptoestel (Python-helper die
   als app goedkeurt met testvlag) → kluis open; weigeren → uitgelogd; gemanipuleerd label → telefoon weigert.
+
+### 14.11 Invulling bij de bouw (16-10-2026)
+
+- **Veldnamen** in JSON: `pub_B`, `epk_L`, `nonce_L` (hoofdletter zoals in dit contract), verder snake_case.
+  `GET /device/v1/approvals/{id}` geeft extra `approval_id`, `vault_name`, `expires_at`.
+- **Weigerredenen** (`reason`, `^[a-z0-9_]{1,64}$`): `sig_req_invalid`, `browser_proof_invalid`,
+  `keyfile_required` (handmatig weigeren: geen reden); de app weigert ook verzoeken > 300 s oud, > 120 s in de toekomst of voorbij
+  `expires_at`, en labels met stuur-/opmaaktekens.
+- **Extra foutcodes:** 409 `totp_required`, 400 `invalid_public_key`, 409 `browser_exists`, 409 `approval_not_draft`,
+  400 `invalid_request`, 429 `rate_limited` (challenge > 10 per e-mail per 10 min).
+- **TOTP-replay:** de gebruikte tijdstap staat in de audit-detail (`totp_step`, nooit de code); browser-login weigert
+  een tijdstap die al gebruikt of ouder is. Andere TOTP-routes handhaven dit nog niet (0.4.x).
+- **Sessies:** elke login krijgt een `sid`; uitloggen, browser intrekken, `deny`/`deny_revoke` en rekey zetten de
+  betrokken sids in `revoked_sessions` (401 `invalid_token` met `reason: "session_revoked"`). Browser-sessies worden
+  via de audit-detail van `browser_login` gevonden.
+- **Geen WorkManager-vangnet in 0.4.0:** de app pollt alleen als hij open is (niet op PIN-schermen); de laptop zegt
+  "Open HorseSafe op je telefoon". Achtergrondmelding (ntfy of WorkManager) = 0.4.x.
+- **Browsernaam vóór de vinger** staat al op de kaart maar is pas na de vinger door het koppelbewijs bevestigd; de
+  kaart zegt dat. Faalt het bewijs, dan weigert de app automatisch.

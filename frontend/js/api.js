@@ -1,4 +1,4 @@
-/* HorseSafe API-wrapper v0.0.2-Hellman
+/* HorseSafe API-wrapper v0.4.0-Montgomery (sinds v0.0.2-Hellman)
  * Fetch-helpers naar backend. Productie: relatieve paden onder /HorseSafe/api/.
  * Dev: absolute URL naar localhost:3997 (zelfde Schema voor cookies vereist HORSESAFE_CORS_ORIGINS).
  */
@@ -23,12 +23,15 @@
     return isDev ? `http://${location.hostname}:${devPort}` : '/HorseSafe/api';
   })();
 
-  async function jsonReq(method, path, body) {
+  // v0.4.0-Montgomery: extra = {signal, keepalive} (long-poll afbreken, annuleren bij tab dicht)
+  async function jsonReq(method, path, body, extra) {
     const opts = {
       method,
       credentials: 'include',
       headers: {},
     };
+    if (extra && extra.signal) opts.signal = extra.signal;
+    if (extra && extra.keepalive) opts.keepalive = true;
     if (body !== undefined) {
       opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
@@ -73,5 +76,35 @@
     readVault:    (id) => blobReq('GET', `/vault/${encodeURIComponent(id)}`),
     updateVault:  (id, blobData, etag) => blobReq('PUT', `/vault/${encodeURIComponent(id)}`, blobData, { ifMatch: etag }),
     deleteVault:  (id) => jsonReq('DELETE', `/vault/${encodeURIComponent(id)}`),
+    me:           () => jsonReq('GET', '/auth/me'),
+
+    // v0.4.0-Montgomery — vertrouwde browser + telefoonvinger (docs/HARDWARE_KEYS.md §14.6).
+    // Elk antwoord {ok, status, data}; fouten staan in data.detail.error (trust.js zet ze om).
+    trust: {
+      // SU — body {browser_id, vault_id, pub_B, label, proof} → 201 {browser_id, created_at}
+      create:   (body) => jsonReq('POST', '/trusted-browsers', body),
+      // S — {browsers:[{browser_id, vault_id, label, created_at, last_used_at}]}
+      list:     () => jsonReq('GET', '/trusted-browsers'),
+      // S — intrekken; 204
+      revoke:   (browserId, extra) => jsonReq('DELETE', `/trusted-browsers/${encodeURIComponent(browserId)}`, undefined, extra),
+      // publiek — {email} → 200 {challenge_id, challenge, expires_at}
+      challenge: (email) => jsonReq('POST', '/auth/browser/challenge', { email }),
+      // publiek — {challenge_id, browser_id, sig, totp} → 200 (JWT-cookie) | 401 browser_login_failed
+      login:    (body) => jsonReq('POST', '/auth/browser/login', body),
+    },
+    approvals: {
+      // S + sid — {browser_id} → 201 {approval_id, created_at}
+      create: (vaultId, browserId) => jsonReq('POST', `/vault/${encodeURIComponent(vaultId)}/approvals`, { browser_id: browserId }),
+      // S + zelfde sid — {epk_L, nonce_L, sig_req} → 200 {expires_at}
+      submit: (vaultId, approvalId, body) => jsonReq('PUT',
+        `/vault/${encodeURIComponent(vaultId)}/approvals/${encodeURIComponent(approvalId)}`, body),
+      // S + zelfde sid — long-poll ≤ wait s → {status} | {status:'approved', resp}; daarna 410 gone
+      status: (vaultId, approvalId, wait, extra) => jsonReq('GET',
+        `/vault/${encodeURIComponent(vaultId)}/approvals/${encodeURIComponent(approvalId)}`
+        + (wait ? `?wait=${encodeURIComponent(wait)}` : ''), undefined, extra),
+      // S + zelfde sid — annuleren; 204
+      cancel: (vaultId, approvalId, extra) => jsonReq('DELETE',
+        `/vault/${encodeURIComponent(vaultId)}/approvals/${encodeURIComponent(approvalId)}`, undefined, extra),
+    },
   };
 })();

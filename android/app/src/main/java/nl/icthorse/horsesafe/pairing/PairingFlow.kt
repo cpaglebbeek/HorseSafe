@@ -38,6 +38,7 @@ enum class FingerStep(val title: String, val subtitle: String) {
     WRAP("Telefoon koppelen (1 van 2)", "Leg je vinger op de sensor om de sleutel van deze telefoon te beschermen."),
     SIGN("Telefoon koppelen (2 van 2)", "Leg je vinger nog een keer op de sensor om de koppeling te ondertekenen."),
     TRIAL("Proef: kopie openen", "Leg je vinger op de sensor om de verzegelde kopie op deze telefoon te openen."),
+    APPROVE("Ontgrendelen goedkeuren", "Leg je vinger op de sensor om de kluis in deze browser te openen."),
 }
 
 /** Toestelgegevens voor het claim-request (geen geheim). */

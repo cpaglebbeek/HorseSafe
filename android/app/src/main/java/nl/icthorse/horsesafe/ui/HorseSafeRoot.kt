@@ -9,7 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import nl.icthorse.horsesafe.ui.screens.ApprovalScreen
 import nl.icthorse.horsesafe.ui.screens.BusyScreen
+import nl.icthorse.horsesafe.ui.screens.visible
 import nl.icthorse.horsesafe.ui.screens.M0Start
 import nl.icthorse.horsesafe.ui.screens.M10Report
 import nl.icthorse.horsesafe.ui.screens.M11Stop
@@ -37,8 +39,16 @@ class RootActions(
 
 /** Wortel van de Compose-UI: kiest het scherm uit [UiState.screen]. */
 @Composable
-fun HorseSafeRoot(vm: HorseSafeViewModel, pairing: PairingViewModel, services: AppServices, signerSha256: String?, actions: RootActions) {
+fun HorseSafeRoot(
+    vm: HorseSafeViewModel,
+    pairing: PairingViewModel,
+    approvals: ApprovalViewModel,
+    services: AppServices,
+    signerSha256: String?,
+    actions: RootActions,
+) {
     val u by vm.ui.collectAsState()
+    val a by approvals.ui.collectAsState()
     HorseSafeTheme {
         Box(Modifier.fillMaxSize().background(HsColors.Background).safeDrawingPadding()) {
             // Terug-knop: vóór een geheim naar start; daarna niets (alleen Afbreken/Afsluiten in beeld).
@@ -66,7 +76,19 @@ fun HorseSafeRoot(vm: HorseSafeViewModel, pairing: PairingViewModel, services: A
                 Screen.M14_PAIR, Screen.M15_PAIR_SCAN, Screen.M16_PAIR_SAS, Screen.M17_PAIRED, Screen.M18_BIO_REQUIRED, Screen.M19_REPAIR ->
                     PairingRoot(pairing) { vm.backToStart() }
                 Screen.BUSY -> BusyScreen(u, vm)
+                Screen.M20_APPROVAL -> Unit // alleen als laag hieronder
+            }
+            // 0.4.0: goedkeuringskaart als laag, alleen boven M0 en de koppelschermen (nooit boven een PIN-scherm).
+            if (approvalAllowedOn(u.screen) && a.visible()) {
+                ApprovalScreen(a, approvals)
             }
         }
     }
 }
+
+/** Waar mag de goedkeuringskaart verschijnen en mag de app pollen? Alleen M0 en "Telefoon koppelen" (M14-M19). */
+fun approvalAllowedOn(screen: Screen): Boolean = screen == Screen.M0_START || screen in PAIRING_SCREENS
+
+private val PAIRING_SCREENS = setOf(
+    Screen.M14_PAIR, Screen.M15_PAIR_SCAN, Screen.M16_PAIR_SAS, Screen.M17_PAIRED, Screen.M18_BIO_REQUIRED, Screen.M19_REPAIR,
+)
