@@ -1,0 +1,113 @@
+{
+  "format": "HorseSafe trust_v1 testvectors",
+  "version": 1,
+  "spec": "docs/HARDWARE_KEYS.md §14.2",
+  "browser_key": {
+    "d_hex": "effe342ed8dbaeb2cb856518530bbb860abf8cf4042ae15330678beb1ec5a1eb",
+    "pub_b": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY4Sg_dJh75KY61jCtpqg7b52iLkVRNd8M27HDEx2dFldZhLL5HB3UeOb45AH71ZMDo8hTqs6ZbfWPP8MYU6HDg"
+  },
+  "proof_vectors": [
+    {
+      "name": "ph+kh",
+      "ph": "OfTlky6sqMnFyGJaON3Ws7SguGy_J6RdN7I2Insde90",
+      "kh": "Mat1w31vPWGVhGxbdpG31buB0paXFdzzwynxUK0U-J8",
+      "pt_ck": "{\"ph\":\"OfTlky6sqMnFyGJaON3Ws7SguGy_J6RdN7I2Insde90\",\"kh\":\"Mat1w31vPWGVhGxbdpG31buB0paXFdzzwynxUK0U-J8\"}",
+      "vault_id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+      "browser_id": "7d3c2b1a-0f9e-4d8c-b7a6-5e4d3c2b1a09",
+      "pub_b": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY4Sg_dJh75KY61jCtpqg7b52iLkVRNd8M27HDEx2dFldZhLL5HB3UeOb45AH71ZMDo8hTqs6ZbfWPP8MYU6HDg",
+      "label": "Chrome – laptop",
+      "k_bind_hex": "2f070b9c1ba146d4e6fb86ed2bdd7f5e2b0b1e7ed1a68afbbc3d27f5b678ebad",
+      "bind_t_hex": "485376322062726f777365720033663261316234632d356436652d346637302d386139622d3063316432653366346135620037643363326231612d306639652d346438632d623761362d356534643363326231613039004d466b77457759484b6f5a497a6a3043415159494b6f5a497a6a30444151634451674145593453675f644a6837354b5936316a437470716737623532694c6b56524e64384d3237484445783264466c645a684c4c3548423355654f623435414837315a4d446f3868547173365a6266575050384d595536484467004368726f6d6520e28093206c6170746f70",
+      "proof": "c8Gy8julmSkOwh06CVrqq1Nj7806jBEQGClTTxR-kt4"
+    },
+    {
+      "name": "alleen kh",
+      "ph": null,
+      "kh": "Mat1w31vPWGVhGxbdpG31buB0paXFdzzwynxUK0U-J8",
+      "pt_ck": "{\"ph\":null,\"kh\":\"Mat1w31vPWGVhGxbdpG31buB0paXFdzzwynxUK0U-J8\"}",
+      "vault_id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+      "browser_id": "7d3c2b1a-0f9e-4d8c-b7a6-5e4d3c2b1a09",
+      "pub_b": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY4Sg_dJh75KY61jCtpqg7b52iLkVRNd8M27HDEx2dFldZhLL5HB3UeOb45AH71ZMDo8hTqs6ZbfWPP8MYU6HDg",
+      "label": "Chrome – laptop",
+      "k_bind_hex": "00aed136d5ca82c1df0ae1f57457bf6abc9312b40783b8a667407ec6795a12a6",
+      "bind_t_hex": "485376322062726f777365720033663261316234632d356436652d346637302d386139622d3063316432653366346135620037643363326231612d306639652d346438632d623761362d356534643363326231613039004d466b77457759484b6f5a497a6a3043415159494b6f5a497a6a30444151634451674145593453675f644a6837354b5936316a437470716737623532694c6b56524e64384d3237484445783264466c645a684c4c3548423355654f623435414837315a4d446f3868547173365a6266575050384d595536484467004368726f6d6520e28093206c6170746f70",
+      "proof": "xYQNUWx82lJJ2qugsxitiIUsL6hdlUdCwxRlSbKPZqE"
+    }
+  ],
+  "login_vector": {
+    "challenge_id": "c4a11e96-0000-4abc-9def-0123456789ab",
+    "challenge": "0oWwTWAInOPFSVEVeWbgQ70S87D3Szgxbm-ad7k5h0E",
+    "browser_id": "7d3c2b1a-0f9e-4d8c-b7a6-5e4d3c2b1a09",
+    "email_lc": "christian@example.com",
+    "pub_b": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY4Sg_dJh75KY61jCtpqg7b52iLkVRNd8M27HDEx2dFldZhLL5HB3UeOb45AH71ZMDo8hTqs6ZbfWPP8MYU6HDg",
+    "login_t_hex": "4853763220626c6f67696e0063346131316539362d303030302d346162632d396465662d30313233343536373839616200306f5777545741496e4f504653564556655762675137305338374433537a6778626d2d6164376b356830450037643363326231612d306639652d346438632d623761362d3565346433633262316130390063687269737469616e406578616d706c652e636f6d",
+    "sig": "GfV4JcMBeuh_wb7YeqQPEsS63jFw1Fm0y6DgXB03AWOuVyELVFNWvr9WNhk4k7wPMRFRR66pjbuDvFxXX8aiJQ"
+  },
+  "approval_vector": {
+    "approval_id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+    "vault_id": "3f2a1b4c-5d6e-4f70-8a9b-0c1d2e3f4a5b",
+    "browser_id": "7d3c2b1a-0f9e-4d8c-b7a6-5e4d3c2b1a09",
+    "e_l_sk": "v0WXvEWG2VMycbS8pNDs-vKluPmwpom8OubVFFrHobA",
+    "epk_l": "regnSwM_8MCSBSzmvA7wUFjCq0Rn6XSPhd2TFDaizWg",
+    "nonce_l": "8whzU5Ea5QdXJ4VgVvHeCLAZ7RbZskWwbJNwug_gIxc",
+    "created_at": 1792150000,
+    "pub_b": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEY4Sg_dJh75KY61jCtpqg7b52iLkVRNd8M27HDEx2dFldZhLL5HB3UeOb45AH71ZMDo8hTqs6ZbfWPP8MYU6HDg",
+    "req_t_hex": "4853763220617070726f76650061316232633364342d653566362d346137622d386339642d3065316632613362346335640033663261316234632d356436652d346637302d386139622d3063316432653366346135620037643363326231612d306639652d346438632d623761362d356534643363326231613039007265676e53774d5f384d435342537a6d7641377755466a437130526e3658535068643254464461697a5767003877687a55354561355164584a34566756764865434c415a3752625a736b5777624a4e7775675f674978630031373932313530303030",
+    "sig_req": "ZUM06L-YvWcF1YS8UyYdTIYv8ELCBfjNg9bz4Qt_30cbG6Wc44KtqcOzWGTzSCoXRcPzrsxuHlGRsNptXzCSqQ",
+    "relay_bind": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d\u00008whzU5Ea5QdXJ4VgVvHeCLAZ7RbZskWwbJNwug_gIxc",
+    "relay_aad_hex": "485376320072656c61790033663261316234632d356436652d346637302d386139622d3063316432653366346135620061316232633364342d653566362d346137622d386339642d306531663261336234633564003877687a55354561355164584a34566756764865434c415a3752625a736b5777624a4e7775675f67497863",
+    "ph": "OfTlky6sqMnFyGJaON3Ws7SguGy_J6RdN7I2Insde90",
+    "kh": "Mat1w31vPWGVhGxbdpG31buB0paXFdzzwynxUK0U-J8",
+    "resp": "{\"v\":2,\"kid\":\"a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d\",\"epk\":\"9GhnpzJtGnvFGLIzWC3Ams-zjmpVfZaMKTT8FT2Tw2g\",\"iv\":\"76_CVTBMnl6PHElz\",\"ct\":\"VOpGGa8zMaN-Y6t974ON37HfabvgjZeX_k8qyHzhpq-m_71S8S5MyeofjIHtMJiPmq9eRxDeKhIG9lCy0mWu2W75bEzRKrk_eA5dJBZbMDyv5zgT0BsW7fnOsjfuNruthi-c63JzCUX8-lYMUihFZxTdxpqEKoY\"}"
+  },
+  "negative": [
+    {
+      "name": "ander vault_id",
+      "based_on": "ph+kh",
+      "change": {
+        "vault_id": "00000000-0000-4000-8000-000000000000"
+      },
+      "expect": "proof wijkt af"
+    },
+    {
+      "name": "ander label",
+      "based_on": "ph+kh",
+      "change": {
+        "label": "Ander apparaat"
+      },
+      "expect": "proof wijkt af"
+    },
+    {
+      "name": "andere pub_b",
+      "based_on": "ph+kh",
+      "change": {
+        "pub_b": "FA_AemEew4qdwEyyb30OVZBVPGKKNMauW3zOxm1E2etPlbriBeMfiRGNQ6BZ80LvjVOoAZDhclPJ8qcHylwlI8DEk99s7DGO4J95KRBTXykUa2fIRrT4XmqgNQ"
+      },
+      "expect": "proof wijkt af"
+    },
+    {
+      "name": "kh null",
+      "based_on": "ph+kh",
+      "change": {
+        "kh": null
+      },
+      "expect": "weigeren: vertrouwen vereist keyfile (kh)"
+    },
+    {
+      "name": "andere nonce bij openen",
+      "based_on": "approval",
+      "change": {
+        "nonce_l": "rDBN4rZrRVbMOjZ4WrLdsiE5gjAgFrk_5KOXjeqcD6E"
+      },
+      "expect": "unseal_failed"
+    },
+    {
+      "name": "ander created_at",
+      "based_on": "approval",
+      "change": {
+        "created_at": 1792150001
+      },
+      "expect": "sig_req ongeldig"
+    }
+  ]
+}
