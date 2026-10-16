@@ -15,7 +15,7 @@ from fastapi import (
 from ..config import get_settings
 from ..db.connection import connect
 from ..models.vault import VaultPublic
-from ..services import audit_service, jwt_service, storage_service
+from ..services import audit_service, jwt_service, stepup_service, storage_service
 from ..services import vault_key_service as vk_svc
 
 router = APIRouter()
@@ -165,6 +165,10 @@ async def delete_vault(vault_id: str, request: Request) -> Response:
         meta = await storage_service.get_vault_meta(conn, user_id, vault_id)
         if not meta:
             raise HTTPException(status_code=404, detail={"error": "not_found"})
+        # Review 4db1810 (H1): vanuit een vertrouwde-browsersessie alleen met step-up.
+        payload = jwt_service.require_auth(request)
+        if jwt_service.is_browser_session(payload):
+            stepup_service.check_stepup(payload)
         keys = await vk_svc.list_keys(conn, user_id, vault_id)
         ok = await storage_service.delete_vault(conn, user_id, vault_id)
         if not ok:

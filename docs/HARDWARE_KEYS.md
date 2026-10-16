@@ -1560,3 +1560,20 @@ verzoek geweigerd. Goedgekeurde ontgrendeling: geen mail (wel audit), anders te 
   "Open HorseSafe op je telefoon". Achtergrondmelding (ntfy of WorkManager) = 0.4.x.
 - **Browsernaam vóór de vinger** staat al op de kaart maar is pas na de vinger door het koppelbewijs bevestigd; de
   kaart zegt dat. Faalt het bewijs, dan weigert de app automatisch.
+
+### 14.12 Na adversariële review (16-10-2026)
+
+- **H1 — beperkte browsersessie:** browser-login geeft JWT-claim `scope:"browser_pending"`; centraal default-deny
+  (`jwt_service.scope_guard`). Toegestaan: `GET /auth/me`, `POST /auth/logout`, `GET /vault`, `GET /vault/{id}`,
+  `GET /vault/{id}/keys`, de approvals-routes, `GET /trusted-browsers`, `DELETE /trusted-browsers/{eigen id}`.
+  Rest → 403 `phone_approval_required`. Het ophalen van een goedgekeurd `resp` zet een cookie zonder `scope`
+  (zelfde sid). Beheer met `amr` "browser" altijd 403 `browser_session_not_allowed`; kluis verwijderen vraagt step-up.
+- **M1:** tabel `browser_sessions(sid, browser_id, user_id, created_at)`; intrekken zonder tijdvenster. Claim
+  `auth_time`; absolute sessiegrens 12 u na login (ook wachtwoordsessies), daarna 401 `session_expired`.
+- **M2:** tabel `totp_used(user_id, step)`, controle + INSERT in één transactie (browser-login, MFA-challenge,
+  step-up; niet bij TOTP instellen).
+- **L2:** intrekken/uitloggen sluit open verzoeken van die sid (`cancelled`, resp NULL); `decide` weigert bij een
+  ingetrokken sid; `PRAGMA secure_delete=ON`.
+- **L3:** UA opgeschoond (tekenregel label), ≤ 200 tekens (mail ≤ 120); app toont alleen opgeschoonde UA/IP.
+- **Open:** M3 eigen subdomein (R26), L1 resp niet herkomst-geauthenticeerd (R25), L4 afsluiten via e-mailthrottle
+  (bestaand patroon), L6 sqlite-lock bij sessiecontrole onder belasting (vermoeden).

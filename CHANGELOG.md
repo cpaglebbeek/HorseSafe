@@ -21,8 +21,13 @@ Besluit HARDWARE_KEYS §11.3 (akkoord 16-10), contract §14, invulling §14.11. 
 - Migratie 007 (`trusted_browsers`, `browser_challenges`, `approvals`, `revoked_sessions`); testvectoren `trust_v1`
   (Python = JS = Kotlin); app-scherm M20 goedkeuringskaart (alleen BIOMETRIC_STRONG); versionCode 400.
 
+### Beveiliging (adversariële review, §14.12)
+- Browsersessie beperkt tot ontgrendelen tot na telefoongoedkeuring (default-deny); beheer nooit via browser-login.
+- Intrekken vangt ook verlengde sessies (`browser_sessions`); absolute sessiegrens 12 u (`auth_time`).
+- TOTP-tijdstap atomair eenmalig (`totp_used`); uitloggen sluit open verzoeken; `secure_delete`; UA opgeschoond.
+
 ### Tests
-- pytest 316 (was 269), node 130 (was 97), Playwright 16/16 (was 13), JVM 389 (was 337).
+- pytest 326 (was 269), node 130 (was 97), Playwright 16/16 (was 13), JVM 391 (was 337).
 
 ## [0.3.5-Miller] — 2026-10-14 (kluis: categorieën + zoeken)
 

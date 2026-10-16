@@ -18,6 +18,12 @@ router = APIRouter()
 
 def _require_admin(request: Request) -> dict[str, Any]:
     payload = jwt_service.require_auth(request)
+    # Review 4db1810 (H1): nooit beheer vanuit een sessie van een vertrouwde browser.
+    if jwt_service.is_browser_session(payload):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": "browser_session_not_allowed"},
+        )
     if not bool(payload.get("admin", False)):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

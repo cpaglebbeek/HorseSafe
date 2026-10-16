@@ -208,13 +208,13 @@ async def totp_verify(
             if not stored:
                 raise HTTPException(status_code=400, detail={"error": "totp_not_configured"})
             step = mfa_service.matched_step(stored, code)
-            if step is None:
+            # Review 4db1810 (M2): een code geldt één keer (atomair via totp_used).
+            if step is None or not await mfa_service.use_step(conn, user_id, step):
                 await auth_service.record_failed_login(conn, ip, None)
                 await audit_service.log(
                     conn, user_id=user_id, event="mfa_fail", ip=ip, detail={"flow": "challenge"}
                 )
                 raise HTTPException(status_code=400, detail={"error": "invalid_code"})
-            # totp_step (alleen de tijdstap) voor de replay-bescherming van /auth/browser/login.
             await audit_service.log(
                 conn, user_id=user_id, event="mfa_pass_totp", ip=ip, detail={"totp_step": step}
             )
@@ -575,7 +575,7 @@ async def stepup(body: StepupRequest, request: Request, response: Response) -> d
             if fails and int(fails["n"]) >= STEPUP_FAIL_MAX:
                 raise HTTPException(status_code=429, detail={"error": "too_many_attempts"})
             totp_step = mfa_service.matched_step(secret, body.code)
-            if totp_step is None:
+            if totp_step is None or not await mfa_service.use_step(conn, user_id, totp_step):
                 await audit_service.log(
                     conn,
                     user_id=user_id,

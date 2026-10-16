@@ -330,6 +330,9 @@
       if (!r.ok) {
         if (r.status === 412) {
           showError('global-error', 'Vault is elders gewijzigd (etag-conflict). Herlaad de pagina.');
+        } else if (r.status === 403 && r.data?.detail?.error === 'phone_approval_required') {
+          // v0.4.0-Montgomery (H1): vertrouwde-browsersessie zonder goedkeuring op de telefoon
+          showError('global-error', 'Niet opgeslagen: ontgrendel eerst met je telefoon.');
         } else {
           showError('global-error', `Save-fout: ${r.status} ${r.data?.detail?.error || ''}`);
         }
@@ -599,6 +602,10 @@
   function pins() {
     return state.db ? window.HorseSafeHwKeys.readPins(state.db, state.vaultId) : {};
   }
+
+  // v0.4.0-Montgomery: sessie verlopen (api.js stuurt naar inloggen) → eerst vergrendelen, geen
+  // "pagina verlaten?"-dialoog en geen open kluis in een verlaten tab.
+  document.addEventListener('horsesafe:session-expired', () => { if (state.db) lockVault(); });
 
   window.HorseSafeVaultUI = {
     state,

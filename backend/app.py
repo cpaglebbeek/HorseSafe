@@ -5,7 +5,7 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,7 +29,7 @@ from .routes import (
     vault_keys,
     webauthn,
 )
-from .services import mail_service
+from .services import jwt_service, mail_service
 
 logger = logging.getLogger("horsesafe")
 
@@ -85,6 +85,8 @@ def create_app() -> FastAPI:
         version=settings.app_version,
         description="Zero-knowledge wachtwoord-vault SaaS (KeePass-KDBX4-compat)",
         lifespan=lifespan,
+        # Review 4db1810 (H1): beperkte browsersessie centraal afdwingen, default deny.
+        dependencies=[Depends(jwt_service.scope_guard)],
         **docs_kwargs,
     )
     # Middleware-order: Starlette wrapt in reverse-add-order. Laatst-toegevoegd =

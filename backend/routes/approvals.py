@@ -20,7 +20,7 @@ from fastapi import APIRouter, HTTPException, Query, Request, Response, status
 from ..config import get_settings
 from ..db.connection import connect
 from ..models.trust import ApprovalCreate, ApprovalCreated, ApprovalSubmit, ApprovalSubmitted
-from ..services import audit_service, stepup_service, storage_service
+from ..services import audit_service, jwt_service, stepup_service, storage_service
 from ..services import trust_service as trust
 from ..services import vault_key_service as svc
 
@@ -177,14 +177,25 @@ async def get_approval(
     vault_id: str,
     approval_id: str,
     request: Request,
+    response: Response,
     wait: int = Query(default=0, ge=0, le=trust.WAIT_MAX),
 ) -> dict[str, Any]:
-    """``{status}`` of eenmalig ``{status:"approved", resp}``; daarna 410 ``gone``."""
-    _payload, user_id, sid = _session(request)
+    """``{status}`` of eenmalig ``{status:"approved", resp}``; daarna 410 ``gone``.
+
+    Review 4db1810 (H1): wordt het antwoord opgehaald in een sessie met
+    ``scope=browser_pending``, dan zet deze respons een nieuw sessiecookie zonder ``scope``
+    (zelfde sid, amr, browser_id en auth_time): pas nu is het een volledige sessie."""
+    payload, user_id, sid = _session(request)
     deadline = time.monotonic() + wait
     while True:
         done, out = await _poll_once(request, user_id, sid, vault_id, approval_id)
         if done or time.monotonic() >= deadline:
+            if "resp" in out and payload.get("scope") == jwt_service.SCOPE_BROWSER_PENDING:
+                claims = {**jwt_service.carry_claims(payload), "scope": None}
+                token = jwt_service.issue(
+                    user_id, bool(payload.get("admin", False)), mfa_passed=True, **claims
+                )
+                jwt_service.set_cookie(response, token)
             return out
         await asyncio.sleep(min(trust.POLL_INTERVAL, max(0.0, deadline - time.monotonic())))
 

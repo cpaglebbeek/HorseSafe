@@ -184,6 +184,20 @@ async function accountWithKeyfileVault(page: Page, web: string, used: Set<string
   return { email, totpSecret, ck: ck as { ph: string; kh: string }, vaultId, keyfile };
 }
 
+/** Directe API-aanroep vanuit de pagina (met het sessiecookie). */
+async function apiCall(page: Page, method: string, path: string, body?: unknown): Promise<{ status: number; error: string | null }> {
+  return page.evaluate(async ([m, p, b]) => {
+    const r = await fetch((window as any).HorseSafeAPI.base + p, {
+      method: m as string, credentials: 'include',
+      headers: b !== null ? { 'Content-Type': 'application/json' } : {},
+      body: b !== null ? JSON.stringify(b) : undefined,
+    });
+    let d: any = null;
+    try { d = await r.json(); } catch { /* geen JSON */ }
+    return { status: r.status, error: (d && d.detail && d.detail.error) || null };
+  }, [method, path, body === undefined ? null : body] as const);
+}
+
 async function idbRecords(page: Page): Promise<any[]> {
   return page.evaluate(async () => (await (window as any).HorseSafeTrust.listRecords())
     .map((r: any) => ({ browser_id: r.browser_id, vault_id: r.vault_id, email: r.email, label: r.label, extractable: r.key.extractable })));
@@ -495,6 +509,29 @@ test('Montgomery: vertrouwen → uitloggen → inloggen met TOTP → ontgrendele
     await page.click('#trusted-submit');
     await page.waitForURL(/vault\.html/, { timeout: 10_000 });
 
+    // H1: vóór goedkeuring op de telefoon is de sessie beperkt (scope browser_pending)
+    expect(await apiCall(page, 'GET', '/auth/me')).toMatchObject({ status: 200 });
+    expect(await apiCall(page, 'GET', '/vault')).toMatchObject({ status: 200 });
+    expect(await apiCall(page, 'PUT', `/vault/${acct.vaultId}`, {})).toEqual({ status: 403, error: 'phone_approval_required' });
+    expect(await apiCall(page, 'GET', '/shares/inbox')).toEqual({ status: 403, error: 'phone_approval_required' });
+    expect(await apiCall(page, 'POST', '/auth/totp/setup', {})).toEqual({ status: 403, error: 'phone_approval_required' });
+    // vault.html laden doet alleen toegestane aanroepen (geen melding)
+    await page.goto(`${web}/vault.html`); // verse pagina: de apiCall's hierboven tonen zelf al de melding
+    await expect(page.locator('#phone-unlock-btn')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('#hs-session-notice')).toHaveCount(0);
+    // Openen met wachtwoord + keyfile kan lokaal, maar opslaan wordt netjes geweigerd tot de telefoon goedkeurt
+    await page.fill('#vault-pw', VAULT_PW);
+    await page.setInputFiles('#vault-keyfile', { name: 'test.keyx', mimeType: 'application/octet-stream', buffer: acct.keyfile });
+    await page.click('#unlock-submit');
+    await expect(page.locator('#vault-section')).toBeVisible({ timeout: 30_000 });
+    await page.click('#add-entry');
+    await page.fill('#e-title', 'Voor telefoon');
+    await page.click('#edit-form button[type="submit"]');
+    await expect(page.locator('#global-error')).toContainText('ontgrendel eerst met je telefoon', { timeout: 10_000 });
+    await expect(page.locator('#hs-session-notice')).toContainText('Ontgrendel eerst met je telefoon');
+    await page.click('#e-cancel');
+    await page.click('#lock-vault');
+
     // Ontgrendelen met de telefoon: neptoestel keurt goed
     await expect(page.locator('#phone-unlock-btn')).toBeVisible({ timeout: 10_000 });
     await page.click('#phone-unlock-btn');
@@ -502,6 +539,20 @@ test('Montgomery: vertrouwen → uitloggen → inloggen met TOTP → ontgrendele
     const res = await fakeAsync(['approve', '--api', api, '--state', state, '--decision', 'approve']);
     expect(res).toBeTruthy();
     await expect(page.locator('#vault-section')).toBeVisible({ timeout: 60_000 });
+
+    // Na goedkeuring: volledige sessie (cookie uit de approved-respons)
+    expect(await apiCall(page, 'GET', '/shares/inbox')).toMatchObject({ status: 200 });
+    const put = await apiCall(page, 'PUT', `/vault/${acct.vaultId}`, {});
+    expect(put.error).not.toBe('phone_approval_required');
+    expect(put.status).not.toBe(403);
+    // Opslaan via de UI werkt nu ook
+    await page.click('#add-entry');
+    await page.fill('#e-title', 'Na telefoon');
+    await page.click('#edit-form button[type="submit"]');
+    await expect(page.locator('#entries-body')).toContainText('Na telefoon', { timeout: 15_000 });
+    await expect(page.locator('#global-error')).toBeHidden();
+    // Beheer blijft dicht voor een vertrouwde-browsersessie
+    expect((await apiCall(page, 'GET', '/admin/stats')).status).toBe(403);
 
     // Weigeren → uitgelogd
     await page.click('#lock-vault');

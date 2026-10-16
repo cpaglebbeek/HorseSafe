@@ -22,6 +22,8 @@ TABLES = (
     "browser_challenges",
     "approvals",
     "revoked_sessions",
+    "browser_sessions",
+    "totp_used",
 )
 
 
@@ -93,6 +95,9 @@ async def test_schema_sql_equals_schema4_plus_005(
         "revoked_sessions",
         "idx_tb_user",
         "idx_approvals_user",
+        "browser_sessions",
+        "idx_bs_browser",
+        "totp_used",
     }
     assert ddl_a == ddl_b
 

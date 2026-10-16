@@ -91,21 +91,43 @@ def matched_step(
     return None
 
 
-# Events waarvan de audit-detail ``totp_step`` bevat (alleen de tijdstap, nooit de code).
-TOTP_STEP_EVENTS = ("mfa_pass_totp", "mfa_setup_totp", "stepup", "browser_login")
+TOTP_USED_TTL = 3600  # oudere tijdstappen zijn toch buiten het venster (±30 s)
 
 
-async def last_totp_step(conn: aiosqlite.Connection, user_id: str) -> int | None:
-    """Hoogste al gebruikte TOTP-tijdstap van deze gebruiker (RFC 6238 §5.2: een code die al
-    gebruikt is, of ouder is dan de laatst gebruikte, wordt geweigerd)."""
-    cur = await conn.execute(
-        "SELECT MAX(CAST(json_extract(detail, '$.totp_step') AS INTEGER)) AS s FROM audit_log "
-        "WHERE user_id = ? AND event IN (?, ?, ?, ?) AND ts > ? "
-        "AND json_extract(detail, '$.totp_step') IS NOT NULL",
-        (user_id, *TOTP_STEP_EVENTS, int(time.time()) - 3600),
-    )
+async def use_step_in_tx(conn: aiosqlite.Connection, user_id: str, step: int) -> bool:
+    """Leg tijdstap ``step`` vast als gebruikt; False = al gebruikt of ouder dan de laatst
+    gebruikte (RFC 6238 §5.2). Moet BINNEN een schrijftransactie (``BEGIN IMMEDIATE``) van de
+    aanroeper lopen: dan is controle + INSERT atomair, ook bij parallelle verzoeken. Geen commit."""
+    cur = await conn.execute("SELECT MAX(step) AS s FROM totp_used WHERE user_id = ?", (user_id,))
     row = await cur.fetchone()
-    return int(row["s"]) if row and row["s"] is not None else None
+    if row and row["s"] is not None and int(row["s"]) >= step:
+        return False
+    try:
+        await conn.execute(
+            "INSERT INTO totp_used (user_id, step, used_at) VALUES (?, ?, ?)",
+            (user_id, step, int(time.time())),
+        )
+    except aiosqlite.IntegrityError:
+        return False
+    return True
+
+
+async def use_step(conn: aiosqlite.Connection, user_id: str, step: int) -> bool:
+    """``use_step_in_tx`` in een eigen transactie (step-up, MFA-challenge). Ruimt oude rijen op."""
+    await conn.execute("BEGIN IMMEDIATE")
+    try:
+        await conn.execute(
+            "DELETE FROM totp_used WHERE used_at < ?", (int(time.time()) - TOTP_USED_TTL,)
+        )
+        ok = await use_step_in_tx(conn, user_id, step)
+        if ok:
+            await conn.commit()
+        else:
+            await conn.rollback()
+    except BaseException:
+        await conn.rollback()
+        raise
+    return ok
 
 
 async def set_user_totp(conn: aiosqlite.Connection, user_id: str, secret_base32: str) -> None:

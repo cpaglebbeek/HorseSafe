@@ -22,7 +22,16 @@
 
   async function loadInbox() {
     const r = await fetch(API.base + '/shares/inbox', { credentials: 'include' });
-    if (r.status === 403) { window.location.href = 'mfa.html'; return; }
+    if (r.status === 403) {
+      // v0.4.0-Montgomery (H1): vertrouwde-browsersessie vóór goedkeuring → api.js toont de melding
+      const d = await r.clone().json().catch(() => null);
+      if (d && d.detail && d.detail.error === 'phone_approval_required') {
+        $('inbox-status').textContent = 'Ontgrendel eerst met je telefoon.';
+        return;
+      }
+      window.location.href = 'mfa.html';
+      return;
+    }
     if (!r.ok) { $('inbox-status').textContent = 'Fout bij inbox-load'; return; }
     inboxRows = await r.json();
     $('inbox-count').textContent = `(${inboxRows.length})`;

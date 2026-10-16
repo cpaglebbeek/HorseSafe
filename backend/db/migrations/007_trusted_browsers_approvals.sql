@@ -5,6 +5,9 @@
 -- approvals: ontgrendelverzoeken browser → telefoon. resp (Seal_v2 'relay') wordt bij
 --   consumed/expired/cancelled gewist (NULL); verlopen rijen ruimt de server lui op.
 -- revoked_sessions: ingetrokken JWT-sessies (sid); jwt-decode controleert deze tabel.
+-- browser_sessions (review 4db1810, M1; aanvulling op §14.7): welke sid via welke vertrouwde browser
+--   is ingelogd, zodat intrekken van de browser al die sessies intrekt (ook na step-up/reissue).
+-- totp_used (review M2): eenmalig gebruikte TOTP-tijdstappen per gebruiker (atomaire replay-bescherming).
 -- schema.sql blijft op versie 5; migrate.py past deze migratie toe (ook bij een verse installatie).
 
 CREATE TABLE trusted_browsers (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -22,4 +25,9 @@ CREATE TABLE approvals (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES us
   created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, decided_at INTEGER);
 CREATE INDEX idx_approvals_user ON approvals(user_id, created_at);
 CREATE TABLE revoked_sessions (sid TEXT PRIMARY KEY, revoked_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
+CREATE TABLE browser_sessions (sid TEXT PRIMARY KEY, browser_id TEXT NOT NULL,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at INTEGER NOT NULL);
+CREATE INDEX idx_bs_browser ON browser_sessions(browser_id);
+CREATE TABLE totp_used (user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, step INTEGER NOT NULL,
+  used_at INTEGER NOT NULL, PRIMARY KEY (user_id, step));
 INSERT OR REPLACE INTO schema_version (version) VALUES (7);

@@ -8,6 +8,7 @@
       + 'De link is een tweede stap en logt niet zelf in; hij is nog niet gebruikt.',
     // v0.4.0-Montgomery: verzoek op de telefoon geweigerd → sessie ingetrokken (§14.5)
     approval_denied: 'Geweigerd op je telefoon. Je bent uitgelogd.',
+    session_expired: 'Sessie verlopen. Log opnieuw in.',
     session_revoked: 'Je bent uitgelogd: het vertrouwen van deze browser is ingetrokken of de kluis is gewijzigd. Log opnieuw in.',
   };
   const err = new URLSearchParams(window.location.search).get('error');

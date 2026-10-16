@@ -18,6 +18,8 @@ async def connect(db_path: Path) -> AsyncIterator[aiosqlite.Connection]:
     conn.row_factory = aiosqlite.Row
     try:
         await conn.execute("PRAGMA foreign_keys = ON")
+        # v0.4.0-Montgomery (review L2): gewiste rijen (bv. resp) echt overschrijven op schijf.
+        await conn.execute("PRAGMA secure_delete = ON")
         yield conn
     finally:
         await conn.close()

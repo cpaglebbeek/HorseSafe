@@ -165,6 +165,12 @@ async def revoke_browser(browser_id: str, request: Request) -> Response:
     """Defensief, geen step-up (zoals een toestel verwijderen)."""
     payload = stepup_service.session(request)
     user_id = str(payload["sub"])
+    # Review 4db1810 (H1): een beperkte browsersessie mag alleen zichzelf vergeten.
+    if (
+        payload.get("scope") == jwt_service.SCOPE_BROWSER_PENDING
+        and payload.get("browser_id") != browser_id
+    ):
+        raise jwt_service.phone_approval_required()
     async with connect(get_settings().db_path) as conn:
         b = await trust.own_active_browser(conn, user_id, browser_id)
         if b is None or not await trust.revoke_browser(
@@ -220,7 +226,7 @@ class _LoginFail(Exception):
 
 async def _check_login(
     conn: aiosqlite.Connection, body: BrowserLoginRequest, ip: str
-) -> tuple[dict[str, Any], dict[str, Any], int]:
+) -> tuple[dict[str, Any], dict[str, Any], int, str]:
     """§14.4 stap 3, in volgorde; eerste fout wint. Geeft (gebruiker, browser, totp-stap)."""
     t = svc.now()
     ch = await trust.consume_challenge(conn, body.challenge_id)  # meteen verbruikt
@@ -251,10 +257,15 @@ async def _check_login(
     step = mfa_service.matched_step(secret, body.totp)
     if step is None:
         raise _LoginFail("totp_invalid", user_id, email_lc)
-    last = await mfa_service.last_totp_step(conn, user_id)
-    if last is not None and step <= last:
-        raise _LoginFail("totp_replay", user_id, email_lc)
-    return user, b, step
+    # Eén transactie vóór het token: TOTP-stap als gebruikt vastleggen (atomair, review M2),
+    # browser nog actief, sessie registreren (browser_sessions, review M1), last_used_at.
+    sid = str(uuid.uuid4())
+    err = await trust.finish_browser_login(
+        conn, user_id=user_id, browser_id=body.browser_id, step=step, sid=sid, t=svc.now()
+    )
+    if err is not None:
+        raise _LoginFail(err, user_id, email_lc)
+    return user, b, step, sid
 
 
 @auth_router.post("/login")
@@ -264,7 +275,7 @@ async def browser_login(
     ip = _ip(request) or "unknown"
     async with connect(get_settings().db_path) as conn:
         try:
-            user, b, step = await _check_login(conn, body, ip)
+            user, b, step, sid = await _check_login(conn, body, ip)
         except _LoginFail as e:
             if e.reason != "throttled":  # telt mee voor de bestaande login-throttle
                 await auth_service.record_failed_login(conn, ip, e.email_lc)
@@ -277,21 +288,12 @@ async def browser_login(
             )
             raise HTTPException(status_code=401, detail={"error": "browser_login_failed"}) from None
         user_id = str(user["id"])
-        sid = str(uuid.uuid4())
-        await trust.mark_browser_used(conn, str(b["id"]), svc.now())
         await _audit(
             conn,
             request,
             user_id,
             "browser_login",
-            # sid (geen geheim: zonder het JWT zelf waardeloos) zodat intrekken van de browser
-            # ook deze sessie kan intrekken.
-            {
-                "browser_id": str(b["id"]),
-                "vault_id": b["vault_id"],
-                "totp_step": step,
-                "sid": sid,
-            },
+            {"browser_id": str(b["id"]), "vault_id": b["vault_id"], "totp_step": step},
         )
     token = jwt_service.issue(
         user_id,
@@ -300,6 +302,8 @@ async def browser_login(
         sid=sid,
         amr=["browser", "totp"],
         browser_id=str(b["id"]),
+        # Review 4db1810 (H1): beperkt tot ontgrendelen tot de telefoon goedkeurt.
+        scope=jwt_service.SCOPE_BROWSER_PENDING,
     )
     jwt_service.set_cookie(response, token)
     return {
@@ -307,4 +311,5 @@ async def browser_login(
         "is_admin": bool(user["is_admin"]),
         "browser_id": str(b["id"]),
         "vault_id": str(b["vault_id"]),
+        "scope": jwt_service.SCOPE_BROWSER_PENDING,
     }

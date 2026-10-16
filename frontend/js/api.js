@@ -24,6 +24,68 @@
   })();
 
   // v0.4.0-Montgomery: extra = {signal, keepalive} (long-poll afbreken, annuleren bij tab dicht)
+  // ───────────── v0.4.0-Montgomery: sessiebewaking (security-review H1) ─────────────
+  // Na inloggen op een vertrouwde browser heeft de sessie scope "browser_pending": tot de telefoon het
+  // ontgrendelen goedkeurt weigert de server bijna alles met 403 phone_approval_required. Elke pagina laadt
+  // api.js; deze haak ziet ook de directe fetch()-aanroepen (settings, shares, admin) en meldt het netjes.
+  // 401 met reason session_expired (absolute grens 12 u) → naar inloggen met "Sessie verlopen".
+  const NOTICES = {
+    phone_approval_required: 'Ontgrendel eerst met je telefoon. Deze actie kan pas nadat je de kluis op deze vertrouwde browser met je telefoon hebt geopend.',
+    browser_session_not_allowed: 'Beheer kan niet vanuit een sessie van een vertrouwde browser. Log in met je wachtwoord.',
+  };
+
+  function showNotice(code) {
+    if (typeof document === 'undefined' || !NOTICES[code]) return;
+    let el = document.getElementById('hs-session-notice');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'hs-session-notice';
+      el.className = 'error';
+      el.setAttribute('role', 'alert');
+      const host = document.querySelector('main') || document.body;
+      host.insertBefore(el, host.firstChild);
+    }
+    el.textContent = NOTICES[code];
+    el.dataset.code = code;
+    if (code === 'phone_approval_required' && !/vault\.html$/.test(location.pathname)) {
+      const a = document.createElement('a');
+      a.href = 'vault.html';
+      a.textContent = ' Naar de kluis';
+      el.appendChild(a);
+    }
+    el.hidden = false;
+  }
+
+  function sessionExpired() {
+    if (/(login|index)\.html$/.test(location.pathname)) return;
+    try { document.dispatchEvent(new CustomEvent('horsesafe:session-expired')); } catch (_) { /* geen DOM */ }
+    location.href = 'login.html?error=session_expired';
+  }
+
+  /** Lees de fout uit een API-antwoord (kloon, niet-blokkerend) en reageer op sessiecodes. */
+  function watch(res) {
+    if (res.status !== 401 && res.status !== 403) return;
+    res.clone().json().then((d) => {
+      const det = d && d.detail && !Array.isArray(d.detail) && typeof d.detail === 'object' ? d.detail : null;
+      if (!det) return;
+      if (res.status === 401 && det.reason === 'session_expired') sessionExpired();
+      else if (res.status === 403 && NOTICES[det.error]) showNotice(det.error);
+    }).catch(() => { /* geen JSON */ });
+  }
+
+  if (typeof window !== 'undefined' && typeof window.fetch === 'function' && !window.__hsFetchWatched) {
+    const origFetch = window.fetch.bind(window);
+    window.__hsFetchWatched = true;
+    window.fetch = async (input, init) => {
+      const res = await origFetch(input, init);
+      try {
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        if (url.startsWith(API_BASE)) watch(res);
+      } catch (_) { /* bewaking mag nooit een aanroep breken */ }
+      return res;
+    };
+  }
+
   async function jsonReq(method, path, body, extra) {
     const opts = {
       method,
@@ -67,6 +129,7 @@
 
   window.HorseSafeAPI = {
     base: API_BASE,
+    showNotice,
     health:    () => jsonReq('GET',  '/health'),
     register:  (body) => jsonReq('POST', '/auth/register', body),
     login:     (body) => jsonReq('POST', '/auth/login', body),

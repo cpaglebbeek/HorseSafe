@@ -93,6 +93,10 @@
     not_authenticated: 'Je bent uitgelogd. Log opnieuw in.',
     invalid_token: 'Je sessie is verlopen. Log opnieuw in.',
     mfa_required: 'Bevestig eerst je tweede factor.',
+    // v0.4.0-Montgomery (H1): sessie van een vertrouwde browser vóór goedkeuring op de telefoon
+    phone_approval_required: 'Ontgrendel eerst met je telefoon.',
+    browser_session_not_allowed: 'Dit kan niet vanuit een sessie van een vertrouwde browser. Log in met je wachtwoord.',
+    session_expired: 'Sessie verlopen. Log opnieuw in.',
     stepup_cooldown: 'Bevestigen met een authenticator-code kan tijdelijk niet: kort geleden is een YubiKey Bio verwijderd of de authenticator-app ingesteld.',
     stepup_key_too_new: 'Opheffen kan alleen met een YubiKey Bio die al gekoppeld was vóór de blokkade. Verwijder anders de noodsleutel en koppel hem opnieuw.',
     totp_already_configured: 'Er is al een authenticator-app ingesteld. Schakel die eerst uit met een geldige code.',

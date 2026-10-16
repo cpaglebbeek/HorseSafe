@@ -109,7 +109,7 @@ async def device_get_approval(approval_id: str, request: Request) -> DeviceAppro
         created_at=int(a["created_at"]),
         sig_req=str(a["sig_req"]),
         ip=a["ip"],
-        ua=a["ua"],
+        ua=trust.clean_ua(a["ua"]),
         requested_at=int(a["expires_at"]) - trust.PENDING_TTL,
         expires_at=int(a["expires_at"]),
     )
@@ -197,7 +197,7 @@ async def device_decide(approval_id: str, body: DeviceDecision, request: Request
         email=email,
         event="approval_deny",
         subject="HorseSafe: verzoek geweigerd",
-        text=text + f" Browser: {a['ua'] or 'onbekend'}.",
+        text=text + f" Browser: {trust.clean_ua(a['ua'], trust.UA_MAIL_MAX) or 'onbekend'}.",
         ip=a["ip"],  # het IP van de browser die het verzoek deed, niet van de telefoon
         user_agent=ua,
     )

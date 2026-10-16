@@ -56,6 +56,8 @@
     approval_expired: 'Geen reactie, probeer opnieuw.',
     approval_cancelled: 'Het verzoek is geannuleerd.',
     approval_invalid: 'Het antwoord van de telefoon past niet bij dit verzoek. Er is niets geopend.',
+    session_expired: 'Sessie verlopen. Log opnieuw in.',
+    phone_approval_required: 'Ontgrendel eerst met je telefoon.',
     not_found: 'Deze browser is niet (meer) vertrouwd voor deze kluis, of de kluis bestaat niet.',
   };
 
@@ -369,6 +371,8 @@
     const d = data && data.detail && !Array.isArray(data.detail) && typeof data.detail === 'object' ? data.detail : null;
     // Na weigeren trekt de server de sessie in: 401 invalid_token + reason session_revoked = geweigerd (§14.5).
     if (status === 401 && d && d.reason === 'session_revoked') return new HwKeyError('approval_denied', MESSAGES.approval_denied);
+    // Absolute sessiegrens (12 u na inloggen) → opnieuw inloggen.
+    if (status === 401 && d && d.reason === 'session_expired') return new HwKeyError('session_expired', MESSAGES.session_expired);
     if (d && typeof d.error === 'string') return new HwKeyError(d.error, MESSAGES[d.error], d);
     if (status === 429) return new HwKeyError('api_429', MESSAGES.api_429);
     return new HwKeyError('api_' + status);

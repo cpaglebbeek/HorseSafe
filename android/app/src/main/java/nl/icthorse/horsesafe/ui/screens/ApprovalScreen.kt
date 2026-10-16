@@ -60,8 +60,8 @@ fun ApprovalScreen(u: ApprovalUi, vm: ApprovalViewModel) {
             SectionTitle(card.browserLabel)
             Small(if (card.canApprove) "Naam van de vertrouwde browser; het koppelbewijs wordt na je vinger gecontroleerd." else "Naam van de browser (niet gecontroleerd).")
             Body("Kluis: " + (card.vaultLabel ?: card.request.vaultId.take(8) + "…"))
-            Body("IP-adres: " + (card.request.ip ?: "onbekend"))
-            Body("Browser: " + (card.request.ua?.take(160) ?: "onbekend"))
+            Body("IP-adres: " + card.displayIp)
+            Body("Browser: " + card.displayUa)
             Body("Tijd: " + time(card.request.requestedAt ?: card.request.createdAt))
         }
         Small("Verwacht je dit verzoek niet? Weiger het. Ontgrendelen kan alleen met je vingerafdruk, nooit met een toestel-PIN.")

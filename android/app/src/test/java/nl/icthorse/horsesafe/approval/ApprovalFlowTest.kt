@@ -256,6 +256,29 @@ class ApprovalFlowTest {
         assertEquals("Database", card().vaultLabel)
     }
 
+    @Test fun uaEnIpWordenGeschoondVoorDeKaart() {
+        server.detail["ua"] = "Mozilla\u0085/5.0\u202E evil\u2028x\u0000y\u200B " + "z".repeat(300)
+        server.detail["ip"] = "203.0.113.7\u202E"
+        val c = card()
+        val ua = c.displayUa
+        assertTrue(ua, ua.startsWith("Mozilla/5.0 evilxy z"))
+        assertEquals(ApprovalCard.UA_MAX, ua.codePointCount(0, ua.length))
+        assertTrue(ua.codePoints().allMatch { nl.icthorse.horsesafe.pairing.DeviceInfo.allowed(it) })
+        assertEquals("onbekend", c.displayIp)
+    }
+
+    @Test fun ipVormen() {
+        fun ip(v: String?): String {
+            server.detail["ip"] = v
+            return card().displayIp
+        }
+        assertEquals("203.0.113.7", ip("203.0.113.7"))
+        assertEquals("2001:db8::1", ip("2001:db8::1"))
+        listOf(null, "", "localhost", "1.2.3.4 <b>", "1.2.3.4\u0085", "::", "a".repeat(46)).forEach { assertEquals("$it", "onbekend", ip(it)) }
+        server.detail["ua"] = null
+        assertEquals("onbekend", card().displayUa)
+    }
+
     @Test fun onbekendeKopieIsNietGoedkeurbaar() {
         server.detail["key_id"] = "11111111-2222-4333-8444-555555555555"
         assertEquals(CardTrust.NO_COPY, card().trust)

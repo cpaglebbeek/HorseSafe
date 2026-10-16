@@ -275,6 +275,8 @@
       if (e && e.code === 'approval_denied') {
         $('phone-unlock-btn').disabled = true;
         setTimeout(logoutDenied, 2500);
+      } else if (e && e.code === 'session_expired') {
+        setTimeout(() => { window.location.href = 'login.html?error=session_expired'; }, 1500);
       } else if (e && (e.code === 'not_authenticated' || e.code === 'invalid_token')) {
         setTimeout(() => { window.location.href = 'login.html'; }, 1500);
       }

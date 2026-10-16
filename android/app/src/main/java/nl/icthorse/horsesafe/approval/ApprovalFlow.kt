@@ -61,6 +61,18 @@ data class ApprovalCard(
     val approvalId: String get() = request.approvalId
     val browserLabel: String get() = DeviceInfo.clean(request.browser.label, 64, "(zonder naam)")
     val canApprove: Boolean get() = trust == CardTrust.SIGNED
+
+    /** UA voor de kaart: tekenregel §13.5.1 (stuur-/opmaaktekens, Zl/Zp, losse surrogaten weg), max [UA_MAX] tekens. */
+    val displayUa: String get() = DeviceInfo.clean(request.ua, UA_MAX, UNKNOWN)
+
+    /** IP voor de kaart: alleen IPv4/IPv6-tekens (cijfers, a-f, ':' en '.'), anders "onbekend". */
+    val displayIp: String get() = request.ip?.takeIf { IP.matches(it) && it.any(Char::isDigit) } ?: UNKNOWN
+
+    companion object {
+        const val UA_MAX = 200
+        const val UNKNOWN = "onbekend"
+        private val IP = Regex("^[0-9A-Fa-f:.]{2,45}$")
+    }
 }
 
 /** Uitkomst van "Goedkeuren". */

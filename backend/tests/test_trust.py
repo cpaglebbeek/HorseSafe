@@ -1024,3 +1024,261 @@ async def test_rekey_revokes_browser_sessions(
     assert r.status_code == 200, r.text
     assert await _status_with(client, b_token) == 401
     assert await _status_with(client, pw_token) == 200
+
+
+# ─────────────── Review 4db1810: beperkte browsersessie (H1) ───────────────
+
+
+async def _pending_session(client: AsyncClient, totp: Totp, w: World) -> str:
+    await client.post("/auth/logout")
+    r = await browser_login(client, w.browser, totp.code(w.secret))
+    assert r.status_code == 200 and r.json()["scope"] == "browser_pending"
+    assert _claims(client)["scope"] == "browser_pending"
+    return str(client.cookies["horsesafe_session"])
+
+
+def _fill(path: str, browser_id: str) -> str:
+    import re
+
+    return re.sub(r"\{[^}]+\}", str(uuid.uuid4()), path)
+
+
+async def test_scope_guard_walks_every_route(client: AsyncClient, dev_env: Any, totp: Totp) -> None:
+    import backend.app as app_module
+    from backend.services import jwt_service
+    from fastapi.routing import APIRoute
+
+    w = await world(client, totp, dev_env)
+    await _pending_session(client, totp, w)
+    routes = {
+        (m, r.path) for r in app_module.app.routes if isinstance(r, APIRoute) for m in r.methods
+    }
+    # elke regel in de lijsten bestaat echt (geen dode of verkeerd gespelde uitzondering)
+    assert routes >= jwt_service.BROWSER_PENDING_ALLOWED
+    assert routes >= jwt_service.SESSIONLESS_ROUTES
+    seen_denied = 0
+    for method, path in sorted(routes):
+        if (method, path) in {("POST", "/auth/logout")}:
+            continue  # zou de sessie beëindigen; apart getest
+        r = await client.request(method, _fill(path, w.browser.browser_id), json={})
+        denied = r.status_code == 403 and r.json().get("detail") == {
+            "error": "phone_approval_required"
+        }
+        if (method, path) == ("DELETE", "/trusted-browsers/{browser_id}"):
+            assert denied, "andere browser dan de eigen moet geweigerd worden"
+        elif (method, path) in jwt_service.BROWSER_PENDING_ALLOWED | jwt_service.SESSIONLESS_ROUTES:
+            assert not denied, (method, path, r.status_code)
+        else:
+            assert denied, (method, path, r.status_code, r.text[:200])
+            seen_denied += 1
+    assert seen_denied > 20
+    assert (await client.get("/auth/me")).status_code == 200  # sessie nog intact
+
+
+async def test_pending_session_upgrades_after_approval(
+    client: AsyncClient, dev_env: Any, totp: Totp
+) -> None:
+    w = await world(client, totp, dev_env)
+    from backend.config import get_settings
+    from backend.db.connection import connect
+
+    async with connect(get_settings().db_path) as conn:  # admin maken: beheer blijft dicht
+        await conn.execute("UPDATE users SET is_admin = 1 WHERE email = ?", (EMAIL,))
+        await conn.commit()
+    await _pending_session(client, totp, w)
+    before = _claims(client)
+    # alles buiten de whitelist dicht, ook kluis wijzigen/verwijderen en toestel intrekken
+    for method, path in (
+        ("DELETE", f"/vault/{w.vid}"),
+        ("PUT", f"/vault/{w.vid}"),
+        ("DELETE", f"/devices/{w.device.device_id}"),
+        ("POST", "/auth/stepup"),
+        ("GET", "/admin/stats"),
+    ):
+        r = await client.request(method, path)
+        assert r.status_code == 403 and r.json()["detail"]["error"] == "phone_approval_required"
+    # wel: kluislijst, blob, sleutels, eigen browser in de lijst
+    assert (await client.get("/vault")).status_code == 200
+    assert (await client.get(f"/vault/{w.vid}")).status_code == 200
+    assert (await client.get(f"/vault/{w.vid}/keys")).status_code == 200
+    req = await request_unlock(client, w)
+    r, _ = await phone_decides(client, w.device)
+    r = await client.get(f"/vault/{w.vid}/approvals/{req.approval_id}")
+    assert r.status_code == 200 and r.json()["resp"]
+    assert "set-cookie" in r.headers
+    after = _claims(client)
+    assert "scope" not in after
+    for k in ("sid", "amr", "browser_id", "auth_time"):
+        assert after[k] == before[k]
+    # nu volledig, behalve: beheer nooit vanuit een browsersessie, kluis verwijderen met step-up
+    r = await client.get("/admin/stats")
+    assert r.status_code == 403 and r.json()["detail"]["error"] == "browser_session_not_allowed"
+    r = await client.delete(f"/vault/{w.vid}")
+    assert r.status_code == 403 and r.json()["detail"]["error"] == "stepup_required"
+    await stepup(client, totp, w.secret)
+    assert _claims(client)["auth_time"] == before["auth_time"]
+    assert (await client.delete(f"/vault/{w.vid}")).status_code == 204
+
+
+async def test_pending_session_only_forgets_itself(
+    client: AsyncClient, dev_env: Any, totp: Totp
+) -> None:
+    w = await world(client, totp, dev_env)
+    await stepup(client, totp, w.secret)
+    b2 = FakeBrowser("Firefox")
+    assert (
+        await client.post("/trusted-browsers", json=b2.trust_body(w.vid, w.ph, w.kh))
+    ).status_code == 201
+    await _pending_session(client, totp, w)
+    r = await client.delete(f"/trusted-browsers/{b2.browser_id}")
+    assert r.status_code == 403 and r.json()["detail"]["error"] == "phone_approval_required"
+    assert (await client.delete(f"/trusted-browsers/{w.browser.browser_id}")).status_code == 204
+    assert (await client.get("/auth/me")).status_code == 401  # eigen sessie mee ingetrokken
+
+
+# ─────────────── Review M1: browser_sessions + absolute grens ───────────────
+
+
+async def test_revoke_catches_extended_browser_session(
+    client: AsyncClient, dev_env: Any, totp: Totp
+) -> None:
+    w = await world(client, totp, dev_env)
+    await _pending_session(client, totp, w)
+    req = await request_unlock(client, w)
+    await phone_decides(client, w.device)
+    await client.get(f"/vault/{w.vid}/approvals/{req.approval_id}")  # → volledige sessie
+    await stepup(client, totp, w.secret)  # verlengd token, zelfde sid
+    extended = str(client.cookies["horsesafe_session"])
+    rows = await _rows(
+        "SELECT browser_id FROM browser_sessions WHERE sid = ?", (_claims(client)["sid"],)
+    )
+    assert rows == [{"browser_id": w.browser.browser_id}]
+    pw = await _password_session(client, totp, w)
+    assert (await client.delete(f"/trusted-browsers/{w.browser.browser_id}")).status_code == 204
+    assert await _status_with(client, extended) == 401
+    assert await _status_with(client, pw) == 200
+
+
+async def test_auth_time_absolute_limit(client: AsyncClient, dev_env: Any, totp: Totp) -> None:
+    import time
+
+    import jwt as pyjwt
+    from backend.config import get_settings
+
+    await world(client, totp, dev_env, phone=False, trusted=False)
+    c = _claims(client)
+    assert c["exp"] <= c["auth_time"] + get_settings().jwt_ttl_minutes * 60
+    s = get_settings()
+    old = {
+        **c,
+        "auth_time": int(time.time()) - s.jwt_ttl_minutes * 60 - 5,
+        "exp": int(time.time()) + 600,
+    }
+    _set_session(client, pyjwt.encode(old, s.jwt_secret, algorithm=s.jwt_algorithm))
+    r = await client.get("/auth/me")
+    assert r.status_code == 401 and r.json()["detail"]["reason"] == "session_expired"
+
+
+# ─────────────── Review M2: TOTP-replay atomair ───────────────
+
+
+async def test_parallel_browser_logins_same_code(
+    client: AsyncClient, dev_env: Any, totp: Totp
+) -> None:
+    w = await world(client, totp, dev_env)
+    await client.post("/auth/logout")
+    code = totp.code(w.secret)
+    bodies = []
+    for _ in range(4):
+        ch = (await client.post("/auth/browser/challenge", json={"email": EMAIL})).json()
+        msg = trust.login_t(
+            ch["challenge_id"], seal.b64u_dec(ch["challenge"]), w.browser.browser_id, EMAIL
+        )
+        bodies.append(
+            {
+                "challenge_id": ch["challenge_id"],
+                "browser_id": w.browser.browser_id,
+                "sig": w.browser.sign(msg),
+                "totp": code,
+            }
+        )
+    rs = await asyncio.gather(*(client.post("/auth/browser/login", json=b) for b in bodies))
+    assert sorted(r.status_code for r in rs) == [200, 401, 401, 401]
+    assert (await _rows("SELECT COUNT(*) AS n FROM browser_sessions"))[0]["n"] == 1
+
+
+async def test_parallel_stepups_same_code(client: AsyncClient, dev_env: Any, totp: Totp) -> None:
+    w = await world(client, totp, dev_env, phone=False, trusted=False)
+    code = totp.code(w.secret)
+    rs = await asyncio.gather(
+        *(client.post("/auth/stepup", json={"method": "totp", "code": code}) for _ in range(4))
+    )
+    assert sorted(r.status_code for r in rs) == [200, 401, 401, 401]
+    # en de gewone MFA-challenge neemt dezelfde code ook niet meer
+    r = await client.post("/auth/totp/verify", json={"code": code})
+    assert r.status_code == 400
+
+
+# ─────────────── Review L2 + L3 ───────────────
+
+
+async def test_logout_cancels_open_approvals(client: AsyncClient, dev_env: Any, totp: Totp) -> None:
+    w = await world(client, totp, dev_env)
+    req = await request_unlock(client, w)
+    assert (await dget(client, w.device, "/device/v1/status")).json()["approvals"]
+    await client.post("/auth/logout")
+    rows = await _rows("SELECT status, resp FROM approvals WHERE id = ?", (req.approval_id,))
+    assert rows == [{"status": "cancelled", "resp": None}]
+    r = await dpost(
+        client, w.device, f"/device/v1/approvals/{req.approval_id}", {"decision": "deny"}
+    )
+    assert r.status_code == 409 and r.json()["detail"]["error"] == "approval_not_pending"
+
+
+async def test_decide_refuses_revoked_sid(client: AsyncClient, dev_env: Any, totp: Totp) -> None:
+    w = await world(client, totp, dev_env)
+    req = await request_unlock(client, w)
+    from backend.config import get_settings
+    from backend.db.connection import connect
+
+    async with connect(get_settings().db_path) as conn:  # alleen intrekken, verzoek blijft pending
+        await conn.execute(
+            "INSERT INTO revoked_sessions (sid, revoked_at, expires_at) VALUES (?, 0, ?)",
+            (_claims(client)["sid"], 2**40),
+        )
+        await conn.commit()
+    r, _ = await phone_decides(client, w.device)
+    assert r.status_code == 409 and r.json()["detail"]["error"] == "approval_not_pending"
+    rows = await _rows("SELECT status, resp FROM approvals WHERE id = ?", (req.approval_id,))
+    assert rows == [{"status": "pending", "resp": None}]
+
+
+async def test_user_agent_cleaned(
+    client: AsyncClient, dev_env: Any, totp: Totp, mailbox: Any
+) -> None:
+    w = await world(client, totp, dev_env)
+    assert trust.clean_ua("a\u202eb\x07c\u2028d\u200b") == "abcd"
+    ua = "Evil\xad\x85Browser\x7f" + "x" * 600  # header: alleen latin-1 mogelijk
+    r = await client.post(
+        f"/vault/{w.vid}/approvals",
+        json={"browser_id": w.browser.browser_id},
+        headers={"User-Agent": ua.encode("latin-1")},
+    )
+    aid, created = r.json()["approval_id"], r.json()["created_at"]
+    epk = b64u(
+        x25519.X25519PrivateKey.generate().public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+    )
+    nonce = os.urandom(32)
+    t = trust.req_t(aid, w.vid, w.browser.browser_id, epk, nonce, created)
+    await client.put(
+        f"/vault/{w.vid}/approvals/{aid}",
+        json={"epk_L": epk, "nonce_L": b64u(nonce), "sig_req": w.browser.sign(t)},
+    )
+    ap = (await dget(client, w.device, f"/device/v1/approvals/{aid}")).json()
+    assert ap["ua"].startswith("EvilBrowser") and len(ap["ua"]) == 200
+    assert not any(c in ap["ua"] for c in "\xad\x85\x7f")
+    r, _ = await phone_decides(client, w.device, decision="deny")
+    body = mailbox.sent[-1]["body"]
+    line = next(x for x in body.splitlines() if "Browser: EvilBrowser" in x)
+    shown = line.split("Browser: ", 1)[1].rstrip(".")
+    assert len(shown) == 120 and "\xad" not in body

@@ -16,7 +16,6 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
-import time
 import uuid
 from typing import Any
 
@@ -44,6 +43,21 @@ POLL_INTERVAL = 0.5  # s tussen DB-controles tijdens een long-poll (tests zetten
 FINAL_ROW_TTL = 24 * 3600  # afgehandelde verzoeken daarna weg (de audit blijft)
 
 OPEN_STATUSES = ("draft", "pending", "approved")
+UA_MAX = 200  # opgeslagen en naar de app
+UA_MAIL_MAX = 120
+
+_FORBIDDEN_UA = frozenset({"Cc", "Cf", "Cs", "Zl", "Zp"})
+
+
+def clean_ua(ua: str | None, limit: int = UA_MAX) -> str | None:
+    """User-Agent zonder stuur-/opmaaktekens (tekenregel §13.5.1), afgekapt op ``limit``."""
+    if not ua:
+        return None
+    import unicodedata
+
+    out = "".join(c for c in ua if unicodedata.category(c) not in _FORBIDDEN_UA).strip()
+    return out[:limit] or None
+
 
 b64u = dev.b64u
 b64u_decode = dev.b64u_decode
@@ -150,6 +164,11 @@ async def cleanup(conn: aiosqlite.Connection, t: int, *, user_id: str | None = N
     )
     await conn.execute("DELETE FROM browser_challenges WHERE created_at < ?", (t - 3600,))
     await conn.execute("DELETE FROM revoked_sessions WHERE expires_at < ?", (t,))
+    # Een sessie leeft hooguit jwt_ttl na de login (auth_time); daarna is de koppeling overbodig.
+    await conn.execute(
+        "DELETE FROM browser_sessions WHERE created_at < ?",
+        (t - get_settings().jwt_ttl_minutes * 60 - 60,),
+    )
     await conn.commit()
 
 
@@ -231,23 +250,25 @@ async def revoke_session(conn: aiosqlite.Connection, sid: str, t: int) -> None:
         "INSERT OR REPLACE INTO revoked_sessions (sid, revoked_at, expires_at) VALUES (?, ?, ?)",
         (sid, t, t + ttl),
     )
+    # Review L2: open verzoeken van een ingetrokken sessie kunnen niet meer (resp weg).
+    await conn.execute(
+        "UPDATE approvals SET status = 'cancelled', resp = NULL "
+        "WHERE sid = ? AND status IN ('draft', 'pending', 'approved')",
+        (sid,),
+    )
 
 
 async def revoke_browser_sessions(
     conn: aiosqlite.Connection, browser_ids: list[str], t: int
 ) -> int:
-    """Trek alle nog geldige sessies in die via deze browser(s) zijn ingelogd. De sid van elke
-    browser-login staat in de audit-detail van ``browser_login`` (geen schemawijziging nodig);
-    alleen logins binnen de JWT-levensduur tellen. Geen commit."""
+    """Trek ALLE sessies in die via deze browser(s) zijn ingelogd (``browser_sessions``, zonder
+    tijdvenster: ook sessies die met step-up/reissue verlengd zijn). Geen commit."""
     if not browser_ids:
         return 0
-    ttl = get_settings().jwt_ttl_minutes * 60
     marks = ",".join("?" * len(browser_ids))
     cur = await conn.execute(
-        "SELECT DISTINCT json_extract(detail, '$.sid') AS sid FROM audit_log "  # noqa: S608
-        f"WHERE event = 'browser_login' AND json_extract(detail, '$.browser_id') IN ({marks}) "
-        "AND json_extract(detail, '$.sid') IS NOT NULL AND ts > ?",
-        (*browser_ids, int(time.time()) - ttl - 60),
+        f"SELECT sid FROM browser_sessions WHERE browser_id IN ({marks})",  # noqa: S608
+        tuple(browser_ids),
     )
     sids = [str(r["sid"]) for r in await cur.fetchall()]
     for sid in sids:
@@ -352,14 +373,38 @@ async def user_by_email(conn: aiosqlite.Connection, email_lc: str) -> dict[str, 
     return dict(row) if row else None
 
 
-async def mark_browser_used(conn: aiosqlite.Connection, browser_id: str, t: int) -> None:
-    await conn.execute("UPDATE trusted_browsers SET last_used_at = ? WHERE id = ?", (t, browser_id))
-    await conn.execute(
-        "UPDATE users SET last_login_at = ? WHERE id = "
-        "(SELECT user_id FROM trusted_browsers WHERE id = ?)",
-        (t, browser_id),
-    )
-    await conn.commit()
+async def finish_browser_login(
+    conn: aiosqlite.Connection, *, user_id: str, browser_id: str, step: int, sid: str, t: int
+) -> str | None:
+    """Laatste stap van een browser-login in één schrijftransactie: TOTP-stap eenmalig
+    (``totp_used``), browser nog actief, ``browser_sessions``-rij, ``last_used_at``. Geeft een
+    foutreden (``totp_replay`` / ``browser_revoked``) of None."""
+    from . import mfa_service
+
+    await conn.execute("BEGIN IMMEDIATE")
+    try:
+        if not await mfa_service.use_step_in_tx(conn, user_id, step):
+            await conn.rollback()
+            return "totp_replay"
+        cur = await conn.execute(
+            "UPDATE trusted_browsers SET last_used_at = ? WHERE id = ? AND user_id = ? "
+            "AND revoked_at IS NULL",
+            (t, browser_id, user_id),
+        )
+        if cur.rowcount != 1:
+            await conn.rollback()
+            return "browser_revoked"
+        await conn.execute(
+            "INSERT INTO browser_sessions (sid, browser_id, user_id, created_at) "
+            "VALUES (?, ?, ?, ?)",
+            (sid, browser_id, user_id, t),
+        )
+        await conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (t, user_id))
+        await conn.commit()
+    except BaseException:
+        await conn.rollback()
+        raise
+    return None
 
 
 # ─────────────── Ontgrendelverzoeken ───────────────
@@ -439,7 +484,7 @@ async def create_approval(
                 browser_id,
                 sid,
                 ip,
-                (ua or "")[:512] or None,
+                clean_ua(ua),
                 t,
                 t + DRAFT_TTL,
             ),
@@ -539,6 +584,11 @@ async def decide(
     await conn.execute("BEGIN IMMEDIATE")
     try:
         if await device_key_for_vault(conn, device_id, approval["vault_id"]) is None:
+            await conn.rollback()
+            return False
+        # Review L2: sessie intussen ingetrokken (uitgelogd, geweigerd) → niets meer beslissen.
+        cur = await conn.execute("SELECT 1 FROM revoked_sessions WHERE sid = ?", (approval["sid"],))
+        if await cur.fetchone() is not None:
             await conn.rollback()
             return False
         if decision == "approve":

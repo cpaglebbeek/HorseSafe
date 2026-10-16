@@ -38,6 +38,10 @@
         window.location.href = 'mfa.html';
         throw new Error('MFA required');
       }
+      if (data?.detail?.error === 'browser_session_not_allowed' || data?.detail?.error === 'phone_approval_required') {
+        alert('Beheer kan niet vanuit een sessie van een vertrouwde browser. Log in met je wachtwoord.');
+        throw new Error('Forbidden');
+      }
       alert('Geen toegang (geen admin-rechten?)');
       throw new Error('Forbidden');
     }
