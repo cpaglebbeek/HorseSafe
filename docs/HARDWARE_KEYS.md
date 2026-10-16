@@ -208,6 +208,7 @@ Zie §12.6.2. Eén `credentials.get` (één vinger) → `POST …/unlock` met de
 
 ## 5. Goedkeuring via de telefoon (Montgomery — niet in Koblitz)
 
+> **Vervangen 16-10-2026 door §11.3 + §14** (vertrouwde browser + koppelbewijs). Historisch:
 > **Herzien 14-10-2026 (§11.2):** de QR-code in stap 2-3 vervalt. In plaats daarvan toont de laptop een code van
 > 6 cijfers die de gebruiker op de telefoon intypt (BB-001-stijl), met een commitment-SAS zodat de server
 > `epk_L` niet ongemerkt kan verwisselen. Het schema hieronder wordt in fase Montgomery herschreven; tot dan
@@ -512,6 +513,39 @@ Besluiten (WhatIf + "akkoord" per vraag, 14-10-2026):
    wachtwoord + back-up in ClaudeSecrets; `verify_apk.sh`, HorseAPK-publicatie en de server-allowlist
    (`attestationApplicationId`) krijgen de nieuwe digest. Eenmalig: app op Fold en Fairphone verwijderen en opnieuw
    installeren (lokale keuringsrapporten eerst exporteren). Vervangt E8 "debug-keystore".
+
+### 11.3 Akkoord 16-10-2026: Montgomery = vertrouwde browser + telefoonvinger
+
+Christian (14-10, akkoord 16-10): "vertrouwde browser is alleen voor het herkennen, koppelen van de database, samen
+met otp. daarna is vingerafdruk om de database echt te ontsleutelen." Dit vervangt §11.2 punt 3 (code van 6 cijfers
++ commitment-SAS) en de QR-stap van §5. Contract: §14.
+
+1. **Vertrouwen = herkennen + koppelen, niet ontsleutelen.** Eenmalig per browser per kluis, met de kluis open
+   (CK in RAM) en step-up (Bio of TOTP). De browser krijgt één niet-exporteerbare ondertekensleutel (WebCrypto
+   ECDSA P-256, IndexedDB). Er wordt **geen** ontgrendelmateriaal in de browser of op de server voor die browser
+   bewaard: P-CRYPT-09 blijft ongewijzigd (alleen hardware ontsleutelt).
+2. **Koppelbewijs** = HMAC met een sleutel afgeleid van CK over (vault_id, browser_id, publieke sleutel, label).
+   Alleen wie de kluis open had kan het maken; de telefoon controleert het na de vinger. Een kwaadwillende server
+   kan dus geen eigen browser tussenschuiven, geen label vervalsen en geen kopieën van kluizen verwisselen (lost de
+   noot bij §13.3 op). Geen cijfers overtypen per ontgrendeling.
+3. **Inloggen op een vertrouwde browser** met e-mail + handtekening van de browsersleutel + TOTP, zonder
+   account-wachtwoord. Elders blijft wachtwoord + tweede stap gelden.
+4. **Ontsleutelen alleen met de telefoonvinger** (BIOMETRIC_STRONG, nooit PIN, E2). Per verzoek maakt de browser een
+   tijdelijke X25519-sleutel; de telefoon verzegelt CK alleen daarnaar (Seal_v2 purpose `relay`), na controle van
+   koppelbewijs én browserhandtekening. Het antwoord staat ≤ 120 s op de server en wordt na ophalen gewist.
+5. **Kaart op de telefoon** toont browsernaam (uit het koppelbewijs), kluis, IP, browser-UA en tijd. "Weigeren"
+   trekt de sessie in; "Weigeren en browser intrekken" ook het vertrouwen. Beide → audit + mail.
+6. **Geen vaste vervaldatum**; intrekken in de sleutellijst; vervalt bij rekey (CK verandert → bewijs ongeldig;
+   de server trekt bij rekey alle vertrouwde browsers van die kluis in).
+7. **Alleen kluizen met keyfile** (`kh` aanwezig). Reden: het koppelbewijs is een snelle HMAC; bij een kluis met
+   alleen een wachtwoord zou de server dat wachtwoord sneller kunnen raden dan via de KDBX-KDF. De live kluis
+   "Database" is keyfile-only en voldoet.
+8. **Meldingen:** de open app pollt (`wait=25`); de laptop zegt "Open HorseSafe op je telefoon". ntfy-versnelling
+   (bestaande ntfy-dienst op HC55) is 0.4.x, niet in 0.4.0. Ontgrendelen ín de app (WebView, §4.6) ook 0.4.x.
+9. **Restrisico R23 en R24 (THREAT_MODEL):** laptop + (geldige sessie of OTP) geeft een aanvaller een *verzoek*; de kluis gaat pas open
+   als de gebruiker op de telefoon goedkeurt. De kaart toont IP en browser; de gebruiker moet onverwachte verzoeken
+   weigeren. Sleutel in IndexedDB is software (niet-exporteerbaar, niet hardware-gebonden).
+10. **Versie:** v0.4.0-Montgomery (+0.1.0, design-impact). Bouwen, deploy en APK-publicatie elk apart akkoord.
 
 ## 12. Koblitz API-contract (v0.2.0)
 
@@ -1340,3 +1374,170 @@ De PIN-schermen van deel 1 blijven zonder netwerkcode (bronbeleidstest: `yubikey
 - `node --test`: pair_v1-vectoren (k_srv, k_web, mac_web, sas).
 - JVM: pair_v1- en seal_v2-vectoren (incl. openen), transcript-codering, bronbeleid (geen `DEVICE_CREDENTIAL`, geen `net/`-import in PIN-code).
 - Playwright: koppelflow met neptoestel (Python-helper die als app claimt met testvlag).
+
+
+## 14. Montgomery API-contract (v0.4.0) — vertrouwde browser + telefoonvinger
+
+Bindend voor backend, web en app (besluit §11.3). Afwijkingen = bug of contractwijziging. Coderingen zoals §12.1/§13.1
+(b64u zonder padding; tijden Unix-seconden; "\0" = byte 0x00; strings UTF-8).
+
+### 14.1 Sleutels
+
+| Sleutel | Waar | Type | Eigenschappen |
+|---|---|---|---|
+| K_B | browser | ECDSA P-256 (WebCrypto) | `extractable:false`, CryptoKey in IndexedDB `horsesafe-trust` (store `browsers`, sleutel `browser_id`); ondertekent login en verzoeken; handtekening **raw r‖s 64 B** (P1363) |
+| e_L | browser-tab | X25519 (WebCrypto) | per verzoek, `extractable:false`, alleen in RAM, weg na gebruik of na 120 s |
+| K_wrap / sk_c | telefoon | §13.2 | ongewijzigd; vinger → `sk_c` → eigen `store`-kopie → CK |
+| K_dev | telefoon | §13.2 | device-requests (§13.6) |
+
+### 14.2 Afleidingen (testvectoren `specs/testvectors/trust_v1.json`, generator `gen_trust_v1.py`)
+
+```
+pt_ck        = exact de Seal_v2-plaintext {"ph":<v>,"kh":<v>} (§12.5); kh MOET niet-null zijn (§11.3.7)
+k_bind       = HKDF-SHA256(ikm=pt_ck, salt=SHA-256(UTF-8("HSv2 bind salt") || 0x00 || UTF-8(vault_id)),
+                           info=UTF-8("HSv2 browser bind"), L=32)
+bind_t       = UTF-8("HSv2 browser" ‖ "\0" ‖ vault_id ‖ "\0" ‖ browser_id ‖ "\0" ‖ pub_B ‖ "\0" ‖ label)
+proof        = HMAC-SHA256(k_bind, bind_t)
+               pub_B = b64u van SPKI-DER van K_B; browser_id = UUID v4 (browser kiest, kleine letters);
+               label 1-64 tekens, tekenregel §13.5.1
+login_t      = UTF-8("HSv2 blogin" ‖ "\0" ‖ challenge_id ‖ "\0" ‖ b64u(challenge) ‖ "\0" ‖ browser_id ‖ "\0" ‖ email_lc)
+req_t        = UTF-8("HSv2 approve" ‖ "\0" ‖ approval_id ‖ "\0" ‖ vault_id ‖ "\0" ‖ browser_id ‖ "\0" ‖ epk_L
+                      ‖ "\0" ‖ b64u(nonce_L) ‖ "\0" ‖ created_at)
+sig_req      = ECDSA-P256-SHA256(K_B, req_t)   (raw 64 B)
+resp         = Seal_v2(epk_L, CK, "relay", vault_id, bind = approval_id ‖ "\0" ‖ b64u(nonce_L)), kid = approval_id
+```
+Vectoren: k_bind/proof (ph+kh, alleen kh), login_t, req_t, sig-verificatie met vaste sleutel, relay-seal + openen;
+negatief: ander vault_id, ander label, andere pub_B, `kh=null` (moet geweigerd worden), verkeerde nonce bij openen.
+JS = Python = Kotlin.
+
+### 14.3 Flow A — browser vertrouwen (web, kluis open)
+
+1. Voorwaarden in de UI: kluis open met `kh` (anders knop uit: "Vertrouwen kan alleen bij een kluis met keyfile");
+   account heeft TOTP (anders: "Stel eerst de authenticator-app in"). Step-up (Bio of TOTP, §12.8).
+2. Browser maakt K_B, kiest `browser_id`, rekent `proof`, bewaart K_B in IndexedDB.
+3. `POST /trusted-browsers` (SU) `{browser_id, vault_id, pub_B, label, proof}` → 201 `{browser_id, created_at}`.
+   Max 10 actief per gebruiker → 409 `too_many_browsers`. Audit `browser_trust`, mail "Browser vertrouwd".
+4. IndexedDB-record: `{browser_id, vault_id, email, label, K_B}`. "Vergeet deze browser" wist het record én doet
+   `DELETE /trusted-browsers/{id}`.
+
+### 14.4 Flow B — inloggen op een vertrouwde browser
+
+1. `POST /auth/browser/challenge` (publiek) `{email}` → altijd 200 `{challenge_id, challenge:b64u 32, expires_at}`
+   (TTL 120 s; ook bij onbekend e-mailadres, geen enumeratie). Rate-limit 10/10 min per IP en per e-mail.
+2. Browser tekent `login_t` met K_B; vraagt de TOTP-code.
+3. `POST /auth/browser/login` `{challenge_id, browser_id, sig, totp}`; controles: challenge bestaat, niet verlopen,
+   eenmalig (meteen verbruikt, ook bij fout) → browser actief en van die gebruiker → handtekening → TOTP (bestaande
+   controle incl. replay-bescherming). Elke fout → 401 `browser_login_failed` (geen detail), audit met reden.
+   Succes → JWT `mfa=true`, nieuwe claims `sid` (UUID) en `amr:["browser","totp"]`, `browser_id`; `last_used_at`.
+4. Gewone login (wachtwoord) krijgt ook een `sid`. Sessies zonder `sid` (oude cookies) mogen geen verzoek starten
+   (409 `session_too_old`, opnieuw inloggen).
+
+### 14.5 Flow C — ontgrendelen met de telefoon
+
+```
+Browser (S, sid, browser_id)          Server                                Telefoon (app, D)
+1 e_L, nonce_L(32B)
+  POST /vault/{vid}/approvals {browser_id}   browser actief, van gebruiker, vault = binding;
+  <- 201 {approval_id, created_at}           telefoon-sleutel voor vid actief; 1 open per sid, 10/uur
+  sig_req over req_t
+  PUT  /vault/{vid}/approvals/{id} {epk_L, nonce_L, sig_req}
+                                       sig_req geldig met pub_B -> pending, expires_at = nu+120
+2 toont "Open HorseSafe op je telefoon"; pollt GET …/approvals/{id}?wait=25
+                                                                             3 pollt /device/v1/status?wait=25
+                                                                               -> approvals:[{approval_id}]
+                                                                             4 GET /device/v1/approvals/{id}
+                                                                               -> {vault_id, key_id, browser:{browser_id,
+                                                                                  pub_B, label, proof}, epk_L, nonce_L,
+                                                                                  created_at, sig_req, ip, ua, requested_at}
+                                                                               controleert sig_req met pub_B (vóór vinger)
+                                                                               kaart: label, IP, UA, tijd
+                                                                             5 vinger -> sk_c -> eigen store-kopie (AAD:
+                                                                               vault_id, key_id) -> CK; kh==null -> weigeren;
+                                                                               proof controleren (timing-safe) -> fout:
+                                                                               weigeren, reason browser_proof_invalid
+                                                                               resp = Seal_v2(epk_L, CK, relay, …); wissen
+                                       <- POST /device/v1/approvals/{id} {decision:"approve", resp}
+                                          | {decision:"deny"|"deny_revoke", reason?}
+                                       pending -> approved|denied atomair, binnen expires_at
+6 <- {status:"approved", resp}; server wist resp, status consumed; daarna 410
+  open met e_L (AAD: eigen vault_id, approval_id, nonce_L) -> CK -> KDBX (header-HMAC bewijst CK);
+  e_L, CK-buffers weg
+```
+**Noot volgorde:** `approval_id` en `created_at` (server) staan in `req_t`, daarom twee stappen; een `draft` vervalt
+na 30 s. Alleen `pending` is zichtbaar voor de telefoon.
+
+- **Weigeren:** `deny` → status `denied`, sessie `sid` ingetrokken (`revoked_sessions`), 15 min geen nieuwe
+  verzoeken voor die browser; `deny_revoke` → idem + browser `revoked_at`. Audit + mail "Verzoek geweigerd".
+- **Browser ziet:** `denied` → "Geweigerd op je telefoon" en uitgelogd; verlopen → "Geen reactie, probeer opnieuw".
+- **Kopie verouderd** (CK klopt niet met de KDBX na een wijziging in KeePassXC): zelfde melding als §2 Rotatie.
+
+### 14.6 Endpoints (onder `/HorseSafe/api`)
+
+| Methode en pad | Auth | Kern |
+|---|---|---|
+| `POST /trusted-browsers` | SU | 14.3; vault van gebruiker anders 404; `kh`-eis kan de server niet zien (client-regel + telefoon weigert) |
+| `GET /trusted-browsers` | S | `{browsers:[{browser_id, vault_id, label, created_at, last_used_at}]}` (actief) |
+| `DELETE /trusted-browsers/{id}` | S | `revoked_at = nu`; open verzoeken → `denied`; 204; audit + mail |
+| `POST /auth/browser/challenge` | publiek | 14.4 |
+| `POST /auth/browser/login` | publiek | 14.4 |
+| `POST /vault/{vid}/approvals` | S + sid | `{browser_id}` → 201 `{approval_id, created_at}`; `browser_id` moet gelijk zijn aan de JWT-claim als die er is |
+| `PUT /vault/{vid}/approvals/{id}` | S + zelfde sid | `{epk_L, nonce_L, sig_req}` → 200 `{expires_at}` |
+| `GET /vault/{vid}/approvals/{id}?wait=25` | S + zelfde sid | `{status}` of `{status:"approved", resp}` (eenmalig) ; daarna 410 `gone` |
+| `DELETE /vault/{vid}/approvals/{id}` | S + zelfde sid | annuleren; 204 |
+| `GET /device/v1/status?wait=25` | D | uitgebreid met `approvals:[{approval_id, vault_id}]` (alleen `pending`, toestel heeft actieve sleutel voor die kluis) |
+| `GET /device/v1/approvals/{id}` | D | 14.5 stap 4; anders 404 |
+| `POST /device/v1/approvals/{id}` | D | 14.5 stap 5; `resp` → `validate_sealed(resp, approval_id)`; 409 `approval_not_pending` |
+
+Foutcodes: 404 `not_found` (eigendom), 409 `browser_cooldown`, 409 `approval_open` (al één open per sid),
+429 `too_many_approvals`, 400 `signature_invalid`, 400 `invalid_sealed`, 409 `no_phone_key`.
+
+### 14.7 Migratie 007
+
+```sql
+CREATE TABLE trusted_browsers (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vault_id TEXT NOT NULL REFERENCES vaults(id) ON DELETE CASCADE, pub_b TEXT NOT NULL, label TEXT NOT NULL,
+  proof TEXT NOT NULL, created_at INTEGER NOT NULL, last_used_at INTEGER, revoked_at INTEGER, revoke_reason TEXT,
+  cooldown_until INTEGER);
+CREATE INDEX idx_tb_user ON trusted_browsers(user_id);
+CREATE TABLE browser_challenges (id TEXT PRIMARY KEY, email_lc TEXT NOT NULL, challenge TEXT NOT NULL,
+  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, used INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE approvals (id TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vault_id TEXT NOT NULL REFERENCES vaults(id) ON DELETE CASCADE,
+  browser_id TEXT NOT NULL REFERENCES trusted_browsers(id) ON DELETE CASCADE, sid TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('draft','pending','approved','denied','consumed','cancelled','expired')),
+  epk_l TEXT, nonce_l TEXT, sig_req TEXT, resp TEXT, device_id TEXT, deny_reason TEXT, ip TEXT, ua TEXT,
+  created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, decided_at INTEGER);
+CREATE INDEX idx_approvals_user ON approvals(user_id, created_at);
+CREATE TABLE revoked_sessions (sid TEXT PRIMARY KEY, revoked_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
+INSERT OR REPLACE INTO schema_version (version) VALUES (7);
+```
+`resp` wordt bij `consumed`/`expired`/`cancelled` gewist (NULL); verlopen rijen ruimt de server lui op.
+JWT-decode controleert `revoked_sessions`. Rekey (`PUT /vault/{vid}/rekey`) trekt alle vertrouwde browsers van die
+kluis in (`revoke_reason='rekey'`).
+
+### 14.8 Audit en mail
+
+Audit: `browser_trust`, `browser_revoke {reason}`, `browser_login`, `browser_login_failed {reason}`,
+`approval_request`, `approval_approve`, `approval_deny {reason}`, `approval_consumed`. Nooit challenge, proof,
+handtekeningen, epk_L, nonce of resp in audit. Mail (niet-blokkerend): browser vertrouwd, browser ingetrokken,
+verzoek geweigerd. Goedgekeurde ontgrendeling: geen mail (wel audit), anders te veel ruis.
+
+### 14.9 App (0.4.0)
+
+- Goedkeuringskaart (foreground-polling `wait=25` zolang de app open is; WorkManager 15 min als vangnet):
+  label, kluis, IP, UA, tijd; knoppen **Goedkeuren (vinger)**, **Weigeren**, **Weigeren en browser intrekken**.
+- `sig_req` controleren vóór de vinger; proof ná de vinger (CK nodig). Fout → `deny` met reason, kaart "Verzoek niet
+  vertrouwd — mogelijk gemanipuleerd".
+- Alleen `BiometricPrompt` + `CryptoObject` + `BIOMETRIC_STRONG`; CK, sk_c, k_bind na gebruik `fill(0)`.
+
+### 14.10 Minimale tests
+
+- pytest: trust_v1-vectoren; vertrouwen (SU vereist, max 10, eigendom); login (onbekende e-mail = zelfde antwoord,
+  challenge eenmalig/verlopen, verkeerde sig, ingetrokken browser, foute/hergebruikte TOTP); approvals (draft→pending,
+  sid-binding, sig_req fout, één open per sid, 10/uur, cooldown na deny, deny_revoke, 410 na ophalen, resp gewist,
+  verlopen); device-kant (alleen toestel met sleutel voor die kluis, validate_sealed); rekey trekt browsers in;
+  revoked_sessions blokkeert JWT.
+- `node --test`: trust_v1 (k_bind, proof, login_t, req_t, P1363-handtekening, relay openen).
+- JVM: trust_v1 (proof controleren, sig_req controleren, relay verzegelen), bronbeleid (geen `DEVICE_CREDENTIAL`).
+- Playwright: vertrouwen → uitloggen → inloggen met e-mail + TOTP → ontgrendelen met neptoestel (Python-helper die
+  als app goedkeurt met testvlag) → kluis open; weigeren → uitgelogd; gemanipuleerd label → telefoon weigert.

@@ -1,6 +1,6 @@
 # Openstaande Acties — HorseSafe
 
-> Laatst bijgewerkt: 2026-10-14
+> Laatst bijgewerkt: 2026-10-16
 
 ## 🆕 2026-10-14 — telefoon-ontgrendelen naar voren (Miller deel 2 → Montgomery)
 
@@ -12,16 +12,17 @@ Doel Christian: HorseSafe op de laptop openen zonder YubiKey, alleen met de tele
 - [x] ~~**A12 Deploy HC55**~~ ✅ 14-10 — backup `backups-predeploy/*-20261014-125010*` (DB, vaults, .env, web), migraties 5→6 (`pairings`, `device_nonces`), health 0.3.4-Miller, `test_attestation`/`test_device_attestation` false, post_deploy_smoke GROEN, koppel-endpoints 401 zonder auth. Valkuilen gerepareerd in runbook + deploy-script: migrate zonder `.env` raakt losse repo-DB; rsync `--delete` liet `devserver.py`/`README.md` staan (handmatig verwijderd)
 - [x] ~~**A12 Publicatie HorseAPK** vc 304~~ ✅ 14-10 — `HorseSafe-v0.3.4-Miller-release.apk`, sha `3e0419c2…c20c`, 2 toestellen gewekt
 - [ ] **Christian: app op Fold/Fairphone verwijderen en opnieuw installeren** (nieuwe keystore; keuringsrapporten eerst exporteren)
-- [ ] **Losse repo-DB opruimen** `/opt/horsesafe/repo/db/horsesafe.db` (0 gebruikers, sinds 21-05, gitignored) — na akkoord
+- [x] ~~**Losse repo-DB opruimen**~~ ✅ 16-10 — verplaatst naar `backups-predeploy/stray-repo-horsesafe-20261016.db` (0 gebruikers); health ok
+- [x] ~~**URL kluis-entry HorseSafe**~~ — blijft `icthorse.nl/HorseSafe/` (besluit Christian 16-10)
 - [x] ~~**Kluis "Database" = database1**~~ ✅ 14-10 — keyfile-only (342 entries), live geopend; oud blob in backups-predeploy
 - [ ] **Christian: TOTP instellen** (Instellingen) — nodig voor step-up bij telefoon koppelen (`stepup_unavailable`)
-- [ ] **Akkoord Montgomery-ombouw**: vertrouwde browser (OTP) + ontsleutelen alleen met telefoonvinger, koppelbewijs i.p.v. code van 6 cijfers
+- [x] ~~**Akkoord Montgomery-ombouw**~~ ✅ 16-10 — besluit §11.3, contract §14 (vertrouwde browser + koppelbewijs + telefoonvinger), R23/R24
 - [x] ~~**Account `cglebbeek+gs@gmail.com`**~~ ✅ 14-10 — aangemaakt vanaf Christians IP (zelfde als zijn login)
 - [x] ~~**0.3.5-Miller gebouwd**~~ ✅ 14-10 — categorieën + zoeken + HS-BUG-010 (TOTP-QR); 5ca99bc + 19cd8f0
 - [x] ~~**Deploy 0.3.5-Miller**~~ ✅ 16-10 LIVE — health 0.3.5-Miller, vault-index.js + QR-CSS geserveerd, smoke groen (account verwijderd); .git-eigenaar hersteld door Christian
 - [ ] **Veldtest koppelen** — echte telefoon + laptop: QR, 2× vinger, SAS vergelijken, "Kopie openen"; meet security level/StrongBox
 - [ ] **Later Miller:** noodsleutel blokkeren vanaf de telefoon, in-app update, androidTest, CI-job android, `/ModelArchDSL update`
-- [ ] **Fase B — Montgomery (0.4.0)**: contract §5 herschrijven volgens §11.2 + akkoord; migratie 007, approvals, web "Ontgrendel met telefoon", app goedkeuringskaart; veldtest laptop + telefoon
+- [ ] **Fase B — Montgomery (0.4.0) bouwen** volgens §14 — wacht op akkoord bouwen; daarna deploy + APK apart; veldtest laptop + telefoon
 
 ## 🆕 2026-10-12 — v0.3.0-Miller deel 1 (Android: YubiKey inrichten en keuren)
 

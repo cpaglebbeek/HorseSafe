@@ -58,8 +58,14 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
     (faalt zonder fix). Categorieboom + zoeken gebouwd (vault-index.js), node 97, Playwright 13, pytest 269.
     Commits 5ca99bc (feat) + 19cd8f0 (versie). Account `+gs` = Christian zelf (zelfde IP). Deploy 0.3.5: apart akkoord.
 
+15. 16-10 "akkoord" deploy 0.3.5 → pull faalde (77 root-objecten in .git); hook blokkeerde `chown -R`; Christian voerde
+    het zelf uit → 0.3.5-Miller LIVE (health, assets, smoke groen). Runbook: git op server alleen als horsesafe (1d1b9a6).
+16. "akkoord" zonder vraag → teruggevraagd welk punt. Antwoord: "1.akkoord 2.nee icthorse.nl/HorseSafe. 3.opruimen".
+    1 = Montgomery-ontwerp akkoord → besluit §11.3 + contract §14 (HARDWARE_KEYS), R23/R24, P-CRYPT-09-noot.
+    Verbeteringen t.o.v. WhatIf: per verzoek tijdelijke X25519 (forward secrecy), browsersleutel alleen ondertekenen;
+    alleen kluizen met keyfile (snelle HMAC zou wachtwoord-only kluis raadbaar maken). 2 = URL in kluis-entry blijft
+    `icthorse.nl/HorseSafe/`. 3 = losse repo-DB verplaatst naar `backups-predeploy/stray-repo-horsesafe-20261016.db`.
+
 ## Open
-- Akkoord deploy 0.3.5-Miller (frontend + versie).
-- Akkoord Montgomery-ombouw (vertrouwde browser + vinger).
-- Christian: TOTP instellen; app op Fold/Fairphone opnieuw installeren (nieuwe keystore), daarna veldtest op echte telefoon.
-- Bouwplan fase A (Miller deel 2, 0.3.4) als WhatIf + akkoord.
+- Akkoord bouwen 0.4.0-Montgomery (WhatIf 16-10).
+- Christian: TOTP instellen; app op Fold/Fairphone opnieuw installeren (nieuwe keystore), daarna veldtest koppelen.
