@@ -56,7 +56,10 @@ sudo tar -czf $B/vaults-$TS.tgz -C /opt/horsesafe vaults
 sudo install -m 600 /opt/horsesafe/.env $B/env-$TS
 
 cd /opt/horsesafe/repo
-sudo -u horsesafe git pull
+# Git op de server ALLEEN als horsesafe, nooit als root: root-git liet 77 objecten van root achter, waarna
+# de pull faalde ("insufficient permission … .git/objects", 0.3.5-deploy 14-10). Controle: moet 0 zijn.
+sudo find .git -not -user horsesafe | wc -l
+sudo -u horsesafe git pull --ff-only
 sudo -u horsesafe /opt/horsesafe/venv/bin/pip install -r backend/requirements.txt
 # Migrate MET de productie-env: zonder .env valt db_path terug op ./db/horsesafe.db (losse repo-DB,
 # productie blijft ongemigreerd — gebeurd bij de 0.3.4-deploy, 14-10). Controleer daarna schema_version.

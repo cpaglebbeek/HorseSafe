@@ -18,7 +18,7 @@ Doel Christian: HorseSafe op de laptop openen zonder YubiKey, alleen met de tele
 - [ ] **Akkoord Montgomery-ombouw**: vertrouwde browser (OTP) + ontsleutelen alleen met telefoonvinger, koppelbewijs i.p.v. code van 6 cijfers
 - [x] ~~**Account `cglebbeek+gs@gmail.com`**~~ ✅ 14-10 — aangemaakt vanaf Christians IP (zelfde als zijn login)
 - [x] ~~**0.3.5-Miller gebouwd**~~ ✅ 14-10 — categorieën + zoeken + HS-BUG-010 (TOTP-QR); 5ca99bc + 19cd8f0
-- [ ] **Deploy 0.3.5-Miller** (frontend-rsync + herstart) — akkoord Christian
+- [x] ~~**Deploy 0.3.5-Miller**~~ ✅ 16-10 LIVE — health 0.3.5-Miller, vault-index.js + QR-CSS geserveerd, smoke groen (account verwijderd); .git-eigenaar hersteld door Christian
 - [ ] **Veldtest koppelen** — echte telefoon + laptop: QR, 2× vinger, SAS vergelijken, "Kopie openen"; meet security level/StrongBox
 - [ ] **Later Miller:** noodsleutel blokkeren vanaf de telefoon, in-app update, androidTest, CI-job android, `/ModelArchDSL update`
 - [ ] **Fase B — Montgomery (0.4.0)**: contract §5 herschrijven volgens §11.2 + akkoord; migratie 007, approvals, web "Ontgrendel met telefoon", app goedkeuringskaart; veldtest laptop + telefoon
