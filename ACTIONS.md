@@ -23,8 +23,8 @@ Doel Christian: HorseSafe op de laptop openen zonder YubiKey, alleen met de tele
 - [ ] **Veldtest koppelen** — echte telefoon + laptop: QR, 2× vinger, SAS vergelijken, "Kopie openen"; meet security level/StrongBox
 - [ ] **Later Miller:** noodsleutel blokkeren vanaf de telefoon, in-app update, androidTest, CI-job android, `/ModelArchDSL update`
 - [x] ~~**Fase B — Montgomery (0.4.0) gebouwd**~~ ✅ 16-10 — dc8edb3 (vectoren), 4db1810 (bouw), f91ab46 (review-fixes H1/M1/M2/L2/L3); pytest 326, node 130, Playwright 16/16, JVM 391
-- [ ] **Deploy 0.4.0 HC55** (migratie 007) — akkoord Christian
-- [ ] **APK 0.4.0 vc 400 naar HorseAPK** — akkoord Christian
+- [x] ~~**Deploy 0.4.0 HC55**~~ ✅ 16-10 — backup `backups-predeploy/*-20261016-154933*`, migratie 7, health 0.4.0-Montgomery, nieuwe endpoints 401 zonder login, smoke groen (account verwijderd)
+- [x] ~~**APK 0.4.0 vc 400 naar HorseAPK**~~ ✅ 16-10 — sha `8ef9e684…fed1`, signer fbd6b151…, verify_apk GROEN, 2 toestellen gewekt
 - [ ] **Besluit R26:** HorseSafe op eigen subdomein (WhatIf)
 - [ ] **0.4.x:** achtergrondmelding (ntfy/WorkManager), `scope` in /auth/me, resp tekenen met K_dev (R25), TOTP-replay bij instellen, Playwright-vlakheid trust-mock, ESLint in CI
 - [ ] **Veldtest Montgomery** — laptop-Chrome + Fold: vertrouwen, inloggen met code, ontgrendelen met vinger, weigeren

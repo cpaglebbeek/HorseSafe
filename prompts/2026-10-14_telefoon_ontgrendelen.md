@@ -71,7 +71,9 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
     M3 gedeelde origin; L1–L6. Fixes H1/M1/M2/L2/L3 → f91ab46 (pytest 326, node 130, Playwright 16/16, JVM 391).
     R25 (relay-herkomst) aanvaard, R26 (subdomein) open.
 
+18. "ja" → deploy 0.4.0 (backup 20261016-154933, migratie 7, health/endpoints/smoke groen) + APK vc 400 naar HorseAPK
+    (sha 8ef9e684…, verify_apk GROEN, 2 toestellen gewekt).
+
 ## Open
-- Akkoord deploy 0.4.0 + APK vc 400.
 - Besluit R26 eigen subdomein.
-- Christian: TOTP instellen; app opnieuw installeren; veldtest.
+- Christian: TOTP instellen; app bijwerken/opnieuw installeren; telefoon koppelen; veldtest Montgomery.
