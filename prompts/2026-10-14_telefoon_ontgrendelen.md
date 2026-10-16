@@ -66,6 +66,12 @@ Vastgelegd in `docs/HARDWARE_KEYS.md` §11.2 (+ notities bij E9 en §5) en `ACTI
     alleen kluizen met keyfile (snelle HMAC zou wachtwoord-only kluis raadbaar maken). 2 = URL in kluis-entry blijft
     `icthorse.nl/HorseSafe/`. 3 = losse repo-DB verplaatst naar `backups-predeploy/stray-repo-horsesafe-20261016.db`.
 
+17. "akkord" (bouwen 0.4.0) → vectoren trust_v1 (dc8edb3); 3 agents server/web/app → 4db1810 (alle tests groen).
+    Adversariële review: H1 browsersessie = volledige sessie; M1 intrekken mist verlengde sessies; M2 TOTP-replay race;
+    M3 gedeelde origin; L1–L6. Fixes H1/M1/M2/L2/L3 → f91ab46 (pytest 326, node 130, Playwright 16/16, JVM 391).
+    R25 (relay-herkomst) aanvaard, R26 (subdomein) open.
+
 ## Open
-- Akkoord bouwen 0.4.0-Montgomery (WhatIf 16-10).
-- Christian: TOTP instellen; app op Fold/Fairphone opnieuw installeren (nieuwe keystore), daarna veldtest koppelen.
+- Akkoord deploy 0.4.0 + APK vc 400.
+- Besluit R26 eigen subdomein.
+- Christian: TOTP instellen; app opnieuw installeren; veldtest.
