@@ -74,7 +74,7 @@ jobs:
         run: pytest --cov=. --cov-report=term --cov-fail-under=80
 
   frontend-e2e:
-    name: Frontend e2e (Playwright)
+    name: Frontend unit + e2e (node --test + Playwright)
     runs-on: ubuntu-latest
     needs: backend
     steps:
@@ -98,34 +98,23 @@ jobs:
           npm install
           npx playwright install --with-deps chromium
 
-      - name: Start backend in background
-        env:
-          HORSESAFE_JWT_SECRET: ci-test-secret-32bytes-replaced-in-prod-do-not-reuse
-          HORSESAFE_COOKIE_SECURE: "false"
-          HORSESAFE_CORS_ORIGINS: http://localhost:8000
-          HORSESAFE_RATE_LIMIT_ENABLED: "false"
-          HORSESAFE_DB_PATH: ./.ci-db/horsesafe.db
-          HORSESAFE_VAULTS_DIR: ./.ci-vaults
-        run: |
-          nohup python -m uvicorn backend.app:app --host 0.0.0.0 --port 3997 > /tmp/backend.log 2>&1 &
-          for i in $(seq 1 20); do
-            if curl -fsS http://localhost:3997/health > /dev/null 2>&1; then
-              echo "backend ready after ${i}s"
-              break
-            fi
-            sleep 1
-          done
-
-      - name: Run Playwright e2e
+      - name: Frontend-unit (node --test — Seal_v2-vectoren, hwkeys-crypto)
         working-directory: frontend
+        run: node --test tests/unit/
+
+      - name: Run Playwright e2e (eigen backend per spec via tests/e2e-stack.ts; WebAuthn virtual authenticator)
+        working-directory: frontend
+        env:
+          HS_PYTHON: python
+          HS_E2E_TMPDIR: ${{ runner.temp }}
         run: npx playwright test --reporter=line
 
-      - name: Upload backend log on failure
+      - name: Upload Playwright-resultaten bij falen
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: backend-log
-          path: /tmp/backend.log
+          name: playwright-results
+          path: frontend/test-results/
 
   kdbx-oracle:
     name: KDBX4 KeePassXC-CLI roundtrip oracle
